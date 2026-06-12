@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+OCR/venv/
+
+# Environment files
+.env
+OCR/.env
+
+# Generated OCR files
+OCR/logs/
+OCR/static/uploads/
+OCR/static/results/
+OCR/static/temp/
+
+# IDE
+.vscode/
+.idea/

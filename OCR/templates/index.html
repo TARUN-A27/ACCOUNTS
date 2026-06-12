@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Azure OCR Test</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #f5f5f5; }
+        .box { background: white; padding: 25px; border-radius: 10px; max-width: 900px; margin: auto; }
+        input, select, button { padding: 10px; margin-top: 10px; width: 100%; }
+        button { background: #0078d4; color: white; border: none; cursor: pointer; }
+        pre { background: #111; color: #0f0; padding: 15px; overflow-x: auto; max-height: 500px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Azure OCR Document Test</h2>
+
+    <form id="uploadForm">
+        <label>Select Document Type</label>
+        <select name="model_id">
+            <option value="prebuilt-invoice">Invoice</option>
+            <option value="prebuilt-receipt">Receipt</option>
+            <option value="prebuilt-layout">Layout / General Document</option>
+            <option value="prebuilt-read">Read Text Only</option>
+        </select>
+
+        <label>Upload PDF or Image</label>
+        <input type="file" name="document" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" required>
+
+        <button type="submit">Extract OCR</button>
+    </form>
+
+    <h3>Status</h3>
+    <p id="status">Waiting for upload...</p>
+
+    <h3>Extracted Output</h3>
+    <pre id="output"></pre>
+</div>
+
+<script>
+document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    document.getElementById("status").innerText = "Processing OCR...";
+    document.getElementById("output").innerText = "";
+
+    try {
+        const response = await fetch("/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            document.getElementById("status").innerText = "Error";
+            document.getElementById("output").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+
+        document.getElementById("status").innerText = "OCR completed successfully";
+        document.getElementById("output").innerText = JSON.stringify(data, null, 2);
+
+    } catch (error) {
+        document.getElementById("status").innerText = "Request failed";
+        document.getElementById("output").innerText = error.toString();
+    }
+});
+</script>
+
+</body>
+</html>
