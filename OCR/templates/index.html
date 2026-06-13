@@ -249,8 +249,26 @@
             <h3 class="section-title">Extracted Structured Fields</h3>
             <div class="grid" id="fieldsGrid"></div>
 
+            <h3 class="section-title">Validation Result</h3>
+            <div class="grid" id="validationGrid"></div>
+
+            <h3 class="section-title">Human Review</h3>
+
+            <div id="reviewForm" class="grid"></div>
+
+            <div style="margin-top:20px; display:flex; gap:15px;">
+                <button id="approveBtn" type="button">
+                    Approve Document
+                </button>
+
+                <button id="rejectBtn" type="button">
+                    Reject Document
+                </button>
+            </div>
+
             <h3 class="section-title">Plain OCR Text</h3>
             <div id="textOutput" class="text-output"></div>
+
 
             <h3 class="section-title">Saved Log Files</h3>
             <div id="logFiles" class="log-box"></div>
@@ -264,11 +282,25 @@ const statusBox = document.getElementById("status");
 const loader = document.getElementById("loader");
 const results = document.getElementById("results");
 const submitBtn = document.getElementById("submitBtn");
+const validationGrid = document.getElementById("validationGrid");
 
 const classificationGrid = document.getElementById("classificationGrid");
 const fieldsGrid = document.getElementById("fieldsGrid");
 const textOutput = document.getElementById("textOutput");
 const logFiles = document.getElementById("logFiles");
+const reviewForm = document.getElementById("reviewForm");
+const approveBtn = document.getElementById("approveBtn");
+const rejectBtn = document.getElementById("rejectBtn");
+
+let latestDocumentData = null;
+
+approveBtn.addEventListener("click", function() {
+    submitReview("approved");
+});
+
+rejectBtn.addEventListener("click", function() {
+    submitReview("rejected");
+});
 
 form.addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -284,6 +316,7 @@ form.addEventListener("submit", async function(e) {
 
     classificationGrid.innerHTML = "";
     fieldsGrid.innerHTML = "";
+    validationGrid.innerHTML = "";
     textOutput.innerText = "";
     logFiles.innerHTML = "";
 
@@ -323,9 +356,13 @@ function renderStructuredOutput(data) {
     const structured = data.structured_output || {};
     const classification = structured.classification || {};
     const fields = structured.fields || {};
+    const validation = structured.validation || {};
     const logs = data.log_files || {};
 
     results.style.display = "block";
+
+    latestDocumentData = data;
+    renderReviewForm(fields);
 
     addField(classificationGrid, "Document Type", classification.document_type || "Unknown");
     addField(classificationGrid, "Confidence", classification.confidence || "N/A");
@@ -339,6 +376,12 @@ function renderStructuredOutput(data) {
         addField(fieldsGrid, "Status", "No structured fields detected");
     }
 
+    addField(validationGrid, "Status", validation.status || "N/A");
+    addField(validationGrid, "Requires Review", validation.requires_review ? "Yes" : "No");
+    addField(validationGrid, "Missing Fields", (validation.missing_fields || []).join(", ") || "None");
+    addField(validationGrid, "Warnings", (validation.warnings || []).join(", ") || "None");
+    addField(validationGrid, "Errors", (validation.errors || []).join(", ") || "None");
+
     textOutput.innerText = data.extracted_text || "No OCR text extracted";
 
     logFiles.innerHTML = `
@@ -347,6 +390,94 @@ function renderStructuredOutput(data) {
         <div><strong>Text Log:</strong> ${logs.text_log || "Not saved"}</div>
         <div><strong>Structured JSON:</strong> ${logs.structured_json || "Check logs/structured folder"}</div>
     `;
+}
+
+function renderReviewForm(fields) {
+    reviewForm.innerHTML = "";
+
+    if (!fields || Object.keys(fields).length === 0) {
+        reviewForm.innerHTML = `
+            <div class="field-card">
+                <div class="field-label">Review</div>
+                <div class="field-value">No fields available for review</div>
+            </div>
+        `;
+        return;
+    }
+
+    Object.keys(fields).forEach(key => {
+        if (key === "raw_text") {
+            return;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "field-card";
+
+        const label = document.createElement("div");
+        label.className = "field-label";
+        label.innerText = formatLabel(key);
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "review-input";
+        input.dataset.field = key;
+        input.value = fields[key] ?? "";
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+
+        reviewForm.appendChild(wrapper);
+    });
+
+    if (reviewForm.innerHTML.trim() === "") {
+        reviewForm.innerHTML = `
+            <div class="field-card">
+                <div class="field-label">Review</div>
+                <div class="field-value">No editable fields available</div>
+            </div>
+        `;
+    }
+}
+
+async function submitReview(status) {
+    if (!latestDocumentData) {
+        alert("No document available for review");
+        return;
+    }
+
+    const correctedFields = {};
+
+    document.querySelectorAll(".review-input").forEach(input => {
+        correctedFields[input.dataset.field] = input.value;
+    });
+
+    const structured = latestDocumentData.structured_output || {};
+    const classification = structured.classification || {};
+
+    const payload = {
+        source_file: latestDocumentData.source_file,
+        document_type: classification.document_type || "unknown",
+        status: status,
+        corrected_fields: correctedFields,
+        reviewed_by: "admin"
+    };
+
+    const response = await fetch("/review", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+        alert("Review save failed: " + (result.error || "Unknown error"));
+        return;
+    }
+
+    alert("Review saved successfully");
 }
 
 function addField(container, label, value) {

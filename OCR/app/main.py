@@ -10,6 +10,7 @@ from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from structured_output_service import build_structured_output
+from review.review_service import save_review_log
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -219,6 +220,32 @@ def upload_document():
 
         return jsonify(error_data), 500
 
+@app.route("/review", methods=["POST"])
+def review_document():
+    try:
+        review_data = request.get_json()
+
+        if not review_data:
+            return jsonify({"error": "No review data received"}), 400
+
+        if "status" not in review_data:
+            return jsonify({"error": "Review status is required"}), 400
+
+        if review_data["status"] not in ["approved", "rejected", "edited"]:
+            return jsonify({"error": "Invalid review status"}), 400
+
+        saved_review = save_review_log(BASE_DIR, review_data)
+
+        return jsonify({
+            "message": "Review saved successfully",
+            "review": saved_review
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "time": datetime.now().isoformat()
+        }), 500
 
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
