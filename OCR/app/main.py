@@ -9,6 +9,7 @@ import requests
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from structured_output_service import build_structured_output
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -178,6 +179,21 @@ def upload_document():
         raw_result = call_computer_vision_ocr(file_path)
         clean_result = parse_computer_vision_result(raw_result)
 
+        structured_output = build_structured_output(
+            clean_result.get("extracted_text", "")
+        )
+
+        clean_result["structured_output"] = structured_output
+        structured_dir = os.path.join(LOG_DIR, "structured")
+        os.makedirs(structured_dir, exist_ok=True)
+
+        structured_file = os.path.join(
+            structured_dir,
+            f"{timestamp}_{secure_filename(original_filename).rsplit('.',1)[0]}_structured.json"
+        )
+
+        with open(structured_file, "w", encoding="utf-8") as f:
+            json.dump(structured_output, f, indent=4, ensure_ascii=False)
         clean_result["source_file"] = saved_filename
         clean_result["processed_at"] = datetime.now().isoformat()
 
