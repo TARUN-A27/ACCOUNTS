@@ -1,0 +1,566 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">Validation Queue</h2>
+            <div class="text-secondary mt-1">
+                Review extracted documents with original preview and editable AI fields.
+            </div>
+        </div>
+        <div class="col-auto">
+            <button onclick="loadValidationDocuments()" class="btn btn-outline-primary">
+                Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+            <thead>
+                <tr>
+                    <th>Document</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody id="validationTable">
+                <tr>
+                    <td colspan="4" class="text-center text-secondary">
+                        Loading validation documents...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="reviewBackdrop" class="modal-backdrop-custom"></div>
+
+<div id="reviewModal" class="review-modal">
+    <div class="review-modal-header">
+        <div>
+            <h3 class="m-0">Review Document</h3>
+            <div id="modalDocMeta" class="text-secondary small mt-1"></div>
+        </div>
+
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closeReviewModal()">
+            Close
+        </button>
+    </div>
+
+    <div class="review-modal-body">
+        <div class="review-document-panel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="m-0">Original Document</h4>
+                <span id="previewStatus" class="badge bg-blue-lt">Preview</span>
+            </div>
+
+            <div class="d-flex gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fitPreview()">Fit Full Image</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomInPreview()">Zoom In</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOutPreview()">Zoom Out</button>
+            </div>
+
+            <div id="modalPreview" class="document-preview-large fit-mode">
+                Document preview will appear here
+            </div>
+        </div>
+
+        <div class="review-fields-panel">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h4 class="card-title">AI Summary</h4>
+                </div>
+
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Document Type</label>
+                        <input id="modalDocumentType" class="form-control" readonly>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">AI Confidence</label>
+                            <input id="modalConfidence" class="form-control" readonly>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Validation Status</label>
+                            <input id="modalValidationStatus" class="form-control" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Editable Fields</h4>
+                </div>
+
+                <div class="card-body">
+                    <div id="modalFields"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="review-modal-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-secondary small">
+                Review the document and correct fields before approval.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" onclick="submitModalReview('approved')">
+                    Approve
+                </button>
+
+                <button class="btn btn-danger" onclick="submitModalReview('rejected')">
+                    Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-backdrop-custom {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    display: none;
+}
+
+.modal-backdrop-custom.show {
+    display: block;
+}
+
+.review-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 96vw;
+    height: 92vh;
+    max-width: 1700px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+    z-index: 1050;
+    display: none;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+}
+
+.review-modal.open {
+    display: flex;
+    flex-direction: column;
+}
+
+.review-modal-header {
+    height: 72px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+}
+
+.review-modal-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 68% 32%;
+    gap: 0;
+    min-height: 0;
+}
+
+.review-document-panel {
+    padding: 18px;
+    border-right: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.review-fields-panel {
+    padding: 18px;
+    background: #ffffff;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+.document-preview-large {
+    height: calc(92vh - 230px);
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.document-preview-large.fit-mode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.document-preview-large.fit-mode img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.document-preview-large.zoom-mode {
+    display: block;
+}
+
+.document-preview-large.zoom-mode img {
+    width: var(--preview-width, 1200px);
+    max-width: none;
+    height: auto;
+    display: block;
+}
+
+.document-preview-large iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.review-modal-footer {
+    height: 72px;
+    padding: 16px 22px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.review-field {
+    margin-bottom: 16px;
+}
+
+.review-field label {
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+}
+
+@media(max-width: 1000px) {
+    .review-modal {
+        width: 96vw;
+        height: 92vh;
+    }
+
+    .review-modal-body {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    .review-document-panel {
+        height: 55vh;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .document-preview-large {
+        height: 40vh;
+    }
+}
+</style>
+
+<script>
+let validationDocuments = [];
+let selectedReviewDocument = null;
+let previewWidth = 1200;
+
+async function loadValidationDocuments() {
+    const table = document.getElementById("validationTable");
+
+    table.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center text-secondary">
+                Loading...
+            </td>
+        </tr>
+    `;
+
+    const response = await fetch("/api/validation-documents");
+    const data = await response.json();
+
+    if (!response.ok) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-danger text-center">
+                    ${data.error || "Failed to load documents"}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    validationDocuments = data.documents || [];
+
+    if (validationDocuments.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-secondary">
+                    No validation documents found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = "";
+
+    validationDocuments.forEach((doc, index) => {
+        const badgeClass = doc.validation_status === "valid"
+            ? "bg-green-lt"
+            : "bg-yellow-lt";
+
+        const displayName = doc.source_file || doc.log_file || "Unknown document";
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${displayName}</td>
+            <td>${doc.document_type || "unknown"}</td>
+            <td>
+                <span class="badge ${badgeClass}">
+                    ${doc.validation_status || "needs_review"}
+                </span>
+            </td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-primary" onclick="openReviewModal(${index})">
+                    Review
+                </button>
+            </td>
+        `;
+
+        table.appendChild(row);
+    });
+}
+
+function openReviewModal(index) {
+    selectedReviewDocument = validationDocuments[index];
+
+    if (!selectedReviewDocument) {
+        return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    document.getElementById("modalDocMeta").innerText =
+        selectedReviewDocument.source_file || selectedReviewDocument.log_file || "";
+
+    document.getElementById("modalDocumentType").value =
+        selectedReviewDocument.document_type || "unknown";
+
+    document.getElementById("modalConfidence").value =
+        selectedReviewDocument.confidence || "N/A";
+
+    document.getElementById("modalValidationStatus").value =
+        selectedReviewDocument.validation_status || "needs_review";
+
+    renderModalPreview(selectedReviewDocument);
+    renderModalFields(selectedReviewDocument.fields || {});
+
+    document.getElementById("reviewBackdrop").classList.add("show");
+    document.getElementById("reviewModal").classList.add("open");
+}
+
+function closeReviewModal() {
+    document.getElementById("reviewBackdrop").classList.remove("show");
+    document.getElementById("reviewModal").classList.remove("open");
+    document.body.style.overflow = "";
+}
+
+function renderModalPreview(doc) {
+    const preview = document.getElementById("modalPreview");
+    const previewStatus = document.getElementById("previewStatus");
+
+    const fileUrl = doc.file_url;
+    const fileName = doc.source_file || "";
+
+    preview.classList.remove("zoom-mode");
+    preview.classList.add("fit-mode");
+
+    if (!fileUrl) {
+        previewStatus.innerText = "Unavailable";
+        preview.innerHTML = `
+            <div class="alert alert-warning m-3">
+                Document preview is not available for this record.
+                Upload the document again to enable preview.
+            </div>
+        `;
+        return;
+    }
+
+    previewStatus.innerText = fileName.toLowerCase().endsWith(".pdf")
+        ? "PDF"
+        : "Image";
+
+    if (fileName.toLowerCase().endsWith(".pdf")) {
+        preview.innerHTML = `
+            <iframe src="${fileUrl}"></iframe>
+        `;
+    } else {
+        previewWidth = 1200;
+
+        preview.innerHTML = `
+            <img src="${fileUrl}" alt="Document Preview" style="--preview-width:${previewWidth}px;">
+        `;
+    }
+
+    setTimeout(() => {
+        preview.scrollTop = 0;
+        preview.scrollLeft = 0;
+    }, 100);
+}
+
+function fitPreview() {
+    const preview = document.getElementById("modalPreview");
+
+    preview.classList.remove("zoom-mode");
+    preview.classList.add("fit-mode");
+
+    preview.scrollTop = 0;
+    preview.scrollLeft = 0;
+}
+
+function zoomInPreview() {
+    const preview = document.getElementById("modalPreview");
+    const img = document.querySelector("#modalPreview img");
+
+    if (!img) {
+        return;
+    }
+
+    preview.classList.remove("fit-mode");
+    preview.classList.add("zoom-mode");
+
+    previewWidth += 200;
+    img.style.setProperty("--preview-width", previewWidth + "px");
+}
+
+function zoomOutPreview() {
+    const preview = document.getElementById("modalPreview");
+    const img = document.querySelector("#modalPreview img");
+
+    if (!img) {
+        return;
+    }
+
+    preview.classList.remove("fit-mode");
+    preview.classList.add("zoom-mode");
+
+    previewWidth = Math.max(800, previewWidth - 200);
+    img.style.setProperty("--preview-width", previewWidth + "px");
+}
+
+function renderModalFields(fields) {
+    const container = document.getElementById("modalFields");
+    container.innerHTML = "";
+
+    if (!fields || Object.keys(fields).length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                No fields available for review.
+            </div>
+        `;
+        return;
+    }
+
+    Object.keys(fields).forEach(key => {
+        if (key === "raw_text") {
+            return;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "review-field";
+
+        const label = document.createElement("label");
+        label.innerText = formatLabel(key);
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "form-control";
+        input.dataset.reviewField = key;
+        input.value = fields[key] ?? "";
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+
+        container.appendChild(wrapper);
+    });
+}
+
+async function submitModalReview(status) {
+    if (!selectedReviewDocument) {
+        alert("No document selected");
+        return;
+    }
+
+    const correctedFields = {};
+
+    document.querySelectorAll("[data-review-field]").forEach(input => {
+        correctedFields[input.dataset.reviewField] = input.value;
+    });
+
+    const payload = {
+        source_file: selectedReviewDocument.source_file || selectedReviewDocument.log_file,
+        document_type: selectedReviewDocument.document_type || "unknown",
+        status: status,
+        corrected_fields: correctedFields,
+        reviewed_by: "admin"
+    };
+
+    const response = await fetch("/review", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+        alert(result.error || "Review failed");
+        return;
+    }
+
+    closeReviewModal();
+    await loadValidationDocuments();
+    alert("Review saved successfully");
+}
+
+function formatLabel(key) {
+    return key
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+document.getElementById("reviewBackdrop").addEventListener("click", closeReviewModal);
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        closeReviewModal();
+    }
+});
+
+loadValidationDocuments();
+</script>
+
+{% endblock %}

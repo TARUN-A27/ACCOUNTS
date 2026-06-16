@@ -1,0 +1,659 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">Document Extraction</h2>
+            <div class="text-secondary mt-1">
+                Upload accounting documents, extract AI fields, and review selected files.
+            </div>
+        </div>
+        <div class="col-auto">
+            <button id="reviewDocsBtn" class="btn btn-outline-primary">
+                Review Docs
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cards">
+
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Document Queue</h3>
+            </div>
+            <div class="card-body">
+                <div id="documentList" class="list-group list-group-flush">
+                    <div class="text-secondary text-center py-4">
+                        No documents extracted yet
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Document Preview</h3>
+            </div>
+            <div class="card-body">
+                <div id="preview" class="border rounded d-flex align-items-center justify-content-center text-secondary"
+                     style="min-height:640px; background:#f8fafc;">
+                    Select or upload a document to preview
+                </div>
+
+                <div id="status" class="alert alert-info mt-3 mb-0">
+                    Waiting for upload...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div id="uploadPanel" class="card">
+            <div class="card-header">
+                <h3 class="card-title">Extract Document</h3>
+            </div>
+
+            <div class="card-body">
+                <form id="uploadForm">
+
+                    <div class="mb-3">
+                        <label class="form-label">Document Type</label>
+                        <select name="model_id" class="form-select">
+                            <option value="auto">Auto Detect</option>
+                            <option value="voucher">Cash Payment Voucher</option>
+                            <option value="invoice">Invoice</option>
+                            <option value="receipt">Receipt</option>
+                            <option value="challan">Delivery Challan</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Upload PDF or Image</label>
+                        <input type="file"
+                               name="document"
+                               class="form-control"
+                               accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp"
+                               required>
+                    </div>
+
+                    <button id="submitBtn" type="submit" class="btn btn-primary w-100">
+                        Extract Document
+                    </button>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="reviewBackdrop" class="extraction-review-backdrop"></div>
+
+<div id="reviewModal" class="extraction-review-modal">
+
+    <div class="extraction-review-header">
+        <div>
+            <h3 class="m-0">Review Document</h3>
+            <div id="reviewDocName" class="text-secondary small mt-1"></div>
+        </div>
+
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closeReviewModal()">
+            Close
+        </button>
+    </div>
+
+    <div class="extraction-review-body">
+
+        <div class="review-preview-panel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="m-0">Original Document</h4>
+                <span class="badge bg-blue-lt">Preview</span>
+            </div>
+
+            <div class="d-flex gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fitReviewPreview()">Fit Full Image</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomInReviewPreview()">Zoom In</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOutReviewPreview()">Zoom Out</button>
+            </div>
+
+            <div id="reviewPreview" class="review-preview fit-mode">
+                Select a document
+            </div>
+        </div>
+
+        <div class="review-fields-panel">
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h4 class="card-title">AI Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div id="classificationBox"></div>
+                    <div id="validationBox"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Editable Fields</h4>
+                </div>
+
+                <div class="card-body">
+                    <div id="reviewForm"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="extraction-review-footer">
+        <div class="text-secondary small">
+            Review the extracted fields and approve or reject this document.
+        </div>
+
+        <div class="d-flex gap-2">
+            <button id="approveBtn" type="button" class="btn btn-success">
+                Approve
+            </button>
+
+            <button id="rejectBtn" type="button" class="btn btn-danger">
+                Reject
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.extraction-review-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    display: none;
+}
+
+.extraction-review-backdrop.show {
+    display: block;
+}
+
+.extraction-review-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 96vw;
+    height: 92vh;
+    max-width: 1700px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+    z-index: 1050;
+    display: none;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+}
+
+.extraction-review-modal.open {
+    display: flex;
+    flex-direction: column;
+}
+
+.extraction-review-header {
+    height: 72px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.extraction-review-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 68% 32%;
+    min-height: 0;
+}
+
+.review-preview-panel {
+    padding: 18px;
+    border-right: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.review-fields-panel {
+    padding: 18px;
+    overflow-y: auto;
+    background: #ffffff;
+    min-width: 0;
+}
+
+.review-preview {
+    height: calc(92vh - 230px);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 12px;
+    overflow: auto;
+}
+
+.review-preview.fit-mode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-preview.fit-mode img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.review-preview.zoom-mode {
+    display: block;
+}
+
+.review-preview.zoom-mode img {
+    width: var(--review-preview-width, 1200px);
+    max-width: none;
+    height: auto;
+    display: block;
+}
+
+.review-preview iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.extraction-review-footer {
+    height: 72px;
+    padding: 16px 22px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.review-field {
+    margin-bottom: 16px;
+}
+
+.review-field label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+</style>
+
+<script>
+const form = document.getElementById("uploadForm");
+const submitBtn = document.getElementById("submitBtn");
+const statusBox = document.getElementById("status");
+const preview = document.getElementById("preview");
+
+const documentList = document.getElementById("documentList");
+const reviewDocsBtn = document.getElementById("reviewDocsBtn");
+
+const reviewBackdrop = document.getElementById("reviewBackdrop");
+const reviewModal = document.getElementById("reviewModal");
+const reviewPreview = document.getElementById("reviewPreview");
+const reviewDocName = document.getElementById("reviewDocName");
+
+const classificationBox = document.getElementById("classificationBox");
+const validationBox = document.getElementById("validationBox");
+const reviewForm = document.getElementById("reviewForm");
+
+const approveBtn = document.getElementById("approveBtn");
+const rejectBtn = document.getElementById("rejectBtn");
+
+let extractedDocuments = [];
+let selectedDocumentIndex = null;
+let latestDocumentData = null;
+let reviewPreviewWidth = 1200;
+
+form.addEventListener("submit", async function(e){
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const file = formData.get("document");
+
+    statusBox.className = "alert alert-info mt-3 mb-0";
+    statusBox.innerText = "Processing document...";
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Processing...";
+
+    if(file){
+        previewFile(file);
+    }
+
+    try{
+        const response = await fetch("/upload", {
+            method:"POST",
+            body:formData
+        });
+
+        const data = await response.json();
+
+        if(!response.ok){
+            statusBox.className = "alert alert-danger mt-3 mb-0";
+            statusBox.innerText = data.error || "Extraction failed";
+            return;
+        }
+
+        const documentRecord = {
+            id: Date.now(),
+            fileName: file ? file.name : data.source_file,
+            fileObject: file,
+            previewUrl: file ? URL.createObjectURL(file) : null,
+            result: data,
+            status: "extracted"
+        };
+
+        extractedDocuments.unshift(documentRecord);
+        selectedDocumentIndex = 0;
+        latestDocumentData = data;
+
+        renderDocumentList();
+        renderSelectedDocument(documentRecord);
+
+        statusBox.className = "alert alert-success mt-3 mb-0";
+        statusBox.innerText = "Document extracted successfully. Click Review Docs to validate.";
+
+        form.reset();
+
+    }catch(error){
+        statusBox.className = "alert alert-danger mt-3 mb-0";
+        statusBox.innerText = "Request failed: " + error.toString();
+    }finally{
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Extract Document";
+    }
+});
+
+reviewDocsBtn.addEventListener("click", function(){
+    if(extractedDocuments.length === 0){
+        statusBox.className = "alert alert-warning mt-3 mb-0";
+        statusBox.innerText = "No documents available for review.";
+        return;
+    }
+
+    if(selectedDocumentIndex === null){
+        selectedDocumentIndex = 0;
+    }
+
+    openReviewModal();
+});
+
+approveBtn.addEventListener("click", function(){
+    submitReview("approved");
+});
+
+rejectBtn.addEventListener("click", function(){
+    submitReview("rejected");
+});
+
+function renderDocumentList(){
+    documentList.innerHTML = "";
+
+    if(extractedDocuments.length === 0){
+        documentList.innerHTML = `
+            <div class="text-secondary text-center py-4">
+                No documents extracted yet
+            </div>
+        `;
+        return;
+    }
+
+    extractedDocuments.forEach((doc, index) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "list-group-item list-group-item-action";
+
+        if(index === selectedDocumentIndex){
+            item.classList.add("active");
+        }
+
+        const structured = doc.result.structured_output || {};
+        const classification = structured.classification || {};
+        const validation = structured.validation || {};
+        const status = validation.status || "needs_review";
+        const badgeClass = status === "valid" ? "bg-green-lt" : "bg-yellow-lt";
+
+        item.innerHTML = `
+            <div class="fw-semibold text-truncate">${doc.fileName}</div>
+            <div class="small mt-1">${classification.document_type || "unknown"}</div>
+            <span class="badge ${badgeClass} mt-2">${status}</span>
+        `;
+
+        item.addEventListener("click", function(){
+            selectedDocumentIndex = index;
+            latestDocumentData = doc.result;
+            renderDocumentList();
+            renderSelectedDocument(doc);
+        });
+
+        documentList.appendChild(item);
+    });
+}
+
+function renderSelectedDocument(doc){
+    if(!doc){
+        return;
+    }
+
+    latestDocumentData = doc.result;
+
+    if(doc.fileObject){
+        previewFile(doc.fileObject);
+    }
+}
+
+function previewFile(file){
+    const url = URL.createObjectURL(file);
+
+    if(file.type && file.type.startsWith("image/")){
+        preview.innerHTML = `<img src="${url}" style="max-width:100%; max-height:620px; border-radius:8px;">`;
+    }else if(file.type === "application/pdf"){
+        preview.innerHTML = `<iframe src="${url}" style="width:100%; height:620px; border:none;"></iframe>`;
+    }else{
+        preview.innerHTML = `<div>${file.name}</div>`;
+    }
+}
+
+function openReviewModal(){
+    const doc = extractedDocuments[selectedDocumentIndex];
+
+    if(!doc){
+        return;
+    }
+
+    latestDocumentData = doc.result;
+    reviewDocName.innerText = doc.fileName;
+
+    renderReviewPreview(doc);
+    renderResult(doc.result);
+
+    reviewBackdrop.classList.add("show");
+    reviewModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+
+function closeReviewModal(){
+    reviewBackdrop.classList.remove("show");
+    reviewModal.classList.remove("open");
+    document.body.style.overflow = "";
+}
+
+function renderReviewPreview(doc){
+    reviewPreview.classList.remove("zoom-mode");
+    reviewPreview.classList.add("fit-mode");
+
+    if(doc.fileObject){
+        const url = URL.createObjectURL(doc.fileObject);
+
+        if(doc.fileObject.type.startsWith("image/")){
+            reviewPreview.innerHTML = `<img src="${url}" alt="Document Preview">`;
+        }else if(doc.fileObject.type === "application/pdf"){
+            reviewPreview.innerHTML = `<iframe src="${url}"></iframe>`;
+        }
+    }
+
+    reviewPreview.scrollTop = 0;
+    reviewPreview.scrollLeft = 0;
+}
+
+function fitReviewPreview(){
+    reviewPreview.classList.remove("zoom-mode");
+    reviewPreview.classList.add("fit-mode");
+    reviewPreview.scrollTop = 0;
+    reviewPreview.scrollLeft = 0;
+}
+
+function zoomInReviewPreview(){
+    const img = document.querySelector("#reviewPreview img");
+    if(!img) return;
+
+    reviewPreview.classList.remove("fit-mode");
+    reviewPreview.classList.add("zoom-mode");
+
+    reviewPreviewWidth += 200;
+    img.style.setProperty("--review-preview-width", reviewPreviewWidth + "px");
+}
+
+function zoomOutReviewPreview(){
+    const img = document.querySelector("#reviewPreview img");
+    if(!img) return;
+
+    reviewPreview.classList.remove("fit-mode");
+    reviewPreview.classList.add("zoom-mode");
+
+    reviewPreviewWidth = Math.max(800, reviewPreviewWidth - 200);
+    img.style.setProperty("--review-preview-width", reviewPreviewWidth + "px");
+}
+
+function renderResult(data){
+    const structured = data.structured_output || {};
+    const classification = structured.classification || {};
+    const fields = structured.fields || {};
+    const validation = structured.validation || {};
+
+    classificationBox.innerHTML = `
+        <div class="mb-3">
+            <label class="form-label">Document Type</label>
+            <input class="form-control" value="${classification.document_type || "Unknown"}" readonly>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Confidence</label>
+            <input class="form-control" value="${classification.confidence || "N/A"}" readonly>
+        </div>
+    `;
+
+    validationBox.innerHTML = `
+        <div class="mb-3">
+            <label class="form-label">Validation Status</label>
+            <input class="form-control" value="${validation.status || "N/A"}" readonly>
+        </div>
+    `;
+
+    renderReviewForm(fields);
+}
+
+function renderReviewForm(fields){
+    reviewForm.innerHTML = "";
+
+    if(!fields || Object.keys(fields).length === 0){
+        reviewForm.innerHTML = `<div class="alert alert-warning">No extracted fields available</div>`;
+        return;
+    }
+
+    Object.keys(fields).forEach(key => {
+        if(key === "raw_text") return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "review-field";
+
+        const label = document.createElement("label");
+        label.innerText = formatLabel(key);
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "form-control";
+        input.dataset.field = key;
+        input.value = fields[key] ?? "";
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        reviewForm.appendChild(wrapper);
+    });
+}
+
+async function submitReview(status){
+    if(!latestDocumentData){
+        alert("No document selected for review");
+        return;
+    }
+
+    const correctedFields = {};
+
+    document.querySelectorAll("[data-field]").forEach(input => {
+        correctedFields[input.dataset.field] = input.value;
+    });
+
+    const structured = latestDocumentData.structured_output || {};
+    const classification = structured.classification || {};
+
+    const payload = {
+        source_file: latestDocumentData.source_file,
+        document_type: classification.document_type || "unknown",
+        status: status,
+        corrected_fields: correctedFields,
+        reviewed_by: "admin"
+    };
+
+    const response = await fetch("/review", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if(!response.ok){
+        alert(result.error || "Review failed");
+        return;
+    }
+
+    closeReviewModal();
+
+    statusBox.className = "alert alert-success mt-3 mb-0";
+    statusBox.innerText = `Document ${status} and review saved.`;
+
+    alert("Review saved successfully");
+}
+
+function formatLabel(key){
+    return key
+        .replaceAll("_"," ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+reviewBackdrop.addEventListener("click", closeReviewModal);
+</script>
+
+{% endblock %}

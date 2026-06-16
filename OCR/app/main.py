@@ -152,8 +152,24 @@ def parse_computer_vision_result(result_json):
 
 
 @app.route("/")
-def index():
-    return render_template("index.html")
+def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/extraction")
+def extraction():
+    return render_template("extraction.html")
+
+
+@app.route("/validation")
+def validation():
+    return render_template("validation.html")
+
+
+@app.route("/history")
+def history():
+    return render_template("history.html")
+
 
 
 @app.route("/upload", methods=["POST"])
@@ -183,6 +199,10 @@ def upload_document():
         structured_output = build_structured_output(
             clean_result.get("extracted_text", "")
         )
+
+        structured_output["source_file"] = saved_filename
+        structured_output["file_url"] = f"/static/uploads/{saved_filename}"
+        structured_output["processed_at"] = datetime.now().isoformat()
 
         clean_result["structured_output"] = structured_output
         structured_dir = os.path.join(LOG_DIR, "structured")
@@ -247,8 +267,51 @@ def review_document():
             "time": datetime.now().isoformat()
         }), 500
 
+@app.route("/api/validation-documents", methods=["GET"])
+def get_validation_documents():
+    try:
+        structured_dir = os.path.join(LOG_DIR, "structured")
+        os.makedirs(structured_dir, exist_ok=True)
+
+        documents = []
+
+        for filename in sorted(os.listdir(structured_dir), reverse=True):
+            if not filename.endswith(".json"):
+                continue
+
+            file_path = os.path.join(structured_dir, filename)
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            classification = data.get("classification", {})
+            validation = data.get("validation", {})
+            fields = data.get("fields", {})
+
+            documents.append({
+                "log_file": filename,
+                "document_type": classification.get("document_type", "unknown"),
+                "confidence": classification.get("confidence", "N/A"),
+                "validation_status": validation.get("status", "needs_review"),
+                "requires_review": validation.get("requires_review", True),
+                "missing_fields": validation.get("missing_fields", []),
+                "source_file": data.get("source_file"),
+                "file_url": data.get("file_url"),
+                "fields": fields
+            })
+
+        return jsonify({
+            "documents": documents
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "time": datetime.now().isoformat()
+        }), 500
+    
 def open_browser():
-    webbrowser.open("http://127.0.0.1:5000")
+    webbrowser.open("http://127.0.0.1:5000/extraction")
 
 
 if __name__ == "__main__":

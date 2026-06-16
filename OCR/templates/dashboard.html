@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">Dashboard</h2>
+            <div class="text-secondary mt-1">
+                Overview of document processing, validation and AI performance.
+            </div>
+        </div>
+        <div class="col-auto">
+            <a href="/extraction" class="btn btn-primary">
+                Upload Document
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cards">
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="text-secondary">Documents Processed</div>
+                <div class="h1 mb-0 mt-2">127</div>
+                <div class="text-success mt-2">Today</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="text-secondary">Pending Validation</div>
+                <div class="h1 mb-0 mt-2">18</div>
+                <div class="text-warning mt-2">Needs review</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="text-secondary">AI Accuracy</div>
+                <div class="h1 mb-0 mt-2">94%</div>
+                <div class="text-success mt-2">Stable</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="text-secondary">Failed Extractions</div>
+                <div class="h1 mb-0 mt-2">4</div>
+                <div class="text-danger mt-2">Requires action</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row row-cards mt-3">
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Processing Trend</h3>
+            </div>
+            <div class="card-body">
+                <div class="empty">
+                    <p class="empty-title">Chart placeholder</p>
+                    <p class="empty-subtitle text-secondary">
+                        Daily document processing chart will appear here.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">AI Insights</h3>
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    12 low-confidence documents need review
+                </div>
+                <div class="list-group-item">
+                    3 possible duplicate vouchers detected
+                </div>
+                <div class="list-group-item">
+                    Vendor name correction common in vouchers
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row row-cards mt-3">
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Activity</h3>
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    Cash payment voucher extracted successfully
+                </div>
+                <div class="list-group-item">
+                    Document approved by Admin
+                </div>
+                <div class="list-group-item">
+                    Validation warning generated for missing purpose
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/extraction" class="btn btn-primary">Document Extraction</a>
+                    <a href="/validation" class="btn btn-outline-primary">Open Validation Queue</a>
+                    <a href="/history" class="btn btn-outline-secondary">View History</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
