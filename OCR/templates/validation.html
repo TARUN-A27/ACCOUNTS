@@ -65,6 +65,7 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fitPreview()">Fit Full Image</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomInPreview()">Zoom In</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOutPreview()">Zoom Out</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="rotatePreview()">Rotate</button>
             </div>
 
             <div id="modalPreview" class="document-preview-large fit-mode">
@@ -283,6 +284,7 @@
 let validationDocuments = [];
 let selectedReviewDocument = null;
 let previewWidth = 1200;
+let previewRotation = 0;
 
 async function loadValidationDocuments() {
     const table = document.getElementById("validationTable");
@@ -387,6 +389,7 @@ function closeReviewModal() {
 }
 
 function renderModalPreview(doc) {
+    previewRotation = 0;
     const preview = document.getElementById("modalPreview");
     const previewStatus = document.getElementById("previewStatus");
 
@@ -467,6 +470,15 @@ function zoomOutPreview() {
 
     previewWidth = Math.max(800, previewWidth - 200);
     img.style.setProperty("--preview-width", previewWidth + "px");
+}
+
+function rotatePreview() {
+    const img = document.querySelector("#modalPreview img");
+    if (!img) return;
+
+    previewRotation = (previewRotation + 90) % 360;
+    img.style.transform = `rotate(${previewRotation}deg)`;
+    img.style.transformOrigin = "center center";
 }
 
 function renderModalFields(fields) {

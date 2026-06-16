@@ -120,6 +120,7 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fitReviewPreview()">Fit Full Image</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomInReviewPreview()">Zoom In</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOutReviewPreview()">Zoom Out</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="rotateReviewPreview()">Rotate</button>
             </div>
 
             <div id="reviewPreview" class="review-preview fit-mode">
@@ -325,6 +326,7 @@ let extractedDocuments = [];
 let selectedDocumentIndex = null;
 let latestDocumentData = null;
 let reviewPreviewWidth = 1200;
+let previewRotation = 0;
 
 form.addEventListener("submit", async function(e){
     e.preventDefault();
@@ -500,6 +502,7 @@ function closeReviewModal(){
 }
 
 function renderReviewPreview(doc){
+    previewRotation = 0;
     reviewPreview.classList.remove("zoom-mode");
     reviewPreview.classList.add("fit-mode");
 
@@ -544,6 +547,15 @@ function zoomOutReviewPreview(){
 
     reviewPreviewWidth = Math.max(800, reviewPreviewWidth - 200);
     img.style.setProperty("--review-preview-width", reviewPreviewWidth + "px");
+}
+
+function rotateReviewPreview(){
+    const img = document.querySelector("#reviewPreview img");
+    if(!img) return;
+
+    previewRotation = (previewRotation + 90) % 360;
+    img.style.transform = `rotate(${previewRotation}deg)`;
+    img.style.transformOrigin = "center center";
 }
 
 function renderResult(data){
