@@ -6,12 +6,18 @@ from datetime import datetime
 from threading import Timer
 
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from structured_output_service import build_structured_output
 from review.review_service import save_review_log
-
+from auth_service import (
+    get_all_divisions,
+    validate_user,
+    create_user,
+    get_division_details,
+    increment_cpa_maxnumber
+)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -43,6 +49,9 @@ app = Flask(
     template_folder=os.path.join(BASE_DIR, "templates"),
     static_folder=os.path.join(BASE_DIR, "static"),
 )
+
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-this-secret-key")
+
 
 
 def allowed_file(filename):
@@ -152,22 +161,39 @@ def parse_computer_vision_result(result_json):
 
 
 @app.route("/")
-def dashboard():
-    return render_template("dashboard.html")
+def home():
+    session.clear()
+    return redirect(url_for("login"))
 
+
+@app.route("/dashboard")
+def dashboard():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    return render_template("dashboard.html")
 
 @app.route("/extraction")
 def extraction():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
     return render_template("extraction.html")
 
 
 @app.route("/validation")
 def validation():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
     return render_template("validation.html")
 
 
 @app.route("/history")
 def history():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
     return render_template("history.html")
 
 
@@ -240,6 +266,99 @@ def upload_document():
 
         return jsonify(error_data), 500
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    divisions = get_all_divisions()
+    if request.method == "GET":
+        session.clear()
+        return render_template("login.html", divisions=divisions)
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+    divisioncode = request.form.get("divisioncode", "").strip()
+    print("Selected division code from login form:", divisioncode)
+
+    if not username or not password or not divisioncode:
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            error="Username, password and department are required"
+        )
+
+    user_result = validate_user(username, password)
+
+    if not user_result.get("valid"):
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            error="Invalid username or password"
+        )
+
+    division = get_division_details(divisioncode)
+    print("Division details from database:", division)
+
+    if not division:
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            error="Invalid department selected"
+        )
+
+    cpa_result = increment_cpa_maxnumber(divisioncode)
+    print("NOCONFIG CPA result:", cpa_result)
+
+    if not cpa_result.get("success"):
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            error=cpa_result.get("message", "Unable to update CPA number")
+        )
+
+    session["logged_in"] = True
+    session["username"] = username
+    session["divisioncode"] = division["divisioncode"]
+    session["divisiondesc"] = division["divdesc"]
+    session["voctype"] = "CPA"
+    session["yearcode"] = 21
+    session["cpa_number"] = cpa_result.get("maxnumber")
+
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/create-account", methods=["POST"])
+def create_account():
+    divisions = get_all_divisions()
+
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+
+    if not username or not password:
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            error="Username and password are required"
+        )
+
+    result = create_user(username, password)
+
+    if not result.get("success"):
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            error=result.get("message")
+        )
+
+    return render_template(
+        "login.html",
+        divisions=divisions,
+        success="Account created successfully. Please login."
+    )
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
 @app.route("/review", methods=["POST"])
 def review_document():
     try:
@@ -311,7 +430,7 @@ def get_validation_documents():
         }), 500
     
 def open_browser():
-    webbrowser.open("http://127.0.0.1:5000/extraction")
+    webbrowser.open_new("http://127.0.0.1:5000/login")
 
 
 if __name__ == "__main__":

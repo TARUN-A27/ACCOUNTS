@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI-Accounts Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .login-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 52% 48%;
+        }
+
+        .brand-panel {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 64px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .brand-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .brand-subtitle {
+            color: #cbd5e1;
+            font-size: 17px;
+            max-width: 520px;
+            line-height: 1.7;
+        }
+
+        .feature-list {
+            margin-top: 40px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .feature-card strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+
+        .feature-card span {
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .form-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 430px;
+        }
+
+        .card {
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+        }
+
+        .app-logo {
+            font-size: 26px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .toggle-link {
+            cursor: pointer;
+            color: #2563eb;
+            font-weight: 500;
+        }
+
+        @media(max-width: 900px) {
+            .login-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-shell">
+
+    <div class="brand-panel">
+        <div class="brand-title">AI-Accounts</div>
+
+        <div class="brand-subtitle">
+            Enterprise document automation for accounting teams. Extract, validate,
+            review and process financial documents with confidence.
+        </div>
+
+        <div class="feature-list">
+            <div class="feature-card">
+                <strong>AI Document Extraction</strong>
+                <span>Extract accounting fields from vouchers, invoices, receipts and challans.</span>
+            </div>
+
+            <div class="feature-card">
+                <strong>Validation Workflow</strong>
+                <span>Review low-confidence documents and approve corrected entries.</span>
+            </div>
+
+            <div class="feature-card">
+                <strong>Division Based Access</strong>
+                <span>Users login with their department and continue with the correct division code.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-panel">
+
+        <div class="login-card">
+
+            <div class="text-center mb-4">
+                <div class="app-logo">AI-Accounts</div>
+                <div class="text-secondary mt-2">
+                    Sign in to continue
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            {% if success %}
+            <div class="alert alert-success">
+                {{ success }}
+            </div>
+            {% endif %}
+
+            <div class="card" id="loginCard">
+                <div class="card-body">
+
+                    <h3 class="card-title mb-4">Login</h3>
+
+                    <form method="POST" action="/login">
+
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text"
+                                   name="username"
+                                   class="form-control"
+                                   placeholder="Enter username"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password"
+                                   name="password"
+                                   class="form-control"
+                                   placeholder="Enter password"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Department</label>
+                            <select name="divisioncode" class="form-select" required>
+                                <option value="">Select department</option>
+
+                                {% for division in divisions %}
+                                <option value="{{ division.divisioncode }}">
+                                    {{ division.divdesc }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Login
+                        </button>
+
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <span class="text-secondary">New user?</span>
+                        <span class="toggle-link" onclick="showCreateAccount()">
+                            Create account
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card d-none" id="createCard">
+                <div class="card-body">
+
+                    <h3 class="card-title mb-4">Create Account</h3>
+
+                    <form method="POST" action="/create-account">
+
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text"
+                                   name="username"
+                                   class="form-control"
+                                   placeholder="Create username"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password"
+                                   name="password"
+                                   class="form-control"
+                                   placeholder="Create password"
+                                   required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Create Account
+                        </button>
+
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <span class="text-secondary">Already have an account?</span>
+                        <span class="toggle-link" onclick="showLogin()">
+                            Login
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function showCreateAccount() {
+    document.getElementById("loginCard").classList.add("d-none");
+    document.getElementById("createCard").classList.remove("d-none");
+}
+
+function showLogin() {
+    document.getElementById("createCard").classList.add("d-none");
+    document.getElementById("loginCard").classList.remove("d-none");
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+</body>
+</html>
