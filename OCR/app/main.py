@@ -6,6 +6,7 @@ from datetime import datetime
 from threading import Timer
 
 import requests
+from cashbank_service import insert_taruncashbank
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -378,72 +379,124 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+    
 @app.route("/review", methods=["POST"])
 def review_document():
     try:
         review_data = request.get_json()
 
+        print("\n" + "=" * 80)
+        print("REVIEW REQUEST RECEIVED")
+        print("=" * 80)
+
         if not review_data:
-            return jsonify({"error": "No review data received"}), 400
+            return jsonify({
+                "error": "No review data received"
+            }), 400
 
-        if "status" not in review_data:
-            return jsonify({"error": "Review status is required"}), 400
+        print("Review Data:")
+        print(review_data)
 
-        if review_data["status"] not in ["approved", "rejected", "edited"]:
-            return jsonify({"error": "Invalid review status"}), 400
+        status = review_data.get("status")
+
+        if not status:
+            return jsonify({
+                "error": "Review status is required"
+            }), 400
+
+        if status not in ["approved", "rejected", "edited"]:
+            return jsonify({
+                "error": "Invalid review status"
+            }), 400
 
         saved_review = save_review_log(BASE_DIR, review_data)
 
+        print("Review Log Saved")
+        print(saved_review)
+
+        cashbank_result = None
+
+        if status == "approved":
+
+            print("\nAPPROVE BUTTON CLICKED")
+
+            session_data = {
+                "cpa_number": session.get("cpa_number"),
+                "usercode": session.get("usercode"),
+                "divisioncode": session.get("divisioncode"),
+                "yearcode": session.get("yearcode"),
+                "username": session.get("username")
+            }
+
+            print("\nSession Data")
+            print(session_data)
+
+            voucher_fields = review_data.get(
+                "corrected_fields",
+                {}
+            )
+
+            print("\nVoucher Fields")
+            print(voucher_fields)
+
+            if not session_data["cpa_number"]:
+                return jsonify({
+                    "error": "CPA Number missing from session"
+                }), 500
+
+            if not session_data["usercode"]:
+                return jsonify({
+                    "error": "User Code missing from session"
+                }), 500
+
+            if not session_data["divisioncode"]:
+                return jsonify({
+                    "error": "Division Code missing from session"
+                }), 500
+
+            if not session_data["yearcode"]:
+                return jsonify({
+                    "error": "Year Code missing from session"
+                }), 500
+
+            print("\nCalling TARUNCASHBANK Insert")
+
+            cashbank_result = insert_taruncashbank(
+                voucher_fields=voucher_fields,
+                session_data=session_data
+            )
+
+            print("\nInsert Result")
+            print(cashbank_result)
+
+            if not cashbank_result.get("success"):
+                return jsonify({
+                    "error": cashbank_result.get(
+                        "message",
+                        "Insert failed"
+                    ),
+                    "cashbank_result": cashbank_result
+                }), 500
+
+            print("\nTARUNCASHBANK INSERT SUCCESS")
+
+        print("\nREVIEW COMPLETED")
+        print("=" * 80)
+
         return jsonify({
+            "success": True,
             "message": "Review saved successfully",
-            "review": saved_review
+            "review": saved_review,
+            "cashbank_result": cashbank_result
         })
 
     except Exception as e:
-        return jsonify({
-            "error": str(e),
-            "time": datetime.now().isoformat()
-        }), 500
 
-@app.route("/api/validation-documents", methods=["GET"])
-def get_validation_documents():
-    try:
-        structured_dir = os.path.join(LOG_DIR, "structured")
-        os.makedirs(structured_dir, exist_ok=True)
-
-        documents = []
-
-        for filename in sorted(os.listdir(structured_dir), reverse=True):
-            if not filename.endswith(".json"):
-                continue
-
-            file_path = os.path.join(structured_dir, filename)
-
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            classification = data.get("classification", {})
-            validation = data.get("validation", {})
-            fields = data.get("fields", {})
-
-            documents.append({
-                "log_file": filename,
-                "document_type": classification.get("document_type", "unknown"),
-                "confidence": classification.get("confidence", "N/A"),
-                "validation_status": validation.get("status", "needs_review"),
-                "requires_review": validation.get("requires_review", True),
-                "missing_fields": validation.get("missing_fields", []),
-                "source_file": data.get("source_file"),
-                "file_url": data.get("file_url"),
-                "fields": fields
-            })
+        print("\nREVIEW ERROR")
+        print(str(e))
 
         return jsonify({
-            "documents": documents
-        })
-
-    except Exception as e:
-        return jsonify({
+            "success": False,
             "error": str(e),
             "time": datetime.now().isoformat()
         }), 500
