@@ -13,6 +13,7 @@ from structured_output_service import build_structured_output
 from review.review_service import save_review_log
 from auth_service import (
     get_all_divisions,
+    get_year_codes,
     validate_user,
     create_user,
     get_division_details,
@@ -269,27 +270,42 @@ def upload_document():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     divisions = get_all_divisions()
+    years = get_year_codes()
+
     if request.method == "GET":
         session.clear()
-        return render_template("login.html", divisions=divisions)
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "").strip()
-    divisioncode = request.form.get("divisioncode", "").strip()
-    print("Selected division code from login form:", divisioncode)
-
-    if not username or not password or not divisioncode:
         return render_template(
             "login.html",
             divisions=divisions,
-            error="Username, password and department are required"
+            years=years
+        )
+
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+    divisioncode = request.form.get("divisioncode", "").strip()
+    yearcode = request.form.get("yearcode", "").strip()
+
+    print("Login username:", username)
+    print("Selected division code from login form:", divisioncode)
+    print("Selected year code from login form:", yearcode)
+
+    if not username or not password or not divisioncode or not yearcode:
+        return render_template(
+            "login.html",
+            divisions=divisions,
+            years=years,
+            error="Username, password, department and year are required"
         )
 
     user_result = validate_user(username, password)
+    print("User Code:", user_result.get("usercode"))
+    print("User validation result:", user_result)
 
     if not user_result.get("valid"):
         return render_template(
             "login.html",
             divisions=divisions,
+            years=years,
             error="Invalid username or password"
         )
 
@@ -300,25 +316,28 @@ def login():
         return render_template(
             "login.html",
             divisions=divisions,
+            years=years,
             error="Invalid department selected"
         )
 
-    cpa_result = increment_cpa_maxnumber(divisioncode)
+    cpa_result = increment_cpa_maxnumber(divisioncode, yearcode)
     print("NOCONFIG CPA result:", cpa_result)
 
     if not cpa_result.get("success"):
         return render_template(
             "login.html",
             divisions=divisions,
+            years=years,
             error=cpa_result.get("message", "Unable to update CPA number")
         )
 
     session["logged_in"] = True
+    session["usercode"] = user_result["usercode"]
     session["username"] = username
     session["divisioncode"] = division["divisioncode"]
     session["divisiondesc"] = division["divdesc"]
+    session["yearcode"] = yearcode
     session["voctype"] = "CPA"
-    session["yearcode"] = 21
     session["cpa_number"] = cpa_result.get("maxnumber")
 
     return redirect(url_for("dashboard"))

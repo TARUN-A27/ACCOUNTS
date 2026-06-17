@@ -41,7 +41,9 @@ def validate_user(username, password):
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT username, password
+            SELECT usercode,
+                   username,
+                   password
             FROM rawuser
             WHERE username = :username
               AND password = :password
@@ -54,11 +56,22 @@ def validate_user(username, password):
 
         if row:
             return {
-                "username": row[0],
+                "usercode": str(row[0]),
+                "username": str(row[1]),
                 "valid": True
             }
 
         return {
+            "usercode": None,
+            "username": None,
+            "valid": False
+        }
+
+    except Exception as e:
+        print("Login Validation Error:", str(e))
+
+        return {
+            "usercode": None,
             "username": None,
             "valid": False
         }
@@ -66,6 +79,7 @@ def validate_user(username, password):
     finally:
         if cursor:
             cursor.close()
+
         if conn:
             conn.close()
 
@@ -158,17 +172,7 @@ def get_division_details(divisioncode):
             conn.close()
 
 
-def increment_cpa_maxnumber(divisioncode):
-    """
-    Reads NOCONFIG using:
-    divisioncode = selected divisioncode
-    voctype = 'CPA'
-    yearcode = 21
-
-    Then updates:
-    maxnumber = maxnumber + 1
-    """
-
+def increment_cpa_maxnumber(divisioncode, yearcode):
     conn = None
     cursor = None
 
@@ -176,15 +180,18 @@ def increment_cpa_maxnumber(divisioncode):
         conn = get_connection()
         cursor = conn.cursor()
 
+        print(f"CPA Update -> Division: {divisioncode}, YearCode: {yearcode}")
+
         cursor.execute("""
             SELECT maxnumber
             FROM NOCONFIG
             WHERE divisioncode = :divisioncode
               AND voctype = 'CPA'
-              AND yearcode = 21
+              AND yearcode = :yearcode
             FOR UPDATE
         """, {
-            "divisioncode": divisioncode
+            "divisioncode": divisioncode,
+            "yearcode": yearcode
         })
 
         row = cursor.fetchone()
@@ -193,7 +200,7 @@ def increment_cpa_maxnumber(divisioncode):
             conn.rollback()
             return {
                 "success": False,
-                "message": "No NOCONFIG record found for selected division, VOCTYPE CPA and YEARCODE 21",
+                "message": f"No NOCONFIG record found for division {divisioncode}, VOCTYPE CPA, YEARCODE {yearcode}",
                 "maxnumber": None
             }
 
@@ -205,10 +212,11 @@ def increment_cpa_maxnumber(divisioncode):
             SET maxnumber = :new_maxnumber
             WHERE divisioncode = :divisioncode
               AND voctype = 'CPA'
-              AND yearcode = 21
+              AND yearcode = :yearcode
         """, {
             "new_maxnumber": new_maxnumber,
-            "divisioncode": divisioncode
+            "divisioncode": divisioncode,
+            "yearcode": yearcode
         })
 
         conn.commit()
@@ -235,3 +243,41 @@ def increment_cpa_maxnumber(divisioncode):
             cursor.close()
         if conn:
             conn.close()
+
+
+def get_year_codes():
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT YearCode,
+                   YearName,
+                   StartDate,
+                   EndDate
+            FROM inventory.InvPeriod
+            ORDER BY 1
+        """)
+
+        years = []
+
+        for row in cursor.fetchall():
+            years.append({
+                "yearcode": str(row[0]),
+                "yearname": str(row[1]),
+                "startdate": row[2],
+                "enddate": row[3]
+            })
+
+        return years
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    return years

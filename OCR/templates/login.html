@@ -201,63 +201,39 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        
+                        <div class="mb-3">
+    <label class="form-label">
+        Financial Year
+    </label>
 
+    <select name="yearcode"
+            class="form-select"
+            required>
+
+        <option value="">
+            Select Financial Year
+        </option>
+
+        {% for year in years %}
+<option value="{{ year.yearcode }}">
+    {{ year.yearname }}
+</option>
+{% endfor %}
+
+    </select>
+</div>
                         <button type="submit" class="btn btn-primary w-100">
                             Login
                         </button>
 
                     </form>
 
-                    <div class="text-center mt-4">
-                        <span class="text-secondary">New user?</span>
-                        <span class="toggle-link" onclick="showCreateAccount()">
-                            Create account
-                        </span>
-                    </div>
-
+                
                 </div>
             </div>
 
-            <div class="card d-none" id="createCard">
-                <div class="card-body">
-
-                    <h3 class="card-title mb-4">Create Account</h3>
-
-                    <form method="POST" action="/create-account">
-
-                        <div class="mb-3">
-                            <label class="form-label">Username</label>
-                            <input type="text"
-                                   name="username"
-                                   class="form-control"
-                                   placeholder="Create username"
-                                   required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password"
-                                   name="password"
-                                   class="form-control"
-                                   placeholder="Create password"
-                                   required>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">
-                            Create Account
-                        </button>
-
-                    </form>
-
-                    <div class="text-center mt-4">
-                        <span class="text-secondary">Already have an account?</span>
-                        <span class="toggle-link" onclick="showLogin()">
-                            Login
-                        </span>
-                    </div>
-
-                </div>
-            </div>
+        
 
         </div>
 
@@ -266,15 +242,6 @@
 </div>
 
 <script>
-function showCreateAccount() {
-    document.getElementById("loginCard").classList.add("d-none");
-    document.getElementById("createCard").classList.remove("d-none");
-}
-
-function showLogin() {
-    document.getElementById("createCard").classList.add("d-none");
-    document.getElementById("loginCard").classList.remove("d-none");
-}
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
