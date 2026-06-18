@@ -6,6 +6,7 @@ from datetime import datetime
 from threading import Timer
 
 import requests
+from database import get_connection
 from cashbank_service import insert_taruncashbank
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
@@ -500,7 +501,141 @@ def review_document():
             "error": str(e),
             "time": datetime.now().isoformat()
         }), 500
-    
+
+@app.route("/api/accounts", methods=["GET"])
+def search_accounts():
+    search_text = request.args.get("search", "").strip().upper()
+
+    print("Account search request:", search_text)
+
+    if not search_text:
+        return jsonify([])
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT ACCODE,
+                   NAME
+            FROM ACCOUNTS
+            WHERE UPPER(NAME) LIKE '%' || :search_text || '%'
+              AND ROWNUM <= 20
+            ORDER BY NAME
+        """, {
+            "search_text": search_text
+        })
+
+        accounts = []
+
+        for row in cursor.fetchall():
+            accounts.append({
+                "accode": str(row[0]),
+                "name": str(row[1])
+            })
+
+        print("Accounts found:", accounts)
+
+        return jsonify(accounts)
+
+    except Exception as e:
+        print("Account search error:", str(e))
+
+        return jsonify({
+            "error": str(e)
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
+
+@app.route("/api/validation-documents", methods=["GET"])
+def get_validation_documents():
+    structured_dir = os.path.join(BASE_DIR, "logs", "structured")
+    review_dir = os.path.join(BASE_DIR, "logs", "review")
+
+    documents = []
+
+    os.makedirs(structured_dir, exist_ok=True)
+    os.makedirs(review_dir, exist_ok=True)
+
+    # Read latest review status by source file
+    review_status_map = {}
+
+    for filename in os.listdir(review_dir):
+        if not filename.endswith(".json"):
+            continue
+
+        review_path = os.path.join(review_dir, filename)
+
+        try:
+            with open(review_path, "r", encoding="utf-8") as f:
+                review_data = json.load(f)
+
+            source_file = review_data.get("source_file")
+            status = review_data.get("status")
+
+            if source_file:
+                review_status_map[source_file] = status
+
+        except Exception as e:
+            print("Review log read error:", filename, str(e))
+
+    # Read structured OCR documents
+    for filename in os.listdir(structured_dir):
+        if not filename.endswith(".json"):
+            continue
+
+        file_path = os.path.join(structured_dir, filename)
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            source_file = data.get("source_file")
+            file_url = data.get("file_url")
+
+            classification = data.get("classification", {})
+            fields = data.get("fields", {})
+            validation = data.get("validation", {})
+
+            review_status = review_status_map.get(source_file, "not_reviewed")
+
+            # Hide approved documents
+            if review_status == "approved":
+                continue
+
+            documents.append({
+                "log_file": filename,
+                "source_file": source_file,
+                "file_url": file_url,
+                "document_type": classification.get("document_type", "unknown"),
+                "confidence": classification.get("confidence", "N/A"),
+                "validation_status": review_status if review_status != "not_reviewed" else validation.get("status", "pending"),
+                "review_status": review_status,
+                "requires_review": validation.get("requires_review", True),
+                "missing_fields": validation.get("missing_fields", []),
+                "fields": fields
+            })
+
+        except Exception as e:
+            print("Structured log read error:", filename, str(e))
+
+    documents.sort(
+        key=lambda item: item.get("log_file", ""),
+        reverse=True
+    )
+
+    return jsonify(documents)
+
+
 def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000/login")
 

@@ -299,6 +299,26 @@
     font-weight: 500;
     margin-bottom: 6px;
 }
+
+.review-field {
+    margin-bottom: 8px;
+}
+
+.review-field label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.review-fields-panel {
+    overflow-y: hidden;
+}
+
+.form-control-sm,
+.form-select-sm {
+    min-height: 32px;
+    font-size: 13px;
+}
 </style>
 
 <script>
@@ -565,17 +585,11 @@ function renderResult(data){
     const validation = structured.validation || {};
 
     classificationBox.innerHTML = `
-        <div class="mb-3">
-            <label class="form-label">Document Type</label>
-            <input class="form-control" value="${classification.document_type || "Unknown"}" readonly>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Confidence</label>
-            <input class="form-control" value="${classification.confidence || "N/A"}" readonly>
-        </div>
-    `;
-
+    <div class="mb-2">
+        <label class="form-label">Document Type</label>
+        <input class="form-control form-control-sm" value="${classification.document_type || "Unknown"}" readonly>
+    </div>
+`;
     validationBox.innerHTML = `
         <div class="mb-3">
             <label class="form-label">Validation Status</label>
@@ -586,7 +600,17 @@ function renderResult(data){
     renderReviewForm(fields);
 }
 
-function renderReviewForm(fields){
+function getTodayDisplayDate() {
+    const today = new Date();
+
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+async function renderReviewForm(fields){
     reviewForm.innerHTML = "";
 
     if(!fields || Object.keys(fields).length === 0){
@@ -594,8 +618,19 @@ function renderReviewForm(fields){
         return;
     }
 
-    Object.keys(fields).forEach(key => {
-        if(key === "raw_text") return;
+    const skipFields = [
+        "raw_text",
+        "confidence",
+        "voucher_no"
+    ];
+
+    const today = getTodayDisplayDate();
+
+    fields.date = today;
+    for(const key of Object.keys(fields)) {
+        if(skipFields.includes(key)) {
+            continue;
+        }
 
         const wrapper = document.createElement("div");
         wrapper.className = "review-field";
@@ -603,16 +638,67 @@ function renderReviewForm(fields){
         const label = document.createElement("label");
         label.innerText = formatLabel(key);
 
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "form-control";
-        input.dataset.field = key;
-        input.value = fields[key] ?? "";
+        let input;
+
+        if(key === "account_head") {
+            input = document.createElement("select");
+            input.className = "form-select form-select-sm";
+            input.dataset.field = key;
+
+            const accountHeadValue = fields[key] ?? "";
+            const firstWord = accountHeadValue
+                .toString()
+                .trim()
+                .toUpperCase()
+                .split(/\s+/)[0];
+
+            const defaultOption = document.createElement("option");
+            defaultOption.value = accountHeadValue;
+            defaultOption.innerText = accountHeadValue || "Select Account Head";
+            input.appendChild(defaultOption);
+
+            if(firstWord) {
+                try {
+                    const response = await fetch(`/api/accounts?search=${encodeURIComponent(firstWord)}`);
+                    const accounts = await response.json();
+
+                    accounts.forEach(account => {
+                        const option = document.createElement("option");
+                        option.value = account.name;
+                        option.innerText = `${account.name} (${account.accode})`;
+
+                        if(account.name.toUpperCase() === accountHeadValue.toString().toUpperCase()) {
+                            option.selected = true;
+                        }
+
+                        input.appendChild(option);
+                    });
+
+                } catch(error) {
+                    console.error("Account search failed:", error);
+                }
+            }
+
+        } else {
+            input = document.createElement("input");
+
+            if(key === "date") {
+    input.type = "text";
+    input.value = getTodayDisplayDate();
+    input.readOnly = true;
+} else {
+    input.type = "text";
+    input.value = fields[key] ?? "";
+}
+
+            input.className = "form-control form-control-sm";
+            input.dataset.field = key;
+        }
 
         wrapper.appendChild(label);
         wrapper.appendChild(input);
         reviewForm.appendChild(wrapper);
-    });
+    }
 }
 
 async function submitReview(status){

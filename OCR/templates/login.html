@@ -212,11 +212,12 @@
             required>
 
         <option value="">
-            Select Financial Year
-        </option>
+    Select Financial Year
+</option>
 
-        {% for year in years %}
-<option value="{{ year.yearcode }}">
+{% for year in years %}
+<option value="{{ year.yearcode }}"
+        {% if year.yearname|replace(" ", "") == "2026-2027" %}selected{% endif %}>
     {{ year.yearname }}
 </option>
 {% endfor %}

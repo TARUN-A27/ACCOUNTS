@@ -82,19 +82,16 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Document Type</label>
-                        <input id="modalDocumentType" class="form-control" readonly>
+                        <input id="modalDocumentType" class="form-control form-control-sm" readonly>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">AI Confidence</label>
-                            <input id="modalConfidence" class="form-control" readonly>
-                        </div>
+                        
 
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Validation Status</label>
-                            <input id="modalValidationStatus" class="form-control" readonly>
-                        </div>
+                        <div class="mb-2">
+    <label class="form-label">Validation Status</label>
+    <input id="modalValidationStatus" class="form-control form-control-sm" readonly>
+</div>
                     </div>
                 </div>
             </div>
@@ -194,9 +191,9 @@
 }
 
 .review-fields-panel {
-    padding: 18px;
+    padding: 12px;
     background: #ffffff;
-    overflow-y: auto;
+    overflow-y: hidden;
     min-width: 0;
 }
 
@@ -248,13 +245,28 @@
 }
 
 .review-field {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 .review-field label {
-    font-weight: 500;
-    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
     display: block;
+}
+
+.form-control-sm,
+.form-select-sm {
+    min-height: 32px;
+    font-size: 13px;
+}
+
+.card-body {
+    padding: 12px;
+}
+
+.card-header {
+    padding: 10px 12px;
 }
 
 @media(max-width: 1000px) {
@@ -299,6 +311,8 @@ async function loadValidationDocuments() {
 
     const response = await fetch("/api/validation-documents");
     const data = await response.json();
+    console.log("Validation API response:", data);  
+    console.log("Is array:", Array.isArray(data));
 
     if (!response.ok) {
         table.innerHTML = `
@@ -311,7 +325,7 @@ async function loadValidationDocuments() {
         return;
     }
 
-    validationDocuments = data.documents || [];
+    validationDocuments = Array.isArray(data) ? data : (data.documents || []);
 
     if (validationDocuments.length === 0) {
         table.innerHTML = `
@@ -354,7 +368,7 @@ async function loadValidationDocuments() {
     });
 }
 
-function openReviewModal(index) {
+async function openReviewModal(index) {
     selectedReviewDocument = validationDocuments[index];
 
     if (!selectedReviewDocument) {
@@ -369,14 +383,12 @@ function openReviewModal(index) {
     document.getElementById("modalDocumentType").value =
         selectedReviewDocument.document_type || "unknown";
 
-    document.getElementById("modalConfidence").value =
-        selectedReviewDocument.confidence || "N/A";
 
     document.getElementById("modalValidationStatus").value =
         selectedReviewDocument.validation_status || "needs_review";
 
     renderModalPreview(selectedReviewDocument);
-    renderModalFields(selectedReviewDocument.fields || {});
+    await renderModalFields(selectedReviewDocument.fields || {});
 
     document.getElementById("reviewBackdrop").classList.add("show");
     document.getElementById("reviewModal").classList.add("open");
@@ -481,7 +493,17 @@ function rotatePreview() {
     img.style.transformOrigin = "center center";
 }
 
-function renderModalFields(fields) {
+function getTodayDisplayDate() {
+    const today = new Date();
+
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+async function renderModalFields(fields) {
     const container = document.getElementById("modalFields");
     container.innerHTML = "";
 
@@ -494,9 +516,17 @@ function renderModalFields(fields) {
         return;
     }
 
-    Object.keys(fields).forEach(key => {
-        if (key === "raw_text") {
-            return;
+    const skipFields = [
+        "raw_text",
+        "confidence",
+        "voucher_no"
+    ];
+
+    fields.date = getTodayDisplayDate();
+
+    for (const key of Object.keys(fields)) {
+        if (skipFields.includes(key)) {
+            continue;
         }
 
         const wrapper = document.createElement("div");
@@ -505,17 +535,68 @@ function renderModalFields(fields) {
         const label = document.createElement("label");
         label.innerText = formatLabel(key);
 
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "form-control";
-        input.dataset.reviewField = key;
-        input.value = fields[key] ?? "";
+        let input;
+
+        if (key === "account_head") {
+            input = document.createElement("select");
+            input.className = "form-select form-select-sm";
+            input.dataset.reviewField = key;
+
+            const accountHeadValue = fields[key] ?? "";
+            const firstWord = accountHeadValue
+                .toString()
+                .trim()
+                .toUpperCase()
+                .split(/\s+/)[0];
+
+            const defaultOption = document.createElement("option");
+            defaultOption.value = accountHeadValue;
+            defaultOption.innerText = accountHeadValue || "Select Account Head";
+            input.appendChild(defaultOption);
+
+            if (firstWord) {
+                try {
+                    const response = await fetch(`/api/accounts?search=${encodeURIComponent(firstWord)}`);
+                    const accounts = await response.json();
+
+                    accounts.forEach(account => {
+                        const option = document.createElement("option");
+                        option.value = account.name;
+                        option.innerText = `${account.name} (${account.accode})`;
+
+                        if (
+                            account.name.toUpperCase() ===
+                            accountHeadValue.toString().toUpperCase()
+                        ) {
+                            option.selected = true;
+                        }
+
+                        input.appendChild(option);
+                    });
+
+                } catch (error) {
+                    console.error("Account search failed:", error);
+                }
+            }
+
+        } else {
+            input = document.createElement("input");
+            input.type = "text";
+            input.className = "form-control form-control-sm";
+            input.dataset.reviewField = key;
+
+            if (key === "date") {
+                input.value = getTodayDisplayDate();
+                input.readOnly = true;
+            } else {
+                input.value = fields[key] ?? "";
+            }
+        }
 
         wrapper.appendChild(label);
         wrapper.appendChild(input);
-
         container.appendChild(wrapper);
-    });
+    }
 }
 
 async function submitModalReview(status) {
