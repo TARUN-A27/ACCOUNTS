@@ -200,6 +200,233 @@ def history():
     return render_template("history.html")
 
 
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    structured_dir = os.path.join(BASE_DIR, "logs", "structured")
+    review_dir = os.path.join(BASE_DIR, "logs", "review")
+
+    history = []
+
+    os.makedirs(structured_dir, exist_ok=True)
+    os.makedirs(review_dir, exist_ok=True)
+
+    def get_file_time(path):
+        try:
+            return os.path.getmtime(path)
+        except Exception:
+            return time.time()
+
+    def format_time(timestamp):
+        try:
+            return datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %I:%M %p")
+        except Exception:
+            return ""
+
+    def date_key(timestamp):
+        try:
+            return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+
+    def clean_amount_key(amount):
+        try:
+            if amount is None:
+                return ""
+
+            amount_text = str(amount).replace(",", "").strip()
+
+            if not amount_text:
+                return ""
+
+            return str(float(amount_text))
+
+        except Exception:
+            return ""
+
+    def get_cashbank_lookup_map():
+        conn = None
+        cursor = None
+        lookup = {}
+
+        try:
+            divisioncode = session.get("divisioncode")
+            yearcode = session.get("yearcode")
+
+            if not divisioncode or not yearcode:
+                return lookup
+
+            conn = get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT amount,
+                       vocno,
+                       accode,
+                       ctcode
+                FROM (
+                    SELECT amount,
+                           vocno,
+                           accode,
+                           ctcode,
+                           id
+                    FROM TARUNCASHBANK
+                    WHERE divisioncode = :divisioncode
+                      AND yearcode = :yearcode
+                    ORDER BY id DESC
+                )
+                WHERE ROWNUM <= 1000
+            """, {
+                "divisioncode": int(divisioncode),
+                "yearcode": int(yearcode)
+            })
+
+            for row in cursor.fetchall():
+                amount_key = clean_amount_key(row[0])
+
+                if amount_key and amount_key not in lookup:
+                    lookup[amount_key] = {
+                        "vocno": row[1],
+                        "accode": row[2],
+                        "ctcode": row[3]
+                    }
+
+            print("Cashbank history lookup loaded:", len(lookup))
+
+            return lookup
+
+        except Exception as e:
+            print("Cashbank history lookup map error:", str(e))
+            return lookup
+
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    cashbank_lookup_map = get_cashbank_lookup_map()
+    reviewed_source_files = set()
+
+    for filename in sorted(os.listdir(review_dir), reverse=True):
+        if not filename.endswith(".json"):
+            continue
+
+        review_path = os.path.join(review_dir, filename)
+
+        try:
+            with open(review_path, "r", encoding="utf-8") as f:
+                review_data = json.load(f)
+
+            timestamp = get_file_time(review_path)
+
+            source_file = review_data.get("source_file") or filename
+            status = review_data.get("status", "pending")
+            document_type = review_data.get("document_type", "unknown")
+            corrected_fields = review_data.get("corrected_fields", {})
+
+            reviewed_source_files.add(source_file)
+
+            cashbank_result = review_data.get("cashbank_result") or {}
+
+            if status == "approved" and not cashbank_result.get("vocno"):
+                amount_key = clean_amount_key(corrected_fields.get("amount"))
+                cashbank_lookup = cashbank_lookup_map.get(amount_key, {})
+
+                if cashbank_lookup:
+                    cashbank_result = {
+                        "success": True,
+                        "vocno": cashbank_lookup.get("vocno"),
+                        "accode": cashbank_lookup.get("accode"),
+                        "ctcode": cashbank_lookup.get("ctcode"),
+                        "amount": corrected_fields.get("amount")
+                    }
+
+            activity = "Reviewed"
+
+            if status == "approved":
+                if cashbank_result.get("success"):
+                    activity = "Approved & Inserted"
+                else:
+                    activity = "Approved"
+            elif status == "rejected":
+                activity = "Rejected"
+
+            history.append({
+                "time_display": format_time(timestamp),
+                "date_key": date_key(timestamp),
+                "sort_time": timestamp,
+                "activity": activity,
+                "source_file": source_file,
+                "log_file": filename,
+                "document_type": document_type,
+                "status": status,
+                "amount": corrected_fields.get("amount", ""),
+                "account_head": corrected_fields.get("account_head", ""),
+                "purpose": corrected_fields.get("purpose", ""),
+                "reviewed_by": review_data.get("reviewed_by", ""),
+                "fields": corrected_fields,
+                "corrected_fields": corrected_fields,
+                "vocno": cashbank_result.get("vocno", ""),
+                "accode": cashbank_result.get("accode", ""),
+                "ctcode": cashbank_result.get("ctcode", ""),
+                "cashbank_result": cashbank_result
+            })
+
+        except Exception as e:
+            print("History review log read error:", filename, str(e))
+
+    for filename in sorted(os.listdir(structured_dir), reverse=True):
+        if not filename.endswith(".json"):
+            continue
+
+        structured_path = os.path.join(structured_dir, filename)
+
+        try:
+            with open(structured_path, "r", encoding="utf-8") as f:
+                structured_data = json.load(f)
+
+            source_file = structured_data.get("source_file") or filename
+
+            if source_file in reviewed_source_files:
+                continue
+
+            timestamp = get_file_time(structured_path)
+
+            classification = structured_data.get("classification", {})
+            fields = structured_data.get("fields", {})
+
+            history.append({
+                "time_display": format_time(timestamp),
+                "date_key": date_key(timestamp),
+                "sort_time": timestamp,
+                "activity": "OCR Extracted / Pending Review",
+                "source_file": source_file,
+                "log_file": filename,
+                "document_type": classification.get("document_type", "unknown"),
+                "status": "pending",
+                "amount": fields.get("amount", ""),
+                "account_head": fields.get("account_head", ""),
+                "purpose": fields.get("purpose", ""),
+                "reviewed_by": "",
+                "fields": fields,
+                "corrected_fields": {},
+                "vocno": "",
+                "accode": "",
+                "ctcode": "",
+                "cashbank_result": {}
+            })
+
+        except Exception as e:
+            print("History structured log read error:", filename, str(e))
+
+    history.sort(
+        key=lambda item: item.get("sort_time", 0),
+        reverse=True
+    )
+
+    return jsonify(history)
+
+
 
 @app.route("/upload", methods=["POST"])
 def upload_document():

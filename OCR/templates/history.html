@@ -2,13 +2,445 @@
 
 {% block content %}
 
-<h1 class="page-title">History</h1>
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">History</h2>
+            <div class="text-secondary mt-1">
+                View all OCR activities with filters for status, document type, date, and document name.
+            </div>
+        </div>
+
+        <div class="col-auto">
+            <button class="btn btn-outline-primary" onclick="loadHistory()">
+                Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Filters</h3>
+    </div>
+
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select id="statusFilter" class="form-select" onchange="applyHistoryFilters()">
+                    <option value="all">All</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Document Type</label>
+                <select id="typeFilter" class="form-select" onchange="applyHistoryFilters()">
+                    <option value="all">All Types</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input id="fromDateFilter" type="date" class="form-control" onchange="applyHistoryFilters()">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input id="toDateFilter" type="date" class="form-control" onchange="applyHistoryFilters()">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Search Document</label>
+                <input id="documentSearchFilter"
+                       type="text"
+                       class="form-control"
+                       placeholder="Search by document name..."
+                       oninput="applyHistoryFilters()">
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="card">
-    <h3>Processed Documents</h3>
-    <p style="color:#94a3b8; margin-top:10px;">
-        Approved, rejected, and processed documents will appear here.
-    </p>
+    <div class="card-header">
+        <h3 class="card-title">Activity History</h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+            <thead>
+                <tr>
+                    <th style="width: 180px;">Time</th>
+                    <th>Activity</th>
+                    <th>Document</th>
+                    <th>Type</th>
+                    <th style="width: 120px;">Status</th>
+                    <th style="width: 120px;">Amount</th>
+                    <th class="text-end" style="width: 100px;">Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="historyTable">
+                <tr>
+                    <td colspan="7" class="text-center text-secondary">
+                        Loading history...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<div id="historyBackdrop" class="history-backdrop"></div>
+
+<div id="historyModal" class="history-modal">
+    <div class="history-modal-header">
+        <div>
+            <h3 class="m-0">Activity Details</h3>
+            <div id="historyModalMeta" class="text-secondary small mt-1"></div>
+        </div>
+
+        <button class="btn btn-outline-secondary btn-sm" onclick="closeHistoryModal()">
+            Close
+        </button>
+    </div>
+
+    <div class="history-modal-body">
+        <div id="historyDetails"></div>
+    </div>
+</div>
+
+<style>
+.history-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    display: none;
+}
+
+.history-backdrop.show {
+    display: block;
+}
+
+.history-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 720px;
+    max-width: 94vw;
+    max-height: 88vh;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+    z-index: 1050;
+    display: none;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+}
+
+.history-modal.open {
+    display: flex;
+    flex-direction: column;
+}
+
+.history-modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.history-modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-label {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.detail-value {
+    color: #0f172a;
+    word-break: break-word;
+}
+
+.status-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-default {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+@media(max-width: 768px) {
+    .detail-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
+</style>
+
+<script>
+let historyItems = [];
+let filteredHistoryItems = [];
+
+async function loadHistory() {
+    const table = document.getElementById("historyTable");
+
+    table.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center text-secondary">
+                Loading history...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch("/api/history", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!response.ok) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-danger">
+                        ${data.error || "Failed to load history"}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        historyItems = Array.isArray(data) ? data : (data.history || []);
+
+        populateDocumentTypes();
+        applyHistoryFilters();
+
+    } catch (error) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-danger">
+                    JavaScript error while loading history: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function populateDocumentTypes() {
+    const typeFilter = document.getElementById("typeFilter");
+    const currentValue = typeFilter.value;
+
+    const types = [...new Set(
+        historyItems
+            .map(item => item.document_type || "unknown")
+            .filter(Boolean)
+    )].sort();
+
+    typeFilter.innerHTML = `<option value="all">All Types</option>`;
+
+    types.forEach(type => {
+        const option = document.createElement("option");
+        option.value = type;
+        option.innerText = formatText(type);
+        typeFilter.appendChild(option);
+    });
+
+    typeFilter.value = currentValue || "all";
+}
+
+function applyHistoryFilters() {
+    const status = document.getElementById("statusFilter").value;
+    const documentType = document.getElementById("typeFilter").value;
+    const fromDate = document.getElementById("fromDateFilter").value;
+    const toDate = document.getElementById("toDateFilter").value;
+    const searchText = document.getElementById("documentSearchFilter").value.trim().toLowerCase();
+
+    filteredHistoryItems = historyItems.filter(item => {
+        const itemStatus = (item.status || "pending").toLowerCase();
+        const itemType = item.document_type || "unknown";
+        const itemDocument = (item.source_file || item.log_file || "").toLowerCase();
+        const itemDate = item.date_key || "";
+
+        if (status !== "all" && itemStatus !== status) {
+            return false;
+        }
+
+        if (documentType !== "all" && itemType !== documentType) {
+            return false;
+        }
+
+        if (fromDate && itemDate && itemDate < fromDate) {
+            return false;
+        }
+
+        if (toDate && itemDate && itemDate > toDate) {
+            return false;
+        }
+
+        if (searchText && !itemDocument.includes(searchText)) {
+            return false;
+        }
+
+        return true;
+    });
+
+    renderHistoryTable();
+}
+
+function renderHistoryTable() {
+    const table = document.getElementById("historyTable");
+
+    if (!filteredHistoryItems || filteredHistoryItems.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-secondary">
+                    No history records found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = "";
+
+    filteredHistoryItems.forEach((item, index) => {
+        const status = item.status || "pending";
+        const badgeClass = getStatusClass(status);
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${item.time_display || "-"}</td>
+            <td>${item.activity || "-"}</td>
+            <td>
+                <div class="fw-semibold">${item.source_file || item.log_file || "Unknown"}</div>
+            </td>
+            <td>${formatText(item.document_type || "unknown")}</td>
+            <td>
+                <span class="badge ${badgeClass}">
+                    ${formatText(status)}
+                </span>
+            </td>
+            <td>${item.amount || "-"}</td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-primary" onclick="openHistoryModal(${index})">
+                    View
+                </button>
+            </td>
+        `;
+
+        table.appendChild(row);
+    });
+}
+
+function openHistoryModal(index) {
+    const item = filteredHistoryItems[index];
+
+    if (!item) {
+        return;
+    }
+
+    document.getElementById("historyModalMeta").innerText =
+        item.source_file || item.log_file || "";
+
+    const fields = item.fields || item.corrected_fields || {};
+
+    document.getElementById("historyDetails").innerHTML = `
+        ${detailRow("Time", item.time_display || "-")}
+        ${detailRow("Activity", item.activity || "-")}
+        ${detailRow("Document", item.source_file || item.log_file || "-")}
+        ${detailRow("Document Type", formatText(item.document_type || "unknown"))}
+        ${detailRow("Status", formatText(item.status || "pending"))}
+        ${detailRow("Account Head", fields.account_head || item.account_head || "-")}
+        ${detailRow("Purpose", fields.purpose || item.purpose || "-")}
+        ${detailRow("Amount", fields.amount || item.amount || "-")}
+        ${detailRow("Reviewed By", item.reviewed_by || "-")}
+        ${detailRow("VOCNO", item.vocno || "-")}
+        ${detailRow("ACCODE", item.accode || "-")}
+        ${detailRow("CTCODE", item.ctcode || "-")}
+        ${detailRow("Log File", item.log_file || "-")}
+    `;
+
+    document.getElementById("historyBackdrop").classList.add("show");
+    document.getElementById("historyModal").classList.add("open");
+}
+
+function closeHistoryModal() {
+    document.getElementById("historyBackdrop").classList.remove("show");
+    document.getElementById("historyModal").classList.remove("open");
+}
+
+function detailRow(label, value) {
+    return `
+        <div class="detail-row">
+            <div class="detail-label">${label}</div>
+            <div class="detail-value">${value}</div>
+        </div>
+    `;
+}
+
+function getStatusClass(status) {
+    status = (status || "").toLowerCase();
+
+    if (status === "approved") {
+        return "status-approved";
+    }
+
+    if (status === "rejected") {
+        return "status-rejected";
+    }
+
+    if (status === "pending") {
+        return "status-pending";
+    }
+
+    return "status-default";
+}
+
+function formatText(value) {
+    return String(value || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+document.getElementById("historyBackdrop").addEventListener("click", closeHistoryModal);
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        closeHistoryModal();
+    }
+});
+
+loadHistory();
+</script>
 
 {% endblock %}
