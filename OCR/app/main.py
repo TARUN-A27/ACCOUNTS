@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import time
 import webbrowser
 from datetime import datetime
@@ -862,6 +863,198 @@ def get_validation_documents():
 
     return jsonify(documents)
 
+@app.route("/api/dashboard", methods=["GET"])
+def get_dashboard():
+    structured_dir = os.path.join(BASE_DIR, "logs", "structured")
+    review_dir = os.path.join(BASE_DIR, "logs", "review")
+
+    os.makedirs(structured_dir, exist_ok=True)
+    os.makedirs(review_dir, exist_ok=True)
+
+    total_documents = 0
+    approved_count = 0
+    rejected_count = 0
+    pending_count = 0
+    approved_amount = 0.0
+
+    reviewed_source_files = set()
+    daily_map = {}
+    recent_activity = []
+
+    def get_file_time(path):
+        try:
+            return os.path.getmtime(path)
+        except Exception:
+            return time.time()
+
+    def format_time(timestamp):
+        try:
+            return datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %I:%M %p")
+        except Exception:
+            return ""
+
+    def date_key(timestamp):
+        try:
+            return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+
+    def clean_amount(value):
+        try:
+            if value is None:
+                return 0.0
+
+            text = str(value).replace(",", "").strip()
+
+            if not text:
+                return 0.0
+
+            match = re.search(r"\d+(\.\d+)?", text)
+
+            if not match:
+                return 0.0
+
+            return float(match.group())
+
+        except Exception:
+            return 0.0
+
+    def ensure_day(day):
+        if day not in daily_map:
+            daily_map[day] = {
+                "date": day,
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0,
+                "total": 0
+            }
+
+    # Reviewed documents: approved / rejected
+    for filename in sorted(os.listdir(review_dir), reverse=True):
+        if not filename.endswith(".json"):
+            continue
+
+        review_path = os.path.join(review_dir, filename)
+
+        try:
+            with open(review_path, "r", encoding="utf-8") as f:
+                review_data = json.load(f)
+
+            timestamp = get_file_time(review_path)
+            day = date_key(timestamp)
+
+            source_file = review_data.get("source_file") or filename
+            status = review_data.get("status", "pending")
+            document_type = review_data.get("document_type", "unknown")
+            corrected_fields = review_data.get("corrected_fields", {})
+
+            reviewed_source_files.add(source_file)
+            ensure_day(day)
+
+            activity = "Reviewed"
+
+            if status == "approved":
+                approved_count += 1
+                daily_map[day]["approved"] += 1
+                activity = "Approved"
+                approved_amount += clean_amount(corrected_fields.get("amount"))
+
+                cashbank_result = review_data.get("cashbank_result") or {}
+                if cashbank_result.get("success"):
+                    activity = "Approved & Inserted"
+
+            elif status == "rejected":
+                rejected_count += 1
+                daily_map[day]["rejected"] += 1
+                activity = "Rejected"
+
+            else:
+                pending_count += 1
+                daily_map[day]["pending"] += 1
+                activity = "Pending Review"
+
+            daily_map[day]["total"] += 1
+
+            recent_activity.append({
+                "sort_time": timestamp,
+                "time_display": format_time(timestamp),
+                "activity": activity,
+                "source_file": source_file,
+                "document_type": document_type,
+                "status": status,
+                "amount": corrected_fields.get("amount", "")
+            })
+
+        except Exception as e:
+            print("Dashboard review log error:", filename, str(e))
+
+    # Structured documents: pending documents
+    for filename in sorted(os.listdir(structured_dir), reverse=True):
+        if not filename.endswith(".json"):
+            continue
+
+        structured_path = os.path.join(structured_dir, filename)
+
+        try:
+            with open(structured_path, "r", encoding="utf-8") as f:
+                structured_data = json.load(f)
+
+            source_file = structured_data.get("source_file") or filename
+
+            total_documents += 1
+
+            if source_file in reviewed_source_files:
+                continue
+
+            timestamp = get_file_time(structured_path)
+            day = date_key(timestamp)
+
+            classification = structured_data.get("classification", {})
+            fields = structured_data.get("fields", {})
+
+            pending_count += 1
+            ensure_day(day)
+
+            daily_map[day]["pending"] += 1
+            daily_map[day]["total"] += 1
+
+            recent_activity.append({
+                "sort_time": timestamp,
+                "time_display": format_time(timestamp),
+                "activity": "OCR Extracted / Pending Review",
+                "source_file": source_file,
+                "document_type": classification.get("document_type", "unknown"),
+                "status": "pending",
+                "amount": fields.get("amount", "")
+            })
+
+        except Exception as e:
+            print("Dashboard structured log error:", filename, str(e))
+
+    recent_activity.sort(
+        key=lambda item: item.get("sort_time", 0),
+        reverse=True
+    )
+
+    daily_trend = list(daily_map.values())
+    daily_trend.sort(key=lambda item: item.get("date", ""))
+
+    return jsonify({
+        "summary": {
+            "total_documents": total_documents,
+            "pending": pending_count,
+            "approved": approved_count,
+            "rejected": rejected_count,
+            "approved_amount": approved_amount
+        },
+        "daily_trend": daily_trend[-10:],
+        "recent_activity": recent_activity[:8],
+        "status_breakdown": {
+            "pending": pending_count,
+            "approved": approved_count,
+            "rejected": rejected_count
+        }
+    })
 
 def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000/login")

@@ -7,55 +7,55 @@
         <div class="col">
             <h2 class="page-title">Dashboard</h2>
             <div class="text-secondary mt-1">
-                Overview of document processing, validation and AI performance.
+                Live overview of OCR vouchers, validation status, and recent activity.
             </div>
         </div>
         <div class="col-auto">
-            <a href="/extraction" class="btn btn-primary">
-                Upload Document
-            </a>
+            <button class="btn btn-outline-primary" onclick="loadDashboard()">
+                Refresh
+            </button>
         </div>
     </div>
 </div>
 
 <div class="row row-cards">
 
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg">
         <div class="card card-sm">
             <div class="card-body">
-                <div class="text-secondary">Documents Processed</div>
-                <div class="h1 mb-0 mt-2">127</div>
-                <div class="text-success mt-2">Today</div>
+                <div class="text-secondary">Total Documents</div>
+                <div id="totalDocuments" class="h1 mb-0 mt-2">0</div>
+                <div class="text-secondary mt-2">OCR extracted</div>
             </div>
         </div>
     </div>
 
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg">
         <div class="card card-sm">
             <div class="card-body">
                 <div class="text-secondary">Pending Validation</div>
-                <div class="h1 mb-0 mt-2">18</div>
+                <div id="pendingDocuments" class="h1 mb-0 mt-2">0</div>
                 <div class="text-warning mt-2">Needs review</div>
             </div>
         </div>
     </div>
 
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg">
         <div class="card card-sm">
             <div class="card-body">
-                <div class="text-secondary">AI Accuracy</div>
-                <div class="h1 mb-0 mt-2">94%</div>
-                <div class="text-success mt-2">Stable</div>
+                <div class="text-secondary">Approved</div>
+                <div id="approvedDocuments" class="h1 mb-0 mt-2">0</div>
+                <div class="text-success mt-2">Reviewed vouchers</div>
             </div>
         </div>
     </div>
 
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg">
         <div class="card card-sm">
             <div class="card-body">
-                <div class="text-secondary">Failed Extractions</div>
-                <div class="h1 mb-0 mt-2">4</div>
-                <div class="text-danger mt-2">Requires action</div>
+                <div class="text-secondary">Rejected</div>
+                <div id="rejectedDocuments" class="h1 mb-0 mt-2">0</div>
+                <div class="text-danger mt-2">Rejected vouchers</div>
             </div>
         </div>
     </div>
@@ -67,14 +67,12 @@
     <div class="col-lg-8">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Processing Trend</h3>
+                <h3 class="card-title">Daily Processing Trend</h3>
             </div>
+
             <div class="card-body">
-                <div class="empty">
-                    <p class="empty-title">Chart placeholder</p>
-                    <p class="empty-subtitle text-secondary">
-                        Daily document processing chart will appear here.
-                    </p>
+                <div id="trendChart" class="trend-chart">
+                    Loading chart...
                 </div>
             </div>
         </div>
@@ -83,17 +81,32 @@
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">AI Insights</h3>
+                <h3 class="card-title">Status Breakdown</h3>
             </div>
-            <div class="list-group list-group-flush">
-                <div class="list-group-item">
-                    12 low-confidence documents need review
+
+            <div class="card-body">
+                <div class="status-row">
+                    <div>
+                        <div class="fw-semibold">Pending</div>
+                        <div class="text-secondary small">Waiting for validation</div>
+                    </div>
+                    <span id="breakdownPending" class="badge bg-yellow-lt">0</span>
                 </div>
-                <div class="list-group-item">
-                    3 possible duplicate vouchers detected
+
+                <div class="status-row">
+                    <div>
+                        <div class="fw-semibold">Approved</div>
+                        <div class="text-secondary small">Accepted vouchers</div>
+                    </div>
+                    <span id="breakdownApproved" class="badge bg-green-lt">0</span>
                 </div>
-                <div class="list-group-item">
-                    Vendor name correction common in vouchers
+
+                <div class="status-row">
+                    <div>
+                        <div class="fw-semibold">Rejected</div>
+                        <div class="text-secondary small">Rejected during review</div>
+                    </div>
+                    <span id="breakdownRejected" class="badge bg-red-lt">0</span>
                 </div>
             </div>
         </div>
@@ -103,40 +116,323 @@
 
 <div class="row row-cards mt-3">
 
-    <div class="col-lg-6">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Recent Activity</h3>
             </div>
-            <div class="list-group list-group-flush">
-                <div class="list-group-item">
-                    Cash payment voucher extracted successfully
-                </div>
-                <div class="list-group-item">
-                    Document approved by Admin
-                </div>
-                <div class="list-group-item">
-                    Validation warning generated for missing purpose
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Quick Actions</h3>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="/extraction" class="btn btn-primary">Document Extraction</a>
-                    <a href="/validation" class="btn btn-outline-primary">Open Validation Queue</a>
-                    <a href="/history" class="btn btn-outline-secondary">View History</a>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 180px;">Time</th>
+                            <th>Activity</th>
+                            <th>Document</th>
+                            <th>Type</th>
+                            <th style="width: 120px;">Status</th>
+                            <th style="width: 120px;">Amount</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="recentActivityTable">
+                        <tr>
+                            <td colspan="6" class="text-center text-secondary">
+                                Loading recent activity...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
 </div>
+
+<style>
+.status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.status-row:last-child {
+    border-bottom: none;
+}
+
+.trend-chart {
+    min-height: 300px;
+}
+
+.trend-legend {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-left: 2px;
+}
+
+.trend-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.trend-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.trend-chart-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chart-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 40px;
+    gap: 12px;
+    align-items: center;
+}
+
+.chart-label {
+    font-size: 13px;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.chart-bars {
+    display: flex;
+    height: 24px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #eef2f7;
+}
+
+.bar-approved {
+    background: #22c55e;
+}
+
+.bar-pending {
+    background: #f59e0b;
+}
+
+.bar-rejected {
+    background: #ef4444;
+}
+
+.chart-total {
+    font-size: 13px;
+    color: #475569;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.status-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-default {
+    background: #e0f2fe;
+    color: #075985;
+}
+</style>
+
+<script>
+async function loadDashboard() {
+    try {
+        const response = await fetch("/api/dashboard", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.error || "Failed to load dashboard");
+            return;
+        }
+
+        renderSummary(data.summary || {});
+        renderStatusBreakdown(data.status_breakdown || {});
+        renderTrendChart(data.daily_trend || []);
+        renderRecentActivity(data.recent_activity || []);
+
+    } catch (error) {
+        alert("Dashboard loading error: " + error.message);
+    }
+}
+
+function renderSummary(summary) {
+    document.getElementById("totalDocuments").innerText = summary.total_documents || 0;
+    document.getElementById("pendingDocuments").innerText = summary.pending || 0;
+    document.getElementById("approvedDocuments").innerText = summary.approved || 0;
+    document.getElementById("rejectedDocuments").innerText = summary.rejected || 0;
+}
+
+function renderStatusBreakdown(statusBreakdown) {
+    document.getElementById("breakdownPending").innerText = statusBreakdown.pending || 0;
+    document.getElementById("breakdownApproved").innerText = statusBreakdown.approved || 0;
+    document.getElementById("breakdownRejected").innerText = statusBreakdown.rejected || 0;
+}
+
+function renderTrendChart(dailyTrend) {
+    const container = document.getElementById("trendChart");
+
+    if (!dailyTrend || dailyTrend.length === 0) {
+        container.innerHTML = `
+            <div class="empty">
+                <p class="empty-title">No processing data available</p>
+                <p class="empty-subtitle text-secondary">
+                    Upload and review documents to generate chart data.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    const maxTotal = Math.max(...dailyTrend.map(day => day.total || 0), 1);
+
+    let html = `
+    <div class="trend-legend">
+        <div class="trend-legend-item">
+            <span class="trend-legend-dot bar-approved"></span> Approved
+        </div>
+        <div class="trend-legend-item">
+            <span class="trend-legend-dot bar-pending"></span> Pending
+        </div>
+        <div class="trend-legend-item">
+            <span class="trend-legend-dot bar-rejected"></span> Rejected
+        </div>
+    </div>
+
+    <div class="trend-chart-body">
+`;
+
+    dailyTrend.forEach(day => {
+        const total = day.total || 0;
+
+        const scaleWidth = total ? (total / maxTotal) * 100 : 0;
+
+const approvedWidth = total ? (day.approved / total) * scaleWidth : 0;
+const pendingWidth = total ? (day.pending / total) * scaleWidth : 0;
+const rejectedWidth = total ? (day.rejected / total) * scaleWidth : 0;
+
+        html += `
+            <div class="chart-row">
+                <div class="chart-label">${formatDate(day.date)}</div>
+
+                <div class="chart-bars">
+                    <div class="bar-approved" title="Approved: ${day.approved}" style="width:${approvedWidth}%"></div>
+                    <div class="bar-pending" title="Pending: ${day.pending}" style="width:${pendingWidth}%"></div>
+                    <div class="bar-rejected" title="Rejected: ${day.rejected}" style="width:${rejectedWidth}%"></div>
+                </div>
+
+                <div class="chart-total">${total}</div>
+            </div>
+        `;
+    });
+
+
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function renderRecentActivity(items) {
+    const table = document.getElementById("recentActivityTable");
+
+    if (!items || items.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-secondary">
+                    No recent activity found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = "";
+
+    items.forEach(item => {
+        const status = item.status || "pending";
+        const badgeClass = getStatusClass(status);
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${item.time_display || "-"}</td>
+            <td>${item.activity || "-"}</td>
+            <td>
+                <div class="fw-semibold">${item.source_file || "-"}</div>
+            </td>
+            <td>${formatText(item.document_type || "unknown")}</td>
+            <td>
+                <span class="badge ${badgeClass}">
+                    ${formatText(status)}
+                </span>
+            </td>
+            <td>${item.amount || "-"}</td>
+        `;
+
+        table.appendChild(row);
+    });
+}
+
+function getStatusClass(status) {
+    status = String(status || "").toLowerCase();
+
+    if (status === "approved") {
+        return "status-approved";
+    }
+
+    if (status === "rejected") {
+        return "status-rejected";
+    }
+
+    if (status === "pending") {
+        return "status-pending";
+    }
+
+    return "status-default";
+}
+
+function formatText(value) {
+    return String(value || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function formatDate(dateValue) {
+    if (!dateValue) {
+        return "-";
+    }
+
+    const parts = String(dateValue).split("-");
+
+    if (parts.length !== 3) {
+        return dateValue;
+    }
+
+    return `${parts[2]}/${parts[1]}`;
+}
+
+loadDashboard();
+</script>
 
 {% endblock %}
