@@ -1,438 +1,203 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-<div class="page-header d-print-none">
-    <div class="row align-items-center">
-        <div class="col">
-            <h2 class="page-title">Dashboard</h2>
-            <div class="text-secondary mt-1">
-                Live overview of OCR vouchers, validation status, and recent activity.
-            </div>
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-outline-primary" onclick="loadDashboard()">
-                Refresh
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="row row-cards">
-
-    <div class="col-sm-6 col-lg">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="text-secondary">Total Documents</div>
-                <div id="totalDocuments" class="h1 mb-0 mt-2">0</div>
-                <div class="text-secondary mt-2">OCR extracted</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-sm-6 col-lg">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="text-secondary">Pending Validation</div>
-                <div id="pendingDocuments" class="h1 mb-0 mt-2">0</div>
-                <div class="text-warning mt-2">Needs review</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-sm-6 col-lg">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="text-secondary">Approved</div>
-                <div id="approvedDocuments" class="h1 mb-0 mt-2">0</div>
-                <div class="text-success mt-2">Reviewed vouchers</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-sm-6 col-lg">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="text-secondary">Rejected</div>
-                <div id="rejectedDocuments" class="h1 mb-0 mt-2">0</div>
-                <div class="text-danger mt-2">Rejected vouchers</div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div class="row row-cards mt-3">
-
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Daily Processing Trend</h3>
-            </div>
-
-            <div class="card-body">
-                <div id="trendChart" class="trend-chart">
-                    Loading chart...
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Status Breakdown</h3>
-            </div>
-
-            <div class="card-body">
-                <div class="status-row">
-                    <div>
-                        <div class="fw-semibold">Pending</div>
-                        <div class="text-secondary small">Waiting for validation</div>
-                    </div>
-                    <span id="breakdownPending" class="badge bg-yellow-lt">0</span>
-                </div>
-
-                <div class="status-row">
-                    <div>
-                        <div class="fw-semibold">Approved</div>
-                        <div class="text-secondary small">Accepted vouchers</div>
-                    </div>
-                    <span id="breakdownApproved" class="badge bg-green-lt">0</span>
-                </div>
-
-                <div class="status-row">
-                    <div>
-                        <div class="fw-semibold">Rejected</div>
-                        <div class="text-secondary small">Rejected during review</div>
-                    </div>
-                    <span id="breakdownRejected" class="badge bg-red-lt">0</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div class="row row-cards mt-3">
-
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Recent Activity</h3>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 180px;">Time</th>
-                            <th>Activity</th>
-                            <th>Document</th>
-                            <th>Type</th>
-                            <th style="width: 120px;">Status</th>
-                            <th style="width: 120px;">Amount</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="recentActivityTable">
-                        <tr>
-                            <td colspan="6" class="text-center text-secondary">
-                                Loading recent activity...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-</div>
-
 <style>
-.status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid #f1f5f9;
-}
+    .dashboard-hero {
+        text-align: center;
+        margin-bottom: 34px;
+    }
 
-.status-row:last-child {
-    border-bottom: none;
-}
+    .dashboard-title {
+        font-size: 34px;
+        font-weight: 900;
+        color: #020617;
+        margin: 0;
+        letter-spacing: -0.8px;
+    }
 
-.trend-chart {
-    min-height: 300px;
-}
+    .dashboard-subtitle {
+        max-width: 680px;
+        margin: 12px auto 0;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #64748b;
+        font-weight: 700;
+    }
 
-.trend-legend {
-    display: flex;
-    gap: 18px;
-    margin-bottom: 24px;
-    align-items: center;
-    flex-wrap: wrap;
-    padding-left: 2px;
-}
+    .module-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(260px, 1fr));
+        gap: 24px;
+        max-width: 1120px;
+        margin: 0 auto;
+    }
 
-.trend-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #475569;
-}
+    .module-card {
+        position: relative;
+        min-height: 220px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid #e2e8f0;
+        border-radius: 28px;
+        padding: 30px;
+        text-decoration: none;
+        color: #020617;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        transition: 0.2s ease;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
 
-.trend-legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    display: inline-block;
-}
+    .module-card::before {
+        content: "";
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        right: -60px;
+        top: -60px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+    }
 
-.trend-chart-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+    .module-card:hover {
+        transform: translateY(-5px);
+        border-color: #94a3b8;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.13);
+    }
 
-.chart-row {
-    display: grid;
-    grid-template-columns: 90px 1fr 40px;
-    gap: 12px;
-    align-items: center;
-}
+    .module-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #020617;
+        color: #ffffff;
+        font-size: 24px;
+        font-weight: 900;
+        margin-bottom: 22px;
+    }
 
-.chart-label {
-    font-size: 13px;
-    color: #475569;
-    white-space: nowrap;
-}
+    .module-name {
+        font-size: 23px;
+        font-weight: 900;
+        margin-bottom: 10px;
+        letter-spacing: -0.3px;
+    }
 
-.chart-bars {
-    display: flex;
-    height: 24px;
-    border-radius: 6px;
-    overflow: hidden;
-    background: #eef2f7;
-}
+    .module-desc {
+        font-size: 15px;
+        line-height: 1.55;
+        color: #64748b;
+        font-weight: 700;
+        max-width: 390px;
+    }
 
-.bar-approved {
-    background: #22c55e;
-}
+    .module-open {
+        margin-top: 24px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 900;
+        color: #020617;
+    }
 
-.bar-pending {
-    background: #f59e0b;
-}
+    .module-card.tall {
+        grid-row: span 2;
+        min-height: 464px;
+    }
 
-.bar-rejected {
-    background: #ef4444;
-}
+    .module-card.tall .module-icon {
+        width: 70px;
+        height: 70px;
+        font-size: 28px;
+    }
 
-.chart-total {
-    font-size: 13px;
-    color: #475569;
-    text-align: right;
-    white-space: nowrap;
-}
+    .module-card.tall .module-name {
+        font-size: 28px;
+    }
 
-.status-approved {
-    background: #dcfce7;
-    color: #166534;
-}
+    .module-card.tall .module-desc {
+        font-size: 16px;
+        line-height: 1.7;
+    }
 
-.status-rejected {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.status-pending {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.status-default {
-    background: #e0f2fe;
-    color: #075985;
-}
-</style>
-
-<script>
-async function loadDashboard() {
-    try {
-        const response = await fetch("/api/dashboard", { cache: "no-store" });
-        const data = await response.json();
-
-        if (!response.ok) {
-            alert(data.error || "Failed to load dashboard");
-            return;
+    @media (max-width: 1000px) {
+        .module-grid {
+            grid-template-columns: repeat(2, minmax(260px, 1fr));
         }
 
-        renderSummary(data.summary || {});
-        renderStatusBreakdown(data.status_breakdown || {});
-        renderTrendChart(data.daily_trend || []);
-        renderRecentActivity(data.recent_activity || []);
-
-    } catch (error) {
-        alert("Dashboard loading error: " + error.message);
-    }
-}
-
-function renderSummary(summary) {
-    document.getElementById("totalDocuments").innerText = summary.total_documents || 0;
-    document.getElementById("pendingDocuments").innerText = summary.pending || 0;
-    document.getElementById("approvedDocuments").innerText = summary.approved || 0;
-    document.getElementById("rejectedDocuments").innerText = summary.rejected || 0;
-}
-
-function renderStatusBreakdown(statusBreakdown) {
-    document.getElementById("breakdownPending").innerText = statusBreakdown.pending || 0;
-    document.getElementById("breakdownApproved").innerText = statusBreakdown.approved || 0;
-    document.getElementById("breakdownRejected").innerText = statusBreakdown.rejected || 0;
-}
-
-function renderTrendChart(dailyTrend) {
-    const container = document.getElementById("trendChart");
-
-    if (!dailyTrend || dailyTrend.length === 0) {
-        container.innerHTML = `
-            <div class="empty">
-                <p class="empty-title">No processing data available</p>
-                <p class="empty-subtitle text-secondary">
-                    Upload and review documents to generate chart data.
-                </p>
-            </div>
-        `;
-        return;
+        .module-card.tall {
+            grid-row: span 1;
+            min-height: 220px;
+        }
     }
 
-    const maxTotal = Math.max(...dailyTrend.map(day => day.total || 0), 1);
+    @media (max-width: 700px) {
+        .module-grid {
+            grid-template-columns: 1fr;
+        }
 
-    let html = `
-    <div class="trend-legend">
-        <div class="trend-legend-item">
-            <span class="trend-legend-dot bar-approved"></span> Approved
+        .dashboard-title {
+            font-size: 28px;
+        }
+    }
+</style>
+
+<div class="dashboard-hero">
+    <h2 class="dashboard-title">Select Module</h2>
+    <p class="dashboard-subtitle">
+        Choose what you want to do!
+    </p>
+</div>
+
+<div class="module-grid">
+    <a class="module-card" href="/cash-voucher-entry">
+        <div>
+            <div class="module-icon">₹</div>
+            <div class="module-name">Cash Voucher Entry</div>
+            <div class="module-desc">Create new cash payment vouchers and save them for IA authentication.</div>
         </div>
-        <div class="trend-legend-item">
-            <span class="trend-legend-dot bar-pending"></span> Pending
+        <div class="module-open">Open Module →</div>
+    </a>
+
+    <a class="module-card" href="/voucher-draft">
+        <div>
+            <div class="module-icon">V</div>
+            <div class="module-name">Voucher Draft</div>
+            <div class="module-desc">View, filter, preview, and edit vouchers based on authentication status.</div>
         </div>
-        <div class="trend-legend-item">
-            <span class="trend-legend-dot bar-rejected"></span> Rejected
+        <div class="module-open">Open Module →</div>
+    </a>
+
+    <a class="module-card tall" href="/history">
+        <div>
+            <div class="module-icon">H</div>
+            <div class="module-name">History</div>
+            <div class="module-desc">Check previous voucher, OCR, validation, and approval activity records in one place.</div>
         </div>
-    </div>
+        <div class="module-open">Open Module →</div>
+    </a>
 
-    <div class="trend-chart-body">
-`;
+    <a class="module-card" href="/extraction">
+        <div>
+            <div class="module-icon">D</div>
+            <div class="module-name">Document Extraction</div>
+            <div class="module-desc">Upload or scan documents and extract text using OCR.</div>
+        </div>
+        <div class="module-open">Open Module →</div>
+    </a>
 
-    dailyTrend.forEach(day => {
-        const total = day.total || 0;
-
-        const scaleWidth = total ? (total / maxTotal) * 100 : 0;
-
-const approvedWidth = total ? (day.approved / total) * scaleWidth : 0;
-const pendingWidth = total ? (day.pending / total) * scaleWidth : 0;
-const rejectedWidth = total ? (day.rejected / total) * scaleWidth : 0;
-
-        html += `
-            <div class="chart-row">
-                <div class="chart-label">${formatDate(day.date)}</div>
-
-                <div class="chart-bars">
-                    <div class="bar-approved" title="Approved: ${day.approved}" style="width:${approvedWidth}%"></div>
-                    <div class="bar-pending" title="Pending: ${day.pending}" style="width:${pendingWidth}%"></div>
-                    <div class="bar-rejected" title="Rejected: ${day.rejected}" style="width:${rejectedWidth}%"></div>
-                </div>
-
-                <div class="chart-total">${total}</div>
-            </div>
-        `;
-    });
-
-
-    html += `</div>`;
-    container.innerHTML = html;
-}
-
-function renderRecentActivity(items) {
-    const table = document.getElementById("recentActivityTable");
-
-    if (!items || items.length === 0) {
-        table.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center text-secondary">
-                    No recent activity found
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    table.innerHTML = "";
-
-    items.forEach(item => {
-        const status = item.status || "pending";
-        const badgeClass = getStatusClass(status);
-
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-            <td>${item.time_display || "-"}</td>
-            <td>${item.activity || "-"}</td>
-            <td>
-                <div class="fw-semibold">${item.source_file || "-"}</div>
-            </td>
-            <td>${formatText(item.document_type || "unknown")}</td>
-            <td>
-                <span class="badge ${badgeClass}">
-                    ${formatText(status)}
-                </span>
-            </td>
-            <td>${item.amount || "-"}</td>
-        `;
-
-        table.appendChild(row);
-    });
-}
-
-function getStatusClass(status) {
-    status = String(status || "").toLowerCase();
-
-    if (status === "approved") {
-        return "status-approved";
-    }
-
-    if (status === "rejected") {
-        return "status-rejected";
-    }
-
-    if (status === "pending") {
-        return "status-pending";
-    }
-
-    return "status-default";
-}
-
-function formatText(value) {
-    return String(value || "")
-        .replaceAll("_", " ")
-        .replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function formatDate(dateValue) {
-    if (!dateValue) {
-        return "-";
-    }
-
-    const parts = String(dateValue).split("-");
-
-    if (parts.length !== 3) {
-        return dateValue;
-    }
-
-    return `${parts[2]}/${parts[1]}`;
-}
-
-loadDashboard();
-</script>
-
+    <a class="module-card" href="/validation">
+        <div>
+            <div class="module-icon">Q</div>
+            <div class="module-name">Validation Queue</div>
+            <div class="module-desc">Review extracted information before approval and final posting.</div>
+        </div>
+        <div class="module-open">Open Module →</div>
+    </a>
+</div>
 {% endblock %}

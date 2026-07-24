@@ -1,0 +1,16 @@
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.DS_Store
+
+static/uploads/*
+static/results/*
+logs/*
+*.bak
+*.bak_*
+templates/*.bak*
+app/*.bak*

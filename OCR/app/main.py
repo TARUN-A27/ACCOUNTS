@@ -9,6 +9,7 @@ from threading import Timer
 import requests
 from database import get_connection
 from cashbank_service import insert_taruncashbank
+from cash_voucher_entry_service import insert_cash_voucher_entry, list_cash_voucher_entries, get_cash_voucher_entry_by_id, update_cash_voucher_entry, list_petty_cash_accounts, is_ia_auth_user, authenticate_cash_voucher_entry
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -168,6 +169,135 @@ def parse_computer_vision_result(result_json):
 def home():
     session.clear()
     return redirect(url_for("login"))
+
+
+
+
+
+@app.route("/ia-authentication")
+def ia_authentication():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    usercode = session.get("usercode")
+    if not is_ia_auth_user(usercode):
+        return redirect(url_for("dashboard"))
+
+    return render_template("ia_authentication.html")
+
+
+@app.route("/api/ia-authentication/print/<int:voucher_id>", methods=["POST"])
+def ia_authentication_print(voucher_id):
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    usercode = session.get("usercode")
+    if not is_ia_auth_user(usercode):
+        return jsonify({
+            "success": False,
+            "message": "Only IA authentication user can authenticate voucher"
+        }), 403
+
+    result = authenticate_cash_voucher_entry(voucher_id, usercode)
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@app.route("/voucher-draft")
+def voucher_draft():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    return render_template("voucher_draft.html")
+
+
+
+@app.route("/api/cash-voucher-entry/accounts", methods=["GET"])
+def cash_voucher_entry_accounts():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required",
+            "rows": []
+        }), 401
+
+    result = list_petty_cash_accounts()
+    return jsonify(result)
+
+
+@app.route("/api/cash-voucher-entry/save", methods=["POST"])
+def save_cash_voucher_entry():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    data = request.get_json() or {}
+
+    session_data = {
+        "usercode": session.get("usercode"),
+        "divisioncode": session.get("divisioncode"),
+        "yearcode": session.get("yearcode")
+    }
+
+    result = insert_cash_voucher_entry(data, session_data)
+
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@app.route("/api/cash-voucher-entry/list", methods=["GET"])
+def list_cash_voucher_entry():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required",
+            "rows": []
+        }), 401
+
+    result = list_cash_voucher_entries()
+    return jsonify(result)
+
+
+
+@app.route("/api/cash-voucher-entry/get/<int:voucher_id>", methods=["GET"])
+def get_cash_voucher_entry(voucher_id):
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    result = get_cash_voucher_entry_by_id(voucher_id)
+    status_code = 200 if result.get("success") else 404
+    return jsonify(result), status_code
+
+
+@app.route("/api/cash-voucher-entry/update/<int:voucher_id>", methods=["POST"])
+def update_cash_voucher_entry_route(voucher_id):
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    data = request.get_json() or {}
+    result = update_cash_voucher_entry(voucher_id, data)
+
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@app.route("/cash-voucher-entry")
+def cash_voucher_entry():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    return render_template("cash_voucher_entry.html")
 
 
 @app.route("/dashboard")
@@ -570,7 +700,12 @@ def login():
     session["voctype"] = "CPA"
     session["cpa_number"] = cpa_result.get("maxnumber")
 
+    if int(session.get("usercode") or 0) == 2008:
+        return redirect(url_for("ia_authentication"))
+
     return redirect(url_for("dashboard"))
+
+
 
 
 @app.route("/create-account", methods=["POST"])
@@ -1062,4 +1197,4 @@ def open_browser():
 
 if __name__ == "__main__":
     Timer(1, open_browser).start()
-    app.run(debug=True, use_reloader=False)
+    app.run(host="0.0.0.0", port=5050, debug=True, use_reloader=False)

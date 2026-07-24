@@ -12,7 +12,8 @@ def get_all_divisions():
         cursor.execute("""
             SELECT divisioncode, divdesc
             FROM DIVISION
-            ORDER BY divdesc
+            WHERE divisioncode IN (1,2,3,17,18,41)
+            ORDER BY divisioncode
         """)
 
         divisions = []

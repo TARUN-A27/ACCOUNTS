@@ -1,0 +1,705 @@
+{% extends "base.html" %}
+
+{% block title %}Cash Voucher Entry{% endblock %}
+
+{% block content %}
+<style>
+    .voucher-page {
+        max-width: 1120px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        margin-bottom: 18px;
+    }
+
+    .page-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: #111827;
+        margin: 0;
+    }
+
+    .page-subtitle {
+        font-size: 14px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
+    .voucher-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .form-control,
+    .form-select {
+        height: 42px;
+        border-radius: 9px;
+        border: 1px solid #cbd5e1;
+        padding: 8px 12px;
+        font-size: 14px;
+        background: #ffffff;
+    }
+
+    textarea.form-control {
+        height: 92px;
+        resize: vertical;
+    }
+
+    .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .amount-words-box {
+        min-height: 42px;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 9px;
+        padding: 11px 12px;
+        font-size: 14px;
+        color: #334155;
+    }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 22px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 18px;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 9px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: #020617;
+        color: #ffffff;
+    }
+
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #020617;
+    }
+
+    .btn-success {
+        background: #16a34a;
+        color: #ffffff;
+    }
+
+    .save-message {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 9px;
+        display: none;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .save-message.success {
+        display: block;
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .save-message.error {
+        display: block;
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .preview-card {
+        margin-top: 22px;
+        display: none;
+    }
+
+    .print-box {
+        width: 900px;
+        min-height: 520px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 2px solid #1d4ed8;
+        color: #1d4ed8;
+        padding: 18px 22px 0 22px;
+        font-family: Arial, sans-serif;
+        box-sizing: border-box;
+    }
+
+    .print-company {
+        text-align: center;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 2px;
+    }
+
+    .print-address {
+        text-align: center;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+
+    .print-title {
+        text-align: center;
+        display: block;
+        width: fit-content;
+        margin: 0 auto 12px auto;
+        border: 2px solid #1d4ed8;
+        padding: 4px 12px;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+    .print-top-row {
+        display: grid;
+        grid-template-columns: 1fr 240px;
+        gap: 12px;
+        margin-bottom: 0;
+        font-size: 15px;
+        border-top: 1.5px solid #1d4ed8;
+        border-bottom: 1.5px solid #1d4ed8;
+    }
+
+    .print-line {
+        border-bottom: 1.5px solid #1d4ed8;
+        min-height: 40px;
+        padding: 0;
+        font-size: 15px;
+        display: grid;
+        grid-template-columns: 190px 1fr;
+        gap: 0;
+    }
+
+    .print-label {
+        font-weight: 800;
+        border-right: 1.5px solid #1d4ed8;
+        padding: 10px 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    .print-value {
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        white-space: pre-wrap;
+    }
+
+    .print-purpose {
+        min-height: 120px;
+    }
+
+    .print-amount-row {
+        display: grid;
+        grid-template-columns: 1fr 160px;
+        border-bottom: 1.5px solid #1d4ed8;
+    }
+
+    .print-amount-words {
+        min-height: 44px;
+        padding: 8px;
+        border-right: 1.5px solid #1d4ed8;
+    }
+
+    .print-amount-value {
+        min-height: 44px;
+        padding: 8px;
+    }
+
+    .print-signatures {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        border-top: 1.5px solid #1d4ed8;
+        margin-top: 28px;
+    }
+
+    .print-sign-cell {
+        min-height: 82px;
+        border-right: 1.5px solid #1d4ed8;
+        padding: 8px;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .print-sign-cell:last-child {
+        border-right: none;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        #printPreview,
+        #printPreview * {
+            visibility: visible;
+        }
+
+        #printPreview {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .print-box {
+        width: 900px;
+        min-height: 520px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 2px solid #1d4ed8;
+        color: #1d4ed8;
+        padding: 18px 22px 0 22px;
+        font-family: Arial, sans-serif;
+        box-sizing: border-box;
+    }
+    }
+
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    #accountHead {
+        appearance: auto;
+        -webkit-appearance: auto;
+        -moz-appearance: auto;
+        background-color: #ffffff;
+        cursor: pointer;
+        padding-right: 36px;
+    }
+
+</style>
+
+<div class="voucher-page">
+    <div class="page-header">
+        <h1 class="page-title">Cash Voucher Entry</h1>
+        <div class="page-subtitle">Manual cash voucher entry interface</div>
+    </div>
+
+    <div class="voucher-card">
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="voucherDate" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount</label>
+                <input type="number" id="amount" class="form-control" required placeholder="Enter amount" oninput="updateAmountWords(); markUnsaved();">
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Account Head</label>
+                <input type="text"
+                       id="accountHead"
+                       class="form-control" required
+                       list="accountHeadList"
+                       placeholder="Search account head"
+                       oninput="handleAccountHeadInput(); markUnsaved();">
+                <input type="hidden" id="accountHeadCode">
+                <datalist id="accountHeadList"></datalist>
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Name of the Person</label>
+                <input type="text" id="personName" class="form-control" required placeholder="Enter person name" oninput="markUnsaved()">
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Purpose</label>
+                <textarea id="purpose" class="form-control" required placeholder="Enter voucher purpose" oninput="markUnsaved()"></textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Amount in Words</label>
+                <div id="amountWords" class="amount-words-box">Amount in words will appear here</div>
+            </div>
+        </div>
+
+        <div id="saveMessage" class="save-message"></div>
+
+        <div class="actions">
+<button class="btn btn-secondary" onclick="resetForm()">Clear</button>
+            <button class="btn btn-secondary" onclick="showPrintPreview()">Print Preview</button>
+            <button class="btn btn-success" onclick="saveVoucher()">Save</button>
+            <button class="btn btn-primary" onclick="printVoucher()">Save-Print</button>
+        </div>
+    </div>
+
+    <div id="printPreview" class="preview-card">
+        <div class="print-box">
+            <span id="printVoucherNo" style="display:none;"></span>
+            <div class="print-company">Amarjothi Spinning Mills Limited</div>
+            <div class="print-address">PUDUSURIPALAYAM - NAMBIYUR - 638 458</div>
+            <div class="print-title">CASH PAYMENT VOUCHER</div>
+
+            <div class="print-top-row">
+                <div style="padding: 8px 10px;"><b>VOUCHER NO :-</b></div>
+                <div style="padding: 8px 10px; border-left: 1.5px solid #1d4ed8;"><b>DATE:</b> <span id="printDate"></span></div>
+            </div>
+
+            <div class="print-line">
+                <div class="print-label">ACCOUNT HEAD</div>
+                <div class="print-value" id="printAccountHead"></div>
+            </div>
+
+            <div class="print-line">
+                <div class="print-label">NAME OF THE PERSON</div>
+                <div class="print-value" id="printPersonName"></div>
+            </div>
+
+            <div class="print-line print-purpose">
+                <div class="print-label">PURPOSE</div>
+                <div class="print-value" id="printPurpose"></div>
+            </div>
+
+            <div class="print-amount-row">
+                <div class="print-amount-words">
+                    <b>AMOUNT IN WORDS :</b> Rs. <span id="printAmountWords"></span>
+                </div>
+                <div class="print-amount-value">
+                    <b>AMOUNT</b><br>Rs. <span id="printAmount"></span>
+                </div>
+            </div>
+
+            <div class="print-signatures">
+                <div class="print-sign-cell">DEPT. HEAD</div>
+                <div class="print-sign-cell">MD/JMD</div>
+                <div class="print-sign-cell">J.O.(Accounts)</div>
+                <div class="print-sign-cell">I.A.</div>
+                <div class="print-sign-cell">CASHIER</div>
+                <div class="print-sign-cell">RECEIVED BY</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let savedVoucherId = null;
+    let accountHeadAccounts = [];
+
+
+    async function loadAccountHeads() {
+        try {
+            const response = await fetch("/api/cash-voucher-entry/accounts");
+            const result = await response.json();
+
+            accountHeadAccounts = result.rows || [];
+
+            const list = document.getElementById("accountHeadList");
+            list.innerHTML = "";
+
+            accountHeadAccounts.forEach(account => {
+                const option = document.createElement("option");
+                option.value = account.name;
+                list.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error("Account head load error:", error);
+            accountHeadAccounts = [];
+        }
+    }
+
+    function setTodayDate() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+
+        document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    function markUnsaved() {
+        savedVoucherId = null;
+    }
+
+    function numberToWords(num) {
+        num = parseInt(num || 0);
+
+        if (num === 0) {
+            return "Zero Rupees Only";
+        }
+
+        const ones = [
+            "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+            "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen",
+            "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+        ];
+
+        const tens = [
+            "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+        ];
+
+        function convertBelowHundred(n) {
+            if (n < 20) return ones[n];
+            return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+        }
+
+        function convertBelowThousand(n) {
+            let word = "";
+
+            if (n >= 100) {
+                word += ones[Math.floor(n / 100)] + " Hundred";
+                n %= 100;
+
+                if (n) word += " ";
+            }
+
+            if (n) word += convertBelowHundred(n);
+
+            return word;
+        }
+
+        let word = "";
+
+        if (num >= 10000000) {
+            word += convertBelowThousand(Math.floor(num / 10000000)) + " Crore ";
+            num %= 10000000;
+        }
+
+        if (num >= 100000) {
+            word += convertBelowThousand(Math.floor(num / 100000)) + " Lakh ";
+            num %= 100000;
+        }
+
+        if (num >= 1000) {
+            word += convertBelowThousand(Math.floor(num / 1000)) + " Thousand ";
+            num %= 1000;
+        }
+
+        if (num > 0) {
+            word += convertBelowThousand(num);
+        }
+
+        return word.trim() + " Rupees Only";
+    }
+
+    function updateAmountWords() {
+        const amount = document.getElementById("amount").value;
+        document.getElementById("amountWords").innerText = numberToWords(amount);
+    }
+
+    function handleAccountHeadInput() {
+        const value = document.getElementById("accountHead").value.trim().toUpperCase();
+        const matched = accountHeadAccounts.find(account => account.name.toUpperCase() === value);
+
+        document.getElementById("accountHeadCode").value = matched ? matched.accode : "";
+    }
+
+    function getFormData() {
+        handleAccountHeadInput();
+
+        return {
+            voucherdate: document.getElementById("voucherDate").value,
+            account_head_code: document.getElementById("accountHeadCode").value,
+            account_name: document.getElementById("accountHead").value,
+            person_name: document.getElementById("personName").value,
+            purpose: document.getElementById("purpose").value,
+            amount: document.getElementById("amount").value
+        };
+    }
+
+    function showMessage(type, message) {
+        const box = document.getElementById("saveMessage");
+        box.className = "save-message " + type;
+        box.innerText = message;
+    }
+
+
+    function validateVoucherForm() {
+        handleAccountHeadInput();
+
+        const voucherDate = document.getElementById("voucherDate").value.trim();
+        const accountName = document.getElementById("accountHead").value.trim();
+        const accountCode = document.getElementById("accountHeadCode").value.trim();
+        const personName = document.getElementById("personName").value.trim();
+        const purpose = document.getElementById("purpose").value.trim();
+        const amount = document.getElementById("amount").value.trim();
+
+        if (!voucherDate) {
+            showMessage("error", "Date is required");
+            document.getElementById("voucherDate").focus();
+            return false;
+        }
+
+        if (!accountName) {
+            showMessage("error", "Account Head is required");
+            document.getElementById("accountHead").focus();
+            return false;
+        }
+
+        if (!accountCode) {
+            showMessage("error", "Please select a valid Account Head from the list");
+            document.getElementById("accountHead").focus();
+            return false;
+        }
+
+        if (!personName) {
+            showMessage("error", "Name of the Person is required");
+            document.getElementById("personName").focus();
+            return false;
+        }
+
+        if (!purpose) {
+            showMessage("error", "Purpose is required");
+            document.getElementById("purpose").focus();
+            return false;
+        }
+
+        if (!amount || Number(amount) <= 0) {
+            showMessage("error", "Amount must be greater than zero");
+            document.getElementById("amount").focus();
+            return false;
+        }
+
+        return true;
+    }
+
+    async function saveVoucher() {
+        if (!validateVoucherForm()) {
+            return null;
+        }
+
+        const data = getFormData();
+
+        const response = await fetch("/api/cash-voucher-entry/save", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            showMessage("error", result.message || "Save failed");
+            return null;
+        }
+
+        savedVoucherId = result.id;
+        showMessage("success", "Voucher saved. : " + result.id);
+
+        return result;
+    }
+
+    function formatDisplayDate(value) {
+        if (!value) return "";
+
+        const parts = value.split("-");
+        if (parts.length !== 3) return value;
+
+        return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+
+    function fillPrintPreview(voucherId) {
+        const data = getFormData();
+        const amountWords = document.getElementById("amountWords").innerText;
+        const personName = document.getElementById("personName").value;
+        const amount = data.amount || "";
+
+        document.getElementById("printVoucherNo").innerText = voucherId || "";
+        document.getElementById("printDate").innerText = formatDisplayDate(data.voucherdate);
+        document.getElementById("printAccountHead").innerText = data.account_name || "";
+        document.getElementById("printPersonName").innerText = personName || "";
+        document.getElementById("printPurpose").innerText = data.purpose || "";
+        document.getElementById("printAmountWords").innerText = amountWords;
+        document.getElementById("printAmount").innerText = amount;
+
+        document.getElementById("printPreview").style.display = "block";
+    }
+
+    function showPrintPreview() {
+        fillPrintPreview(savedVoucherId);
+        document.getElementById("printPreview").scrollIntoView({ behavior: "smooth" });
+    }
+
+    async function printVoucher() {
+        let result = null;
+
+        if (!savedVoucherId) {
+            result = await saveVoucher();
+
+            if (!result) {
+                return;
+            }
+        }
+
+        fillPrintPreview(savedVoucherId);
+
+        setTimeout(() => {
+            window.print();
+        }, 300);
+    }
+
+    function resetForm() {
+        savedVoucherId = null;
+
+        document.getElementById("accountHead").value = "";
+        document.getElementById("accountHeadCode").value = "";
+        document.getElementById("personName").value = "";
+        document.getElementById("purpose").value = "";
+        document.getElementById("amount").value = "";
+        document.getElementById("amountWords").innerText = "Amount in words will appear here";
+        document.getElementById("printPreview").style.display = "none";
+        document.getElementById("saveMessage").style.display = "none";
+
+        loadAccountHeads();
+    setTodayDate();
+    }
+
+    loadAccountHeads();
+    setTodayDate();
+</script>
+{% endblock %}

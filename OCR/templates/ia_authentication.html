@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication Screen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+
+<style>
+    .draft-page {
+        max-width: 1250px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 18px;
+    }
+
+    .draft-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .draft-toolbar {
+        padding: 16px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1.4fr 1fr 1fr 0.8fr auto auto auto;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .filter-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .filter-control {
+        height: 38px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        padding: 7px 10px;
+        font-size: 13px;
+        background: #ffffff;
+    }
+
+    @media (max-width: 1100px) {
+        .filter-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .btn {
+        border: none;
+        border-radius: 9px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: #020617;
+        color: #ffffff;
+    }
+
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #020617;
+    }
+
+    .btn-success {
+        background: #16a34a;
+        color: #ffffff;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        text-align: left;
+        font-size: 12px;
+        color: #64748b;
+        text-transform: uppercase;
+        padding: 12px 14px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    td {
+        padding: 13px 14px;
+        border-bottom: 1px solid #eef2f7;
+        font-size: 14px;
+        vertical-align: top;
+    }
+
+    .modal-backdrop-custom {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        z-index: 9999;
+        padding: 30px;
+        overflow-y: auto;
+    }
+
+    .modal-box {
+        background: white;
+        max-width: 850px;
+        margin: 0 auto;
+        border-radius: 14px;
+        padding: 22px;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 16px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .form-control {
+        height: 40px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        padding: 8px 10px;
+    }
+
+    textarea.form-control {
+        height: 90px;
+    }
+
+    .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .preview-box {
+        border: 2px solid #1d4ed8;
+        color: #1d4ed8;
+        padding: 22px;
+        font-family: Arial, sans-serif;
+    }
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    .print-sign-cell:last-child {
+        border-right: none;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        #previewModal,
+        #previewModal * {
+            visibility: visible;
+        }
+
+        #previewModal {
+            display: block !important;
+            position: absolute;
+            inset: 0;
+            background: white;
+            padding: 0;
+        }
+
+        .modal-box {
+            max-width: none;
+            box-shadow: none;
+            border-radius: 0;
+        }
+
+        .modal-actions,
+        .modal-title {
+            display: none;
+        }
+    }
+
+    .standalone-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 28px;
+    }
+
+    body {
+        margin: 0;
+        background: #f8fafc;
+        color: #172554;
+        font-family: Arial, sans-serif;
+    }
+
+
+.print-box {
+    width: 900px;
+    min-height: 520px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 2px solid #1d4ed8;
+    color: #1d4ed8;
+    padding: 18px 22px 0 22px;
+    font-family: Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+.print-company {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 2px;
+}
+
+.print-address {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+
+.print-title {
+    text-align: center;
+    display: block;
+    width: fit-content;
+    margin: 0 auto 12px auto;
+    border: 2px solid #1d4ed8;
+    padding: 4px 12px;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.print-top-row {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 12px;
+    margin-bottom: 0;
+    font-size: 15px;
+    border-top: 1.5px solid #1d4ed8;
+    border-bottom: 1.5px solid #1d4ed8;
+}
+
+.print-line {
+    border-bottom: 1.5px solid #1d4ed8;
+    min-height: 40px;
+    padding: 0;
+    font-size: 15px;
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 0;
+}
+
+.print-label {
+    font-weight: 800;
+    border-right: 1.5px solid #1d4ed8;
+    padding: 10px 10px;
+    display: flex;
+    align-items: center;
+}
+
+.print-value {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    white-space: pre-wrap;
+}
+
+.print-purpose {
+    min-height: 120px;
+}
+
+.print-amount-row {
+    display: grid;
+    grid-template-columns: 1fr 170px;
+    border-bottom: 1.5px solid #1d4ed8;
+    min-height: 58px;
+}
+
+.print-amount-words {
+    padding: 10px 10px;
+    border-right: 1.5px solid #1d4ed8;
+    font-size: 15px;
+}
+
+.print-amount-value {
+    padding: 10px 10px;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.print-signatures {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    min-height: 84px;
+    border-bottom: 1.5px solid #1d4ed8;
+}
+
+.print-sign-cell {
+    border-right: 1.5px solid #1d4ed8;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 6px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.print-sign-cell:last-child {
+    border-right: none;
+}
+
+</style>
+</head>
+<body>
+    <div class="standalone-page">
+
+<div class="draft-page">
+    <div class="page-title">Authentication Screen</div>
+    <div class="page-subtitle">Pending cash vouchers for IA authentication.</div>
+
+    <div class="draft-card">
+        <div class="draft-toolbar">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Search</label>
+                    <input id="draftSearch" class="filter-control" placeholder="Voucher no, person, purpose" oninput="applyDraftFilters()">
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Account Head</label>
+                    <input id="accountFilter" class="filter-control" list="accountFilterList" placeholder="Search account head" oninput="applyDraftFilters()">
+                    <datalist id="accountFilterList"></datalist>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">From Date</label>
+                    <input id="fromDateFilter" type="date" class="filter-control" onchange="applyDraftFilters()">
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">To Date</label>
+                    <input id="toDateFilter" type="date" class="filter-control" onchange="applyDraftFilters()">
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Rows</label>
+                    <select id="rowLimitFilter" class="filter-control" onchange="applyDraftFilters()">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+<button class="btn btn-secondary" onclick="clearDraftFilters()">Clear</button>
+                <button class="btn btn-secondary" onclick="loadDrafts()">Refresh</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Date</th>
+                    <th>Account Head</th>
+                    <th>Person Name</th>
+                    <th>Purpose</th>
+                    <th>Amount</th>
+                    <th>Entry Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="draftBody">
+                <tr>
+                    <td colspan="8">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="editModal" class="modal-backdrop-custom">
+    <div class="modal-box">
+        <div class="modal-title">Edit Voucher</div>
+
+        <input type="hidden" id="editId">
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="editDate" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount</label>
+                <input type="number" id="editAmount" class="form-control" required>
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Account Head</label>
+                <input type="text" id="editAccountName" class="form-control" required list="editAccountHeadList" oninput="handleEditAccountHeadInput()">
+                <input type="hidden" id="editAccountCode">
+                <datalist id="editAccountHeadList"></datalist>
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Name of the Person</label>
+                <input type="text" id="editPersonName" class="form-control" required>
+            </div>
+
+            <div class="form-group full-width">
+                <label class="form-label">Purpose</label>
+                <textarea id="editPurpose" class="form-control" required></textarea>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button class="btn btn-success" onclick="saveEdit()">Update</button>
+        </div>
+    </div>
+</div>
+
+<div id="previewModal" class="modal-backdrop-custom">
+    <div class="modal-box">
+        <div class="modal-title">Voucher Preview</div>
+
+        <div class="preview-box">
+            <div class="print-company">Amarjothi Spinning Mills Limited</div>
+            <div class="print-address">PUDUSURIPALAYAM - NAMBIYUR - 638 458</div>
+            <div class="print-title">CASH PAYMENT VOUCHER</div>
+
+            <div class="print-top-row">
+                
+                <div style="text-align:right;"><b>DATE:</b> <span id="pvDate"></span></div>
+            </div>
+
+            <div class="print-line">
+                <div class="print-label">ACCOUNT HEAD</div>
+                <div id="pvAccountHead"></div>
+            </div>
+
+            <div class="print-line">
+                <div class="print-label">NAME OF THE PERSON</div>
+                <div id="pvPersonName"></div>
+            </div>
+
+            <div class="print-line print-purpose">
+                <div class="print-label">PURPOSE</div>
+                <div id="pvPurpose"></div>
+            </div>
+
+            <div class="print-amount-row">
+                <div class="print-amount-words">
+                    <b>AMOUNT IN WORDS :</b> Rs. <span id="pvAmountWords"></span>
+                </div>
+                <div class="print-amount-value">
+                    <b>AMOUNT</b><br>Rs. <span id="pvAmount"></span>
+                </div>
+            </div>
+
+            <div class="print-signatures">
+                <div class="print-sign-cell">DEPT. HEAD</div>
+                <div class="print-sign-cell">MD/JMD</div>
+                <div class="print-sign-cell">J.O.(Accounts)</div>
+                <div class="print-sign-cell">I.A.</div>
+                <div class="print-sign-cell">CASHIER</div>
+                <div class="print-sign-cell">RECEIVED BY</div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closePreviewModal()">Close</button>
+            <button class="btn btn-primary" onclick="authenticateAndPrint()">Authenticate & Print</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let draftRows = [];
+    let draftAccountHeadAccounts = [];
+
+    function numberToWords(num) {
+        num = parseInt(num || 0);
+
+        if (num === 0) return "Zero Rupees Only";
+
+        const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+            "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+
+        const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+        function belowHundred(n) {
+            if (n < 20) return ones[n];
+            return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+        }
+
+        function belowThousand(n) {
+            let word = "";
+            if (n >= 100) {
+                word += ones[Math.floor(n / 100)] + " Hundred";
+                n %= 100;
+                if (n) word += " ";
+            }
+            if (n) word += belowHundred(n);
+            return word;
+        }
+
+        let word = "";
+
+        if (num >= 10000000) {
+            word += belowThousand(Math.floor(num / 10000000)) + " Crore ";
+            num %= 10000000;
+        }
+
+        if (num >= 100000) {
+            word += belowThousand(Math.floor(num / 100000)) + " Lakh ";
+            num %= 100000;
+        }
+
+        if (num >= 1000) {
+            word += belowThousand(Math.floor(num / 1000)) + " Thousand ";
+            num %= 1000;
+        }
+
+        if (num > 0) word += belowThousand(num);
+
+        return word.trim() + " Rupees Only";
+    }
+
+    function formatDateForDisplay(value) {
+        if (!value) return "";
+
+        if (value.includes("-")) {
+            const parts = value.split("-");
+            return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+
+        return value;
+    }
+
+    async function loadDraftAccountHeads() {
+        try {
+            const response = await fetch("/api/cash-voucher-entry/accounts");
+            const result = await response.json();
+
+            draftAccountHeadAccounts = result.rows || [];
+
+            const list = document.getElementById("editAccountHeadList");
+            const filterList = document.getElementById("accountFilterList");
+
+            list.innerHTML = "";
+            filterList.innerHTML = "";
+
+            draftAccountHeadAccounts.forEach(account => {
+                const option = document.createElement("option");
+                option.value = account.name;
+                list.appendChild(option);
+
+                const filterOption = document.createElement("option");
+                filterOption.value = account.name;
+                filterList.appendChild(filterOption);
+            });
+
+        } catch (error) {
+            console.error("Draft account load error:", error);
+            draftAccountHeadAccounts = [];
+        }
+    }
+
+    function handleEditAccountHeadInput() {
+        const value = document.getElementById("editAccountName").value.trim().toUpperCase();
+        const matched = draftAccountHeadAccounts.find(account => account.name.toUpperCase() === value);
+
+        document.getElementById("editAccountCode").value = matched ? matched.accode : "";
+    }
+
+
+    function normalizeText(value) {
+        return (value || "").toString().trim().toUpperCase();
+    }
+
+    function parseDisplayDateToISO(value) {
+        if (!value) return "";
+
+        if (value.includes("-")) {
+            return value;
+        }
+
+        const parts = value.split(".");
+        if (parts.length !== 3) return "";
+
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+
+    function renderDraftRows(rows) {
+        const body = document.getElementById("draftBody");
+
+        if (!rows.length) {
+            body.innerHTML = `<tr><td colspan="8">No voucher drafts found.</td></tr>`;
+            return;
+        }
+
+        body.innerHTML = "";
+
+        rows.forEach(row => {
+            body.innerHTML += `
+                <tr>
+                    <td>${row.id || ""}</td>
+                    <td>${row.voucherdate || ""}</td>
+                    <td>${row.account_name || ""}</td>
+                    <td>${row.person_name || ""}</td>
+                    <td>${row.purpose || ""}</td>
+                    <td>${row.amount || ""}</td>
+                    <td>${row.entrydateandtime || ""}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>
+                        <button class="btn btn-primary" onclick="openPreview(${row.id})">Preview</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function applyDraftFilters() {
+        const searchText = normalizeText(document.getElementById("draftSearch").value);
+        const accountText = normalizeText(document.getElementById("accountFilter").value);
+        const fromDate = document.getElementById("fromDateFilter").value;
+        const toDate = document.getElementById("toDateFilter").value;
+        const rowLimit = document.getElementById("rowLimitFilter").value;
+
+        let filtered = draftRows.filter(row => {
+            const rowSearch = normalizeText(
+                `${row.id} ${row.person_name || ""} ${row.purpose || ""} ${row.amount || ""}`
+            );
+
+            const rowAccount = normalizeText(row.account_name || "");
+            const rowDate = parseDisplayDateToISO(row.voucherdate || "");
+
+            if (searchText && !rowSearch.includes(searchText)) {
+                return false;
+            }
+
+            if (accountText && !rowAccount.includes(accountText)) {
+                return false;
+            }
+
+            if (fromDate && rowDate && rowDate < fromDate) {
+                return false;
+            }
+
+            if (toDate && rowDate && rowDate > toDate) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (rowLimit !== "all") {
+            filtered = filtered.slice(0, Number(rowLimit));
+        }
+
+        renderDraftRows(filtered);
+    }
+
+    function clearDraftFilters() {
+        document.getElementById("draftSearch").value = "";
+        document.getElementById("accountFilter").value = "";
+        document.getElementById("fromDateFilter").value = "";
+        document.getElementById("toDateFilter").value = "";
+        document.getElementById("rowLimitFilter").value = "10";
+        applyDraftFilters();
+    }
+
+
+    async function loadDrafts() {
+        const body = document.getElementById("draftBody");
+        body.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
+
+        const response = await fetch("/api/cash-voucher-entry/list");
+        const result = await response.json();
+
+        if (!result.success) {
+            body.innerHTML = `<tr><td colspan="8">${result.message || "Failed to load drafts"}</td></tr>`;
+            return;
+        }
+
+        draftRows = result.rows || [];
+
+        applyDraftFilters();
+    }
+
+    async function openEdit(id) {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Failed to load voucher");
+            return;
+        }
+
+        const row = result.row;
+
+        document.getElementById("editId").value = row.id;
+        document.getElementById("editDate").value = row.voucherdate;
+        document.getElementById("editAccountName").value = row.account_name || "";
+        document.getElementById("editAccountCode").value = row.account_head_code || "";
+        document.getElementById("editPersonName").value = row.person_name || "";
+        document.getElementById("editPurpose").value = row.purpose || "";
+        document.getElementById("editAmount").value = row.amount || "";
+
+        document.getElementById("editModal").style.display = "block";
+    }
+
+    function closeEditModal() {
+        document.getElementById("editModal").style.display = "none";
+    }
+
+
+    function validateEditForm() {
+        handleEditAccountHeadInput();
+
+        const voucherDate = document.getElementById("editDate").value.trim();
+        const accountName = document.getElementById("editAccountName").value.trim();
+        const accountCode = document.getElementById("editAccountCode").value.trim();
+        const personName = document.getElementById("editPersonName").value.trim();
+        const purpose = document.getElementById("editPurpose").value.trim();
+        const amount = document.getElementById("editAmount").value.trim();
+
+        if (!voucherDate) {
+            alert("Date is required");
+            document.getElementById("editDate").focus();
+            return false;
+        }
+
+        if (!accountName) {
+            alert("Account Head is required");
+            document.getElementById("editAccountName").focus();
+            return false;
+        }
+
+        if (!accountCode) {
+            alert("Please select a valid Account Head from the list");
+            document.getElementById("editAccountName").focus();
+            return false;
+        }
+
+        if (!personName) {
+            alert("Name of the Person is required");
+            document.getElementById("editPersonName").focus();
+            return false;
+        }
+
+        if (!purpose) {
+            alert("Purpose is required");
+            document.getElementById("editPurpose").focus();
+            return false;
+        }
+
+        if (!amount || Number(amount) <= 0) {
+            alert("Amount must be greater than zero");
+            document.getElementById("editAmount").focus();
+            return false;
+        }
+
+        return true;
+    }
+
+    async function saveEdit() {
+        if (!validateEditForm()) {
+            return;
+        }
+
+        const id = document.getElementById("editId").value;
+
+        const data = {
+            voucherdate: document.getElementById("editDate").value,
+            account_head_code: document.getElementById("editAccountCode").value,
+            account_name: document.getElementById("editAccountName").value,
+            person_name: document.getElementById("editPersonName").value,
+            purpose: document.getElementById("editPurpose").value,
+            amount: document.getElementById("editAmount").value
+        };
+
+        const response = await fetch(`/api/cash-voucher-entry/update/${id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Update failed");
+            return;
+        }
+
+        closeEditModal();
+        loadDraftAccountHeads();
+    loadDrafts();
+    }
+
+    async function openPreview(id) {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Failed to load voucher");
+            return;
+        }
+
+        const row = result.row;
+
+        const pvVoucherNo = document.getElementById("pvVoucherNo");
+        if (pvVoucherNo) pvVoucherNo.innerText = row.id || "";
+        document.getElementById("pvDate").innerText = formatDateForDisplay(row.voucherdate);
+        if (document.getElementById("pvAccountHead")) document.getElementById("pvAccountHead").innerText = row.account_name || "";
+        if (document.getElementById("pvPersonName")) document.getElementById("pvPersonName").innerText = row.person_name || "";
+        if (document.getElementById("pvPurpose")) document.getElementById("pvPurpose").innerText = row.purpose || "";
+        if (document.getElementById("pvAmount")) document.getElementById("pvAmount").innerText = row.amount || "";
+        document.getElementById("pvAmountWords").innerText = numberToWords(row.amount).replace(" Rupees Only", "");
+
+        document.getElementById("previewModal").style.display = "block";
+    }
+
+    function closePreviewModal() {
+        document.getElementById("previewModal").style.display = "none";
+    }
+
+    loadDraftAccountHeads();
+    loadDrafts();
+
+    async function authenticateAndPrint() {
+        const id = document.getElementById("pvVoucherNo").innerText.trim();
+
+        if (!id) {
+            alert("Voucher number missing");
+            return;
+        }
+
+        const response = await fetch(`/api/ia-authentication/print/${id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Authentication failed");
+            return;
+        }
+
+        window.print();
+        loadDrafts();
+    }
+</script>
+
+
+
+    </div>
+</body>
+</html>

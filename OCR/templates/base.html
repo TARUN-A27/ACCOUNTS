@@ -3,179 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <title>AI-Accounts</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            background: #f8fafc;
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 30%),
+                radial-gradient(circle at top right, rgba(15, 23, 42, 0.08), transparent 32%),
+                #f8fafc;
+            color: #020617;
         }
 
-        .navbar-brand {
+        .app-shell {
+            width: 100%;
+            min-height: 100vh;
+            padding: 28px 24px 56px;
+        }
+
+        .app-brand {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .app-brand-title {
+            font-size: 44px;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: -1.2px;
+            color: #020617;
+        }
+
+        .app-brand-subtitle {
+            margin-top: 8px;
+            font-size: 15px;
             font-weight: 700;
-            color: #0f172a;
+            color: #64748b;
         }
 
-        .page-wrapper {
-            background: #f8fafc;
+        .page-container {
+            width: min(1280px, 100%);
+            margin: 0 auto;
         }
 
-        .nav-link-title {
-            font-weight: 500;
+        .global-back-dashboard {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 11px 16px;
+            border-radius: 12px;
+            background: #020617;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 900;
         }
 
-        .card {
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        .global-back-dashboard:hover {
+            background: #111827;
+            color: #ffffff;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 11px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            text-decoration: none;
         }
 
         .btn-primary {
-            background: #2563eb;
-            border-color: #2563eb;
+            background: #020617;
+            color: #ffffff;
         }
 
-        .ai-badge {
-            background: #f3e8ff;
-            color: #7c3aed;
-            border: 1px solid #ddd6fe;
+        .btn-secondary,
+        .btn-outline-primary,
+        .btn-outline-secondary {
+            background: #eef2f7;
+            color: #020617;
         }
 
-        .status-success {
-            color: #16a34a;
+        .btn-success {
+            background: #16a34a;
+            color: #ffffff;
         }
 
-        .status-warning {
-            color: #d97706;
+        .btn-danger {
+            background: #dc2626;
+            color: #ffffff;
         }
 
-        .status-error {
-            color: #dc2626;
+        .card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
         }
 
-        .review-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(4px);
-    z-index: 1040;
-    display: none;
-}
+        .card-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #e5e7eb;
+        }
 
-.review-drawer {
-    position: fixed;
-    top: 0;
-    right: -520px;
-    width: 520px;
-    height: 100vh;
-    background: #ffffff;
-    border-left: 1px solid #e2e8f0;
-    z-index: 1050;
-    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.18);
-    transition: right 0.25s ease;
-    display: flex;
-    flex-direction: column;
-}
+        .card-title {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 900;
+        }
 
-.review-drawer.open {
-    right: 0;
-}
+        .card-body {
+            padding: 18px;
+        }
 
-.review-backdrop.show {
-    display: block;
-}
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-.review-drawer-header {
-    padding: 18px 22px;
-    border-bottom: 1px solid #e2e8f0;
-}
+        .table th,
+        .table td {
+            padding: 13px 14px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            font-size: 14px;
+        }
 
-.review-drawer-body {
-    padding: 20px;
-    overflow-y: auto;
-    flex: 1;
-}
+        .table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #475569;
+            font-weight: 900;
+        }
 
-.review-drawer-footer {
-    padding: 16px 20px;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
-}
+        .form-control,
+        .form-select {
+            width: 100%;
+            height: 42px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 8px 11px;
+            font-size: 14px;
+            background: #ffffff;
+        }
 
-.review-field {
-    margin-bottom: 16px;
-}
+        textarea.form-control {
+            height: auto;
+            min-height: 90px;
+        }
 
-.review-field label {
-    font-weight: 500;
-    margin-bottom: 6px;
-    display: block;
-}
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 7px;
+            color: #334155;
+        }
 
-@media(max-width: 700px) {
-    .review-drawer {
-        width: 100%;
-        right: -100%;
-    }
-}
+        .text-secondary {
+            color: #64748b;
+        }
+
+        .badge {
+            display: inline-flex;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .bg-green-lt {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .bg-yellow-lt {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .bg-blue-lt {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: -10px;
+            margin-right: -10px;
+        }
+
+        .col,
+        .col-auto,
+        .col-lg-3,
+        .col-lg-4,
+        .col-lg-5,
+        .col-md-2,
+        .col-md-4 {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        .col-auto {
+            flex: 0 0 auto;
+        }
+
+        .col-lg-3 { width: 25%; }
+        .col-lg-4 { width: 33.333%; }
+        .col-lg-5 { width: 41.666%; }
+        .col-md-2 { width: 16.666%; }
+        .col-md-4 { width: 33.333%; }
+
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 16px; }
+        .mt-1 { margin-top: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 16px; }
+        .m-0 { margin: 0; }
+        .py-4 { padding-top: 24px; padding-bottom: 24px; }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        .fw-semibold { font-weight: 800; }
+        .small { font-size: 12px; }
+        .d-flex { display: flex; }
+        .justify-content-between { justify-content: space-between; }
+        .align-items-center { align-items: center; }
+        .gap-2 { gap: 8px; }
+        .w-100 { width: 100%; }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 0;
+            color: #020617;
+        }
+
+        @media (max-width: 900px) {
+            .app-shell {
+                padding: 22px 14px 44px;
+            }
+
+            .app-brand-title {
+                font-size: 34px;
+            }
+
+            .col-lg-3,
+            .col-lg-4,
+            .col-lg-5,
+            .col-md-2,
+            .col-md-4 {
+                width: 100%;
+            }
+        }
+
+        @media print {
+            .app-brand,
+            .global-back-dashboard {
+                display: none !important;
+            }
+
+            body {
+                background: #ffffff !important;
+            }
+
+            .app-shell {
+                padding: 0 !important;
+            }
+        }
     </style>
 </head>
 
 <body>
-<div class="page">
+    <main class="app-shell">
+        <header class="app-brand">
+            <h1 class="app-brand-title">AI-Accounts</h1>
+            <div class="app-brand-subtitle">Cash Voucher · OCR · Validation · History</div>
+        </header>
 
-    <aside class="navbar navbar-vertical navbar-expand-lg">
-        <div class="container-fluid">
+        <section class="page-container">
+            {% if request.endpoint != 'dashboard' %}
+                <a class="global-back-dashboard" href="/dashboard">← Back to Dashboard</a>
+            {% endif %}
 
-            <h1 class="navbar-brand navbar-brand-autodark">
-                AI-Accounts
-            </h1>
-
-            <div class="collapse navbar-collapse show">
-                <ul class="navbar-nav pt-lg-3">
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">
-                            <span class="nav-link-title">Dashboard</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="/extraction">
-                            <span class="nav-link-title">Document Extraction</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="/validation">
-                            <span class="nav-link-title">Validation Queue</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="/history">
-                            <span class="nav-link-title">History</span>
-                        </a>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-    </aside>
-
-    <div class="page-wrapper">
-
-
-        <div class="page-body">
-            <div class="container-xl">
-                {% block content %}
-                {% endblock %}
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+            {% block content %}{% endblock %}
+        </section>
+    </main>
 </body>
 </html>

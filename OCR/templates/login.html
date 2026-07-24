@@ -195,7 +195,7 @@
                                 <option value="">Select department</option>
 
                                 {% for division in divisions %}
-                                <option value="{{ division.divisioncode }}">
+                                <option value="{{ division.divisioncode }}" {% if division.divisioncode == '1' %}selected{% endif %}>
                                     {{ division.divdesc }}
                                 </option>
                                 {% endfor %}
