@@ -1,4 +1,6 @@
 import os
+import glob
+import subprocess
 import json
 import re
 import time
@@ -558,6 +560,193 @@ def get_history():
     return jsonify(history)
 
 
+
+
+
+
+@app.route("/api/ocr-extraction/approve", methods=["POST"])
+def approve_ocr_extraction():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    conn = None
+    cursor = None
+
+    try:
+        data = request.get_json() or {}
+
+        account_name = (data.get("account_name") or "").strip().upper()
+        account_head_code = (data.get("account_head_code") or "").strip()
+
+        if account_name and not account_head_code:
+            conn = get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT accode
+                FROM accounts
+                WHERE pettycashflag = 1
+                  AND UPPER(TRIM(name)) = :account_name
+            """, {
+                "account_name": account_name
+            })
+
+            row = cursor.fetchone()
+
+            if row:
+                account_head_code = row[0]
+
+            cursor.close()
+            conn.close()
+            cursor = None
+            conn = None
+
+        save_data = {
+            "voucherdate": data.get("voucherdate"),
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": data.get("person_name"),
+            "purpose": data.get("purpose"),
+            "amount": data.get("amount")
+        }
+
+        result = insert_cash_voucher_entry(
+            save_data,
+            session,
+            entry_source="OCR"
+        )
+
+        if not result.get("success"):
+            return jsonify(result), 400
+
+        return jsonify({
+            "success": True,
+            "message": "OCR voucher approved and inserted successfully",
+            "voucher_id": result.get("id") or result.get("voucher_id"),
+            "account_head_code": account_head_code,
+            "account_name": account_name
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route("/api/scanned-documents", methods=["GET"])
+def scanned_documents():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required",
+            "rows": []
+        }), 401
+
+    try:
+        upload_dir = os.path.abspath(os.path.join(app.root_path, "..", "static", "uploads"))
+        os.makedirs(upload_dir, exist_ok=True)
+
+        files = []
+        for path in glob.glob(os.path.join(upload_dir, "scan_*.png")):
+            filename = os.path.basename(path)
+            stat = os.stat(path)
+
+            files.append({
+                "filename": filename,
+                "file_url": url_for("static", filename=f"uploads/{filename}"),
+                "size": stat.st_size,
+                "modified": stat.st_mtime
+            })
+
+        files.sort(key=lambda x: x["modified"], reverse=True)
+
+        return jsonify({
+            "success": True,
+            "rows": files[:50]
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e),
+            "rows": []
+        }), 500
+
+@app.route("/api/scan-document", methods=["POST"])
+def scan_document():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    try:
+        upload_dir = os.path.join(app.root_path, "..", "static", "uploads")
+        upload_dir = os.path.abspath(upload_dir)
+        os.makedirs(upload_dir, exist_ok=True)
+
+        filename = "scan_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".png"
+        output_path = os.path.join(upload_dir, filename)
+
+        scanner_device = "escl:http://localhost:60000"
+
+        cmd = [
+            "scanimage",
+            "-d", scanner_device,
+            "--source", "ADF",
+            "--format=png",
+            "--mode", "Gray",
+            "--resolution", "200",
+            "-x", "148",
+            "-y", "210",
+        ]
+
+        with open(output_path, "wb") as f:
+            result = subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=subprocess.PIPE,
+                timeout=120
+            )
+
+        if result.returncode != 0:
+            try:
+                os.remove(output_path)
+            except Exception:
+                pass
+
+            return jsonify({
+                "success": False,
+                "message": result.stderr.decode("utf-8", errors="ignore") or "Scanner failed"
+            }), 500
+
+        return jsonify({
+            "success": True,
+            "filename": filename,
+            "file_url": url_for("static", filename=f"uploads/{filename}")
+        })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False,
+            "message": "Scanner timeout. Please check scanner/ADF paper."
+        }), 500
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 @app.route("/upload", methods=["POST"])
 def upload_document():

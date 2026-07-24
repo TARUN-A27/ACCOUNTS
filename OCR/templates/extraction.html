@@ -1,757 +1,745 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-<div class="page-header d-print-none">
-    <div class="row align-items-center">
-        <div class="col">
-            <h2 class="page-title">Document Extraction</h2>
-            <div class="text-secondary mt-1">
-                Upload accounting documents, extract AI fields, and review selected files.
-            </div>
-        </div>
-        <div class="col-auto">
-            <button id="reviewDocsBtn" class="btn btn-outline-primary">
-                Review Docs
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="row row-cards">
-
-    <div class="col-lg-3">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Document Queue</h3>
-            </div>
-            <div class="card-body">
-                <div id="documentList" class="list-group list-group-flush">
-                    <div class="text-secondary text-center py-4">
-                        No documents extracted yet
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Document Preview</h3>
-            </div>
-            <div class="card-body">
-                <div id="preview" class="border rounded d-flex align-items-center justify-content-center text-secondary"
-                     style="min-height:640px; background:#f8fafc;">
-                    Select or upload a document to preview
-                </div>
-
-                <div id="status" class="alert alert-info mt-3 mb-0">
-                    Waiting for upload...
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div id="uploadPanel" class="card">
-            <div class="card-header">
-                <h3 class="card-title">Extract Document</h3>
-            </div>
-
-            <div class="card-body">
-                <form id="uploadForm">
-
-                    <div class="mb-3">
-                        <label class="form-label">Document Type</label>
-                        <select name="model_id" class="form-select">
-                            <option value="auto">Auto Detect</option>
-                            <option value="voucher">Cash Payment Voucher</option>
-                            <option value="invoice">Invoice</option>
-                            <option value="receipt">Receipt</option>
-                            <option value="challan">Delivery Challan</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Upload PDF or Image</label>
-                        <input type="file"
-                               name="document"
-                               class="form-control"
-                               accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp"
-                               required>
-                    </div>
-
-                    <button id="submitBtn" type="submit" class="btn btn-primary w-100">
-                        Extract Document
-                    </button>
-
-                </form>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div id="reviewBackdrop" class="extraction-review-backdrop"></div>
-
-<div id="reviewModal" class="extraction-review-modal">
-
-    <div class="extraction-review-header">
-        <div>
-            <h3 class="m-0">Review Document</h3>
-            <div id="reviewDocName" class="text-secondary small mt-1"></div>
-        </div>
-
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closeReviewModal()">
-            Close
-        </button>
-    </div>
-
-    <div class="extraction-review-body">
-
-        <div class="review-preview-panel">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h4 class="m-0">Original Document</h4>
-                <span class="badge bg-blue-lt">Preview</span>
-            </div>
-
-            <div class="d-flex gap-2 mb-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fitReviewPreview()">Fit Full Image</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomInReviewPreview()">Zoom In</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOutReviewPreview()">Zoom Out</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="rotateReviewPreview()">Rotate</button>
-            </div>
-
-            <div id="reviewPreview" class="review-preview fit-mode">
-                Select a document
-            </div>
-        </div>
-
-        <div class="review-fields-panel">
-
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h4 class="card-title">AI Summary</h4>
-                </div>
-                <div class="card-body">
-                    <div id="classificationBox"></div>
-                    <div id="validationBox"></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="card-title">Editable Fields</h4>
-                </div>
-
-                <div class="card-body">
-                    <div id="reviewForm"></div>
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="extraction-review-footer">
-        <div class="text-secondary small">
-            Review the extracted fields and approve or reject this document.
-        </div>
-
-        <div class="d-flex gap-2">
-            <button id="approveBtn" type="button" class="btn btn-success">
-                Approve
-            </button>
-
-            <button id="rejectBtn" type="button" class="btn btn-danger">
-                Reject
-            </button>
-        </div>
-    </div>
-
-</div>
-
 <style>
-.extraction-review-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(4px);
-    z-index: 1040;
-    display: none;
-}
-
-.extraction-review-backdrop.show {
-    display: block;
-}
-
-.extraction-review-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 96vw;
-    height: 92vh;
-    max-width: 1700px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
-    z-index: 1050;
-    display: none;
-    transform: translate(-50%, -50%);
-    overflow: hidden;
-}
-
-.extraction-review-modal.open {
-    display: flex;
-    flex-direction: column;
-}
-
-.extraction-review-header {
-    height: 72px;
-    padding: 18px 22px;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.extraction-review-body {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 68% 32%;
-    min-height: 0;
-}
-
-.review-preview-panel {
-    padding: 18px;
-    border-right: 1px solid #e2e8f0;
-    background: #f8fafc;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.review-fields-panel {
-    padding: 18px;
-    overflow-y: auto;
-    background: #ffffff;
-    min-width: 0;
-}
-
-.review-preview {
-    height: calc(92vh - 230px);
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #ffffff;
-    padding: 12px;
-    overflow: auto;
-}
-
-.review-preview.fit-mode {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.review-preview.fit-mode img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-}
-
-.review-preview.zoom-mode {
-    display: block;
-}
-
-.review-preview.zoom-mode img {
-    width: var(--review-preview-width, 1200px);
-    max-width: none;
-    height: auto;
-    display: block;
-}
-
-.review-preview iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
-.extraction-review-footer {
-    height: 72px;
-    padding: 16px 22px;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.review-field {
-    margin-bottom: 16px;
-}
-
-.review-field label {
-    display: block;
-    font-weight: 500;
-    margin-bottom: 6px;
-}
-
-.review-field {
-    margin-bottom: 8px;
-}
-
-.review-field label {
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 3px;
-}
-
-.review-fields-panel {
-    overflow-y: hidden;
-}
-
-.form-control-sm,
-.form-select-sm {
-    min-height: 32px;
-    font-size: 13px;
-}
-</style>
-
-<script>
-const form = document.getElementById("uploadForm");
-const submitBtn = document.getElementById("submitBtn");
-const statusBox = document.getElementById("status");
-const preview = document.getElementById("preview");
-
-const documentList = document.getElementById("documentList");
-const reviewDocsBtn = document.getElementById("reviewDocsBtn");
-
-const reviewBackdrop = document.getElementById("reviewBackdrop");
-const reviewModal = document.getElementById("reviewModal");
-const reviewPreview = document.getElementById("reviewPreview");
-const reviewDocName = document.getElementById("reviewDocName");
-
-const classificationBox = document.getElementById("classificationBox");
-const validationBox = document.getElementById("validationBox");
-const reviewForm = document.getElementById("reviewForm");
-
-const approveBtn = document.getElementById("approveBtn");
-const rejectBtn = document.getElementById("rejectBtn");
-
-let extractedDocuments = [];
-let selectedDocumentIndex = null;
-let latestDocumentData = null;
-let reviewPreviewWidth = 1200;
-let previewRotation = 0;
-
-form.addEventListener("submit", async function(e){
-    e.preventDefault();
-
-    const formData = new FormData(this);
-    const file = formData.get("document");
-
-    statusBox.className = "alert alert-info mt-3 mb-0";
-    statusBox.innerText = "Processing document...";
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Processing...";
-
-    if(file){
-        previewFile(file);
+    .extract-app {
+        max-width: 1440px;
+        margin: 0 auto;
     }
 
-    try{
-        const response = await fetch("/upload", {
-            method:"POST",
-            body:formData
+    .extract-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-end;
+        margin-bottom: 18px;
+    }
+
+    .extract-title {
+        font-size: 30px;
+        font-weight: 900;
+        color: #111827;
+        letter-spacing: -0.04em;
+    }
+
+    .extract-subtitle {
+        margin-top: 5px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .extract-layout {
+        display: grid;
+        grid-template-columns: 300px minmax(520px, 1fr) 360px;
+        gap: 18px;
+        align-items: start;
+    }
+
+    .panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .panel-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid #eef2f7;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .panel-title {
+        font-size: 15px;
+        font-weight: 900;
+        color: #111827;
+    }
+
+    .panel-body {
+        padding: 16px;
+    }
+
+    .scan-list {
+        max-height: 710px;
+        overflow: auto;
+        padding: 10px;
+    }
+
+    .scan-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        background: #ffffff;
+        transition: 0.15s ease;
+    }
+
+    .scan-item:hover {
+        border-color: #94a3b8;
+        transform: translateY(-1px);
+    }
+
+    .scan-item.active {
+        border-color: #111827;
+        background: #f8fafc;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .scan-thumb {
+        width: 100%;
+        height: 132px;
+        object-fit: contain;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #eef2f7;
+    }
+
+    .scan-name {
+        font-size: 12px;
+        font-weight: 800;
+        color: #111827;
+        margin-top: 8px;
+        word-break: break-word;
+    }
+
+    .scan-meta {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: 0.15s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-primary {
+        background: #111827;
+        color: #ffffff;
+    }
+
+    .btn-blue {
+        background: #2563eb;
+        color: #ffffff;
+    }
+
+    .btn-light {
+        background: #f3f4f6;
+        color: #111827;
+        border: 1px solid #e5e7eb;
+    }
+
+    .btn-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .viewer-shell {
+        height: 760px;
+        background:
+            linear-gradient(45deg, #f8fafc 25%, transparent 25%),
+            linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #f8fafc 75%),
+            linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
+        background-size: 26px 26px;
+        background-position: 0 0, 0 13px, 13px -13px, -13px 0px;
+        border-radius: 0 0 20px 20px;
+        position: relative;
+        overflow: hidden;
+        cursor: grab;
+        user-select: none;
+    }
+
+    .viewer-shell.dragging {
+        cursor: grabbing;
+    }
+
+    .viewer-empty {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        text-align: center;
+        font-weight: 800;
+        padding: 30px;
+    }
+
+    .preview-image {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        max-width: none;
+        transform-origin: center center;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+        background: #ffffff;
+        border-radius: 8px;
+    }
+
+    .zoom-badge {
+        font-size: 12px;
+        font-weight: 900;
+        color: #475569;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        padding: 8px 10px;
+        border-radius: 999px;
+    }
+
+    .status-box {
+        padding: 13px 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        font-size: 13px;
+        line-height: 1.5;
+        margin-bottom: 14px;
+    }
+
+    .selected-file-box {
+        padding: 12px;
+        border-radius: 14px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+        font-size: 12px;
+        font-weight: 800;
+        word-break: break-word;
+        margin-bottom: 14px;
+    }
+
+    .result-box {
+        background: #0b1220;
+        color: #e5e7eb;
+        border-radius: 16px;
+        padding: 14px;
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        max-height: 510px;
+        overflow: auto;
+    }
+
+    .field-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #ffffff;
+    }
+
+    .field-label {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: 4px;
+    }
+
+    .field-value {
+        font-size: 14px;
+        color: #111827;
+        font-weight: 800;
+        min-height: 18px;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    @media (max-width: 1180px) {
+        .extract-layout {
+            grid-template-columns: 280px 1fr;
+        }
+
+        .right-panel {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 780px) {
+        .extract-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .viewer-shell {
+            height: 560px;
+        }
+
+        .extract-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+
+<div class="extract-app">
+    <div class="extract-header">
+        <div>
+            <div class="extract-title">Document Extraction</div>
+            <div class="extract-subtitle">Scan A5 voucher from ADF, inspect image, zoom/move, then extract OCR data.</div>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" id="startScanBtn" onclick="startScan()">Start Extraction</button>
+            <button class="btn btn-blue" id="extractBtn" onclick="extractSelected()" disabled>Extract Selected</button>
+            <button class="btn btn-primary" id="approveBtn" onclick="approveOcrVoucher()" disabled>Approve & Insert</button>
+            <button class="btn btn-light" onclick="loadScannedDocuments()">Refresh List</button>
+        </div>
+    </div>
+
+    <div class="extract-layout">
+        <div class="panel">
+            <div class="panel-head">
+                <div class="panel-title">Scanned Files</div>
+                <span id="scanCount" class="zoom-badge">0</span>
+            </div>
+            <div id="scanList" class="scan-list">
+                <div class="viewer-empty">No scanned documents yet.</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                <div class="panel-title">Image Preview</div>
+                <div class="toolbar">
+                    <span id="zoomBadge" class="zoom-badge">100%</span>
+                    <button class="btn btn-light" onclick="zoomOut()">−</button>
+                    <button class="btn btn-light" onclick="zoomIn()">+</button>
+                    <button class="btn btn-light" onclick="fitImage()">Fit</button>
+                    <button class="btn btn-light" onclick="resetView()">Reset</button>
+                    <button class="btn btn-light" onclick="rotateImage()">Rotate</button>
+                </div>
+            </div>
+
+            <div id="viewerShell" class="viewer-shell">
+                <div id="viewerEmpty" class="viewer-empty">
+                    Select or scan a document to preview.
+                </div>
+                <img id="previewImage" class="preview-image hidden" draggable="false">
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="panel-head">
+                <div class="panel-title">Extraction Result</div>
+            </div>
+            <div class="panel-body">
+                <div id="statusBox" class="status-box">
+                    Ready. Place A5 voucher vertically in ADF and click Start Extraction.
+                </div>
+
+                <div id="selectedFileBox" class="selected-file-box hidden"></div>
+
+                <div id="structuredFields" class="hidden"></div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let scannedDocuments = [];
+let selectedDoc = null;
+let selectedBlob = null;
+let latestExtractedFields = null;
+
+let scale = 1;
+let rotation = 0;
+let translateX = 0;
+let translateY = 0;
+
+let dragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let startTranslateX = 0;
+let startTranslateY = 0;
+
+const UPLOAD_FIELD_NAME = "document";
+
+function setStatus(message) {
+    document.getElementById("statusBox").innerText = message;
+}
+
+function updateButtons() {
+    document.getElementById("extractBtn").disabled = !selectedDoc;
+}
+
+function formatSize(bytes) {
+    if (!bytes) return "0 KB";
+    return Math.round(bytes / 1024) + " KB";
+}
+
+function renderScanList() {
+    const list = document.getElementById("scanList");
+    document.getElementById("scanCount").innerText = scannedDocuments.length;
+
+    if (!scannedDocuments.length) {
+        list.innerHTML = `<div class="viewer-empty">No scanned documents yet.</div>`;
+        return;
+    }
+
+    list.innerHTML = scannedDocuments.map((doc, index) => {
+        const active = selectedDoc && selectedDoc.filename === doc.filename ? "active" : "";
+        const url = doc.file_url + "?t=" + Date.now();
+
+        return `
+            <div class="scan-item ${active}" onclick="selectDocument(${index})">
+                <img class="scan-thumb" src="${url}" alt="${doc.filename}">
+                <div class="scan-name">${doc.filename}</div>
+                <div class="scan-meta">${formatSize(doc.size)}</div>
+            </div>
+        `;
+    }).join("");
+}
+
+async function loadScannedDocuments() {
+    try {
+        const response = await fetch("/api/scanned-documents");
+        const data = await response.json();
+
+        if (!data.success) {
+            setStatus("Could not load scanned files: " + (data.message || "Unknown error"));
+            return;
+        }
+
+        scannedDocuments = data.rows || [];
+
+        if (!selectedDoc && scannedDocuments.length) {
+            selectedDoc = scannedDocuments[0];
+        }
+
+        renderScanList();
+
+        if (selectedDoc) {
+            showSelectedDocument();
+        }
+
+    } catch (error) {
+        setStatus("Scanned file list error: " + error.message);
+    }
+}
+
+function selectDocument(index) {
+    selectedDoc = scannedDocuments[index];
+    selectedBlob = null;
+    renderScanList();
+    showSelectedDocument();
+}
+
+function showSelectedDocument() {
+    if (!selectedDoc) return;
+
+    const img = document.getElementById("previewImage");
+    const empty = document.getElementById("viewerEmpty");
+
+    document.getElementById("selectedFileBox").classList.remove("hidden");
+    document.getElementById("selectedFileBox").innerText = "Selected: " + selectedDoc.filename;
+
+    empty.classList.add("hidden");
+    img.classList.remove("hidden");
+    img.src = selectedDoc.file_url + "?t=" + Date.now();
+
+    img.onload = () => {
+        fitImage();
+    };
+
+    updateButtons();
+    setStatus("Preview loaded. Zoom, move around, then click Extract Selected.");
+}
+
+function applyTransform() {
+    const img = document.getElementById("previewImage");
+    img.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) rotate(${rotation}deg) scale(${scale})`;
+    document.getElementById("zoomBadge").innerText = Math.round(scale * 100) + "%";
+}
+
+function fitImage() {
+    const shell = document.getElementById("viewerShell");
+    const img = document.getElementById("previewImage");
+
+    if (!img.src || !img.naturalWidth) return;
+
+    const shellW = shell.clientWidth - 40;
+    const shellH = shell.clientHeight - 40;
+
+    const fitScale = Math.min(shellW / img.naturalWidth, shellH / img.naturalHeight);
+    scale = Math.max(0.1, Math.min(fitScale, 3));
+    translateX = 0;
+    translateY = 0;
+
+    applyTransform();
+}
+
+function resetView() {
+    scale = 1;
+    rotation = 0;
+    translateX = 0;
+    translateY = 0;
+    applyTransform();
+}
+
+function zoomIn() {
+    scale = Math.min(scale + 0.15, 5);
+    applyTransform();
+}
+
+function zoomOut() {
+    scale = Math.max(scale - 0.15, 0.1);
+    applyTransform();
+}
+
+function rotateImage() {
+    rotation = (rotation + 90) % 360;
+    applyTransform();
+}
+
+document.getElementById("viewerShell").addEventListener("wheel", function(event) {
+    event.preventDefault();
+
+    if (!selectedDoc) return;
+
+    if (event.deltaY < 0) {
+        scale = Math.min(scale + 0.08, 5);
+    } else {
+        scale = Math.max(scale - 0.08, 0.1);
+    }
+
+    applyTransform();
+}, { passive: false });
+
+document.getElementById("viewerShell").addEventListener("mousedown", function(event) {
+    if (!selectedDoc) return;
+
+    dragging = true;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    startTranslateX = translateX;
+    startTranslateY = translateY;
+
+    document.getElementById("viewerShell").classList.add("dragging");
+});
+
+window.addEventListener("mousemove", function(event) {
+    if (!dragging) return;
+
+    translateX = startTranslateX + (event.clientX - dragStartX);
+    translateY = startTranslateY + (event.clientY - dragStartY);
+
+    applyTransform();
+});
+
+window.addEventListener("mouseup", function() {
+    dragging = false;
+    document.getElementById("viewerShell").classList.remove("dragging");
+});
+
+async function startScan() {
+    setStatus("Scanning A5 voucher from ADF... please wait.");
+    document.getElementById("startScanBtn").disabled = true;
+    document.getElementById("extractBtn").disabled = true;
+    if (document.getElementById("approveBtn")) document.getElementById("approveBtn").disabled = true;
+    document.getElementById("structuredFields").classList.add("hidden");
+    
+    try {
+        const response = await fetch("/api/scan-document", {
+            method: "POST"
         });
 
         const data = await response.json();
 
-        if(!response.ok){
-            statusBox.className = "alert alert-danger mt-3 mb-0";
-            statusBox.innerText = data.error || "Extraction failed";
+        if (!data.success) {
+            setStatus("Scan failed: " + (data.message || "Unknown error"));
+            document.getElementById("startScanBtn").disabled = false;
+            updateButtons();
             return;
         }
 
-        const documentRecord = {
-            id: Date.now(),
-            fileName: file ? file.name : data.source_file,
-            fileObject: file,
-            previewUrl: file ? URL.createObjectURL(file) : null,
-            result: data,
-            status: "extracted"
+        const newDoc = {
+            filename: data.filename,
+            file_url: data.file_url,
+            size: data.size || 0,
+            modified: Date.now()
         };
 
-        extractedDocuments.unshift(documentRecord);
-        selectedDocumentIndex = 0;
-        latestDocumentData = data;
+        scannedDocuments.unshift(newDoc);
+        selectedDoc = newDoc;
+        selectedBlob = null;
 
-        renderDocumentList();
-        renderSelectedDocument(documentRecord);
+        renderScanList();
+        showSelectedDocument();
 
-        statusBox.className = "alert alert-success mt-3 mb-0";
-        statusBox.innerText = "Document extracted successfully. Click Review Docs to validate.";
+        setStatus("Scan completed. Check image, then click Extract Selected.");
 
-        form.reset();
-
-    }catch(error){
-        statusBox.className = "alert alert-danger mt-3 mb-0";
-        statusBox.innerText = "Request failed: " + error.toString();
-    }finally{
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Extract Document";
-    }
-});
-
-reviewDocsBtn.addEventListener("click", function(){
-    if(extractedDocuments.length === 0){
-        statusBox.className = "alert alert-warning mt-3 mb-0";
-        statusBox.innerText = "No documents available for review.";
-        return;
+    } catch (error) {
+        setStatus("Scan error: " + error.message);
     }
 
-    if(selectedDocumentIndex === null){
-        selectedDocumentIndex = 0;
-    }
-
-    openReviewModal();
-});
-
-approveBtn.addEventListener("click", function(){
-    submitReview("approved");
-});
-
-rejectBtn.addEventListener("click", function(){
-    submitReview("rejected");
-});
-
-function renderDocumentList(){
-    documentList.innerHTML = "";
-
-    if(extractedDocuments.length === 0){
-        documentList.innerHTML = `
-            <div class="text-secondary text-center py-4">
-                No documents extracted yet
-            </div>
-        `;
-        return;
-    }
-
-    extractedDocuments.forEach((doc, index) => {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "list-group-item list-group-item-action";
-
-        if(index === selectedDocumentIndex){
-            item.classList.add("active");
-        }
-
-        const structured = doc.result.structured_output || {};
-        const classification = structured.classification || {};
-        const validation = structured.validation || {};
-        const status = validation.status || "needs_review";
-        const badgeClass = status === "valid" ? "bg-green-lt" : "bg-yellow-lt";
-
-        item.innerHTML = `
-            <div class="fw-semibold text-truncate">${doc.fileName}</div>
-            <div class="small mt-1">${classification.document_type || "unknown"}</div>
-            <span class="badge ${badgeClass} mt-2">${status}</span>
-        `;
-
-        item.addEventListener("click", function(){
-            selectedDocumentIndex = index;
-            latestDocumentData = doc.result;
-            renderDocumentList();
-            renderSelectedDocument(doc);
-        });
-
-        documentList.appendChild(item);
-    });
+    document.getElementById("startScanBtn").disabled = false;
+    updateButtons();
 }
 
-function renderSelectedDocument(doc){
-    if(!doc){
-        return;
-    }
+async function getSelectedBlob() {
+    if (!selectedDoc) return null;
 
-    latestDocumentData = doc.result;
+    if (selectedBlob) return selectedBlob;
 
-    if(doc.fileObject){
-        previewFile(doc.fileObject);
-    }
+    const response = await fetch(selectedDoc.file_url + "?t=" + Date.now());
+    selectedBlob = await response.blob();
+    return selectedBlob;
 }
 
-function previewFile(file){
-    const url = URL.createObjectURL(file);
-
-    if(file.type && file.type.startsWith("image/")){
-        preview.innerHTML = `<img src="${url}" style="max-width:100%; max-height:620px; border-radius:8px;">`;
-    }else if(file.type === "application/pdf"){
-        preview.innerHTML = `<iframe src="${url}" style="width:100%; height:620px; border:none;"></iframe>`;
-    }else{
-        preview.innerHTML = `<div>${file.name}</div>`;
-    }
-}
-
-function openReviewModal(){
-    const doc = extractedDocuments[selectedDocumentIndex];
-
-    if(!doc){
-        return;
-    }
-
-    latestDocumentData = doc.result;
-    reviewDocName.innerText = doc.fileName;
-
-    renderReviewPreview(doc);
-    renderResult(doc.result);
-
-    reviewBackdrop.classList.add("show");
-    reviewModal.classList.add("open");
-    document.body.style.overflow = "hidden";
-}
-
-function closeReviewModal(){
-    reviewBackdrop.classList.remove("show");
-    reviewModal.classList.remove("open");
-    document.body.style.overflow = "";
-}
-
-function renderReviewPreview(doc){
-    previewRotation = 0;
-    reviewPreview.classList.remove("zoom-mode");
-    reviewPreview.classList.add("fit-mode");
-
-    if(doc.fileObject){
-        const url = URL.createObjectURL(doc.fileObject);
-
-        if(doc.fileObject.type.startsWith("image/")){
-            reviewPreview.innerHTML = `<img src="${url}" alt="Document Preview">`;
-        }else if(doc.fileObject.type === "application/pdf"){
-            reviewPreview.innerHTML = `<iframe src="${url}"></iframe>`;
-        }
-    }
-
-    reviewPreview.scrollTop = 0;
-    reviewPreview.scrollLeft = 0;
-}
-
-function fitReviewPreview(){
-    reviewPreview.classList.remove("zoom-mode");
-    reviewPreview.classList.add("fit-mode");
-    reviewPreview.scrollTop = 0;
-    reviewPreview.scrollLeft = 0;
-}
-
-function zoomInReviewPreview(){
-    const img = document.querySelector("#reviewPreview img");
-    if(!img) return;
-
-    reviewPreview.classList.remove("fit-mode");
-    reviewPreview.classList.add("zoom-mode");
-
-    reviewPreviewWidth += 200;
-    img.style.setProperty("--review-preview-width", reviewPreviewWidth + "px");
-}
-
-function zoomOutReviewPreview(){
-    const img = document.querySelector("#reviewPreview img");
-    if(!img) return;
-
-    reviewPreview.classList.remove("fit-mode");
-    reviewPreview.classList.add("zoom-mode");
-
-    reviewPreviewWidth = Math.max(800, reviewPreviewWidth - 200);
-    img.style.setProperty("--review-preview-width", reviewPreviewWidth + "px");
-}
-
-function rotateReviewPreview(){
-    const img = document.querySelector("#reviewPreview img");
-    if(!img) return;
-
-    previewRotation = (previewRotation + 90) % 360;
-    img.style.transform = `rotate(${previewRotation}deg)`;
-    img.style.transformOrigin = "center center";
-}
-
-function renderResult(data){
+function renderStructuredFields(data) {
+    const container = document.getElementById("structuredFields");
     const structured = data.structured_output || {};
-    const classification = structured.classification || {};
     const fields = structured.fields || {};
-    const validation = structured.validation || {};
 
-    classificationBox.innerHTML = `
-    <div class="mb-2">
-        <label class="form-label">Document Type</label>
-        <input class="form-control form-control-sm" value="${classification.document_type || "Unknown"}" readonly>
-    </div>
-`;
-    validationBox.innerHTML = `
-        <div class="mb-3">
-            <label class="form-label">Validation Status</label>
-            <input class="form-control" value="${validation.status || "N/A"}" readonly>
-        </div>
-    `;
-
-    renderReviewForm(fields);
-}
-
-function getTodayDisplayDate() {
-    const today = new Date();
-
-    const day = String(today.getDate()).padStart(2, "0");
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const year = today.getFullYear();
-
-    return `${day}/${month}/${year}`;
-}
-
-async function renderReviewForm(fields){
-    reviewForm.innerHTML = "";
-
-    if(!fields || Object.keys(fields).length === 0){
-        reviewForm.innerHTML = `<div class="alert alert-warning">No extracted fields available</div>`;
-        return;
-    }
-
-    const skipFields = [
-        "raw_text",
-        "confidence",
-        "voucher_no"
+    const cards = [
+        ["Document Type", structured.classification?.document_type || ""],
+        ["Voucher No", fields.voucher_no || ""],
+        ["Date", fields.date || ""],
+        ["Account Head", (fields.account_head || "").toUpperCase()],
+        ["Person Name", fields.person_name || ""],
+        ["Purpose", fields.purpose || ""],
+        ["Amount Words", fields.amount_words || ""],
+        ["Amount", fields.amount ?? ""],
+        ["Status", structured.validation?.status || data.status || ""]
     ];
 
-    const today = getTodayDisplayDate();
+    container.innerHTML = cards.map(([label, value]) => `
+        <div class="field-card">
+            <div class="field-label">${label}</div>
+            <div class="field-value">${value || "-"}</div>
+        </div>
+    `).join("");
 
-    fields.date = today;
-    for(const key of Object.keys(fields)) {
-        if(skipFields.includes(key)) {
-            continue;
-        }
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "review-field";
-
-        const label = document.createElement("label");
-        label.innerText = formatLabel(key);
-
-        let input;
-
-        if(key === "account_head") {
-            input = document.createElement("select");
-            input.className = "form-select form-select-sm";
-            input.dataset.field = key;
-
-            const accountHeadValue = fields[key] ?? "";
-            const firstWord = accountHeadValue
-                .toString()
-                .trim()
-                .toUpperCase()
-                .split(/\s+/)[0];
-
-            const defaultOption = document.createElement("option");
-            defaultOption.value = accountHeadValue;
-            defaultOption.innerText = accountHeadValue || "Select Account Head";
-            input.appendChild(defaultOption);
-
-            if(firstWord) {
-                try {
-                    const response = await fetch(`/api/accounts?search=${encodeURIComponent(firstWord)}`);
-                    const accounts = await response.json();
-
-                    accounts.forEach(account => {
-                        const option = document.createElement("option");
-                        option.value = account.name;
-                        option.innerText = `${account.name} (${account.accode})`;
-
-                        if(account.name.toUpperCase() === accountHeadValue.toString().toUpperCase()) {
-                            option.selected = true;
-                        }
-
-                        input.appendChild(option);
-                    });
-
-                } catch(error) {
-                    console.error("Account search failed:", error);
-                }
-            }
-
-        } else {
-            input = document.createElement("input");
-
-            if(key === "date") {
-    input.type = "text";
-    input.value = getTodayDisplayDate();
-    input.readOnly = true;
-} else {
-    input.type = "text";
-    input.value = fields[key] ?? "";
+    container.classList.remove("hidden");
 }
 
-            input.className = "form-control form-control-sm";
-            input.dataset.field = key;
-        }
-
-        wrapper.appendChild(label);
-        wrapper.appendChild(input);
-        reviewForm.appendChild(wrapper);
-    }
-}
-
-async function submitReview(status){
-    if(!latestDocumentData){
-        alert("No document selected for review");
+async function extractSelected() {
+    if (!selectedDoc) {
+        setStatus("Select a scanned document first.");
         return;
     }
 
-    const correctedFields = {};
+    setStatus("Extracting OCR data from selected image...");
+    document.getElementById("extractBtn").disabled = true;
+    if (document.getElementById("approveBtn")) document.getElementById("approveBtn").disabled = true;
+    document.getElementById("structuredFields").classList.add("hidden");
+   
 
-    document.querySelectorAll("[data-field]").forEach(input => {
-        correctedFields[input.dataset.field] = input.value;
-    });
+    try {
+        const blob = await getSelectedBlob();
 
-    const structured = latestDocumentData.structured_output || {};
-    const classification = structured.classification || {};
+        const formData = new FormData();
+        formData.append(UPLOAD_FIELD_NAME, blob, selectedDoc.filename);
+
+        const response = await fetch("/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        renderStructuredFields(data);
+
+        const structured = data.structured_output || {};
+        const fields = structured.fields || {};
+        latestExtractedFields = fields;
+        if (document.getElementById("approveBtn")) {
+            document.getElementById("approveBtn").disabled = false;
+        }
+
+        
+
+        if (data.status === "succeeded" || data.success !== false) {
+            setStatus("Extraction completed for " + selectedDoc.filename);
+        } else {
+            setStatus("Extraction failed: " + (data.message || data.error || "Unknown error"));
+        }
+
+    } catch (error) {
+        setStatus("Extraction error: " + error.message);
+    }
+
+    updateButtons();
+}
+
+
+async function approveOcrVoucher() {
+    if (!latestExtractedFields) {
+        setStatus("Extract first before approving.");
+        return;
+    }
 
     const payload = {
-        source_file: latestDocumentData.source_file,
-        document_type: classification.document_type || "unknown",
-        status: status,
-        corrected_fields: correctedFields,
-        reviewed_by: "admin"
+        voucherdate: latestExtractedFields.date || "",
+        account_head_code: latestExtractedFields.account_head_code || "",
+        account_name: (latestExtractedFields.account_head || "").toUpperCase(),
+        person_name: latestExtractedFields.person_name || "",
+        purpose: latestExtractedFields.purpose || "",
+        amount: latestExtractedFields.amount || ""
     };
 
-    const response = await fetch("/review", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-
-    if(!response.ok){
-        alert(result.error || "Review failed");
+    if (!payload.voucherdate || !payload.account_name || !payload.person_name || !payload.purpose || !payload.amount) {
+        setStatus("Approve failed: required fields missing. Please review OCR fields.");
         return;
     }
 
-    closeReviewModal();
+    try {
+        setStatus("Approving and inserting OCR voucher...");
 
-    statusBox.className = "alert alert-success mt-3 mb-0";
-    statusBox.innerText = `Document ${status} and review saved.`;
+        const response = await fetch("/api/ocr-extraction/approve", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-    alert("Review saved successfully");
+        const data = await response.json();
+
+        if (!data.success) {
+            setStatus("Approve failed: " + (data.message || "Unknown error"));
+            return;
+        }
+
+        setStatus("Approved and inserted successfully. Voucher ID: " + (data.voucher_id || ""));
+        document.getElementById("approveBtn").disabled = true;
+
+    } catch (error) {
+        setStatus("Approve error: " + error.message);
+    }
 }
 
-function formatLabel(key){
-    return key
-        .replaceAll("_"," ")
-        .replace(/\b\w/g, char => char.toUpperCase());
-}
-
-reviewBackdrop.addEventListener("click", closeReviewModal);
+loadScannedDocuments();
 </script>
-
 {% endblock %}

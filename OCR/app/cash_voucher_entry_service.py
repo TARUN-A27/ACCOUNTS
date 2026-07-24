@@ -65,7 +65,7 @@ def is_valid_petty_cash_account(account_name, account_head_code):
             conn.close()
 
 
-def insert_cash_voucher_entry(data, session_data):
+def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
     conn = None
     cursor = None
 
@@ -210,7 +210,8 @@ def list_cash_voucher_entries(limit=100):
                     DIVCODE,
                     YEARCODE,
                     AUTHUSERCODE,
-                    TO_CHAR(AUTHDATEANDTIME, 'DD.MM.YYYY HH24:MI:SS') AS AUTHDATEANDTIME
+                    TO_CHAR(AUTHDATEANDTIME, 'DD.MM.YYYY HH24:MI:SS') AS AUTHDATEANDTIME,
+                    NVL(ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE
                 FROM CASHBANKENTRY
                 ORDER BY ID DESC
             )
@@ -236,7 +237,8 @@ def list_cash_voucher_entries(limit=100):
                 "yearcode": row[10],
                 "authusercode": authusercode,
                 "authdateandtime": row[12],
-                "authenticated": True if authusercode else False
+                "authenticated": True if authusercode else False,
+                "entry_source": row[13] if len(row) > 13 else "MANUAL"
             })
 
         return {
@@ -282,7 +284,8 @@ def get_cash_voucher_entry_by_id(voucher_id):
                 DIVCODE,
                 YEARCODE,
                 AUTHUSERCODE,
-                TO_CHAR(AUTHDATEANDTIME, 'DD.MM.YYYY HH24:MI:SS') AS AUTHDATEANDTIME
+                TO_CHAR(AUTHDATEANDTIME, 'DD.MM.YYYY HH24:MI:SS') AS AUTHDATEANDTIME,
+                    NVL(ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE
             FROM CASHBANKENTRY
             WHERE ID = :id
         """, {"id": int(voucher_id)})
@@ -313,7 +316,8 @@ def get_cash_voucher_entry_by_id(voucher_id):
                 "yearcode": row[10],
                 "authusercode": authusercode,
                 "authdateandtime": row[12],
-                "authenticated": True if authusercode else False
+                "authenticated": True if authusercode else False,
+                "entry_source": row[13] if len(row) > 13 else "MANUAL"
             }
         }
 
