@@ -318,6 +318,42 @@
         padding-right: 36px;
     }
 
+
+.optional-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.suggestions {
+    margin-top: 6px;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    background: white;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+    z-index: 20;
+    position: relative;
+}
+
+.suggestion-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 13px;
+}
+
+.suggestion-item:hover {
+    background: #eff6ff;
+}
+
+.suggestion-code {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    margin-top: 2px;
+}
 </style>
 
 <div class="voucher-page">
@@ -351,6 +387,25 @@
             </div>
 
             <div class="form-group full-width">
+        <div class="form-row optional-row">
+            <div class="form-group">
+                <label>Invoice No <span class="optional-label">(Optional)</span></label>
+                <input type="text" class="form-control" id="invoiceNo" placeholder="Enter invoice no">
+            </div>
+
+            <div class="form-group">
+                <label>Invoice Date <span class="optional-label">(Optional)</span></label>
+                <input type="date" class="form-control" id="invoiceDate">
+            </div>
+        </div>
+
+        <div class="form-group optional-row">
+            <label>Party Name <span class="optional-label">(Optional)</span></label>
+            <input type="text" class="form-control" id="partyName" placeholder="Search party name" autocomplete="off">
+            <input type="hidden" id="partyCode">
+            <div id="partySuggestions" class="suggestions hidden"></div>
+        </div>
+
                 <label class="form-label">Name of the Person</label>
                 <input type="text" id="personName" class="form-control" required placeholder="Enter person name" oninput="markUnsaved()">
             </div>
@@ -613,6 +668,8 @@
 
         const data = getFormData();
 
+        Object.assign(data, getOptionalVoucherFields());
+
         const response = await fetch("/api/cash-voucher-entry/save", {
             method: "POST",
             headers: {
@@ -701,5 +758,77 @@
 
     loadAccountHeads();
     setTodayDate();
+
+let partySearchTimer = null;
+
+function setupPartySearch() {
+    const partyInput = document.getElementById("partyName");
+    const partyCode = document.getElementById("partyCode");
+    const suggestions = document.getElementById("partySuggestions");
+
+    if (!partyInput || !suggestions) return;
+
+    partyInput.addEventListener("input", function () {
+        partyCode.value = "";
+        const search = partyInput.value.trim();
+
+        clearTimeout(partySearchTimer);
+
+        if (search.length < 2) {
+            suggestions.classList.add("hidden");
+            suggestions.innerHTML = "";
+            return;
+        }
+
+        partySearchTimer = setTimeout(async function () {
+            try {
+                const response = await fetch("/api/cash-voucher-entry/parties?search=" + encodeURIComponent(search));
+                const data = await response.json();
+
+                if (!data.success || !data.parties || data.parties.length === 0) {
+                    suggestions.innerHTML = '<div class="suggestion-item">No party found</div>';
+                    suggestions.classList.remove("hidden");
+                    return;
+                }
+
+                suggestions.innerHTML = data.parties.map(function (p) {
+                    return `
+                        <div class="suggestion-item" data-code="${p.party_code}" data-name="${p.party_name}">
+                            <strong>${p.party_name}</strong>
+                            <span class="suggestion-code">${p.party_code}</span>
+                        </div>
+                    `;
+                }).join("");
+
+                suggestions.classList.remove("hidden");
+
+                suggestions.querySelectorAll(".suggestion-item").forEach(function (item) {
+                    item.addEventListener("click", function () {
+                        partyInput.value = item.dataset.name || "";
+                        partyCode.value = item.dataset.code || "";
+                        suggestions.classList.add("hidden");
+                    });
+                });
+
+            } catch (error) {
+                suggestions.innerHTML = '<div class="suggestion-item">Party search failed</div>';
+                suggestions.classList.remove("hidden");
+            }
+        }, 250);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", setupPartySearch);
+
+
+function getOptionalVoucherFields() {
+    return {
+        invoice_no: document.getElementById("invoiceNo") ? document.getElementById("invoiceNo").value.trim() : "",
+        invoice_date: document.getElementById("invoiceDate") ? document.getElementById("invoiceDate").value : "",
+        party_code: document.getElementById("partyCode") ? document.getElementById("partyCode").value.trim() : "",
+        party_name: document.getElementById("partyName") ? document.getElementById("partyName").value.trim().toUpperCase() : ""
+    };
+}
+
 </script>
 {% endblock %}

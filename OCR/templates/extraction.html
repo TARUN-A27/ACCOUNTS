@@ -299,6 +299,237 @@
             align-items: stretch;
         }
     }
+
+.result-approve-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 13px 16px;
+    border-radius: 14px;
+    border: none;
+    background: #020617;
+    color: white;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.result-approve-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ===== EXTRACTION PAGE ALIGNMENT FIX ===== */
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
+.extraction-page,
+.extraction-wrapper,
+.page-container,
+.main-content {
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+}
+
+.extraction-header,
+.page-header {
+    margin-bottom: 12px !important;
+}
+
+.extraction-layout,
+.extraction-grid,
+.scan-extraction-layout {
+    display: grid !important;
+    grid-template-columns: 260px minmax(420px, 1fr) 360px !important;
+    gap: 14px !important;
+    height: calc(100vh - 150px) !important;
+    max-height: calc(100vh - 150px) !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+}
+
+.scan-list-panel,
+.scanned-files-panel,
+.left-panel,
+.document-list-panel {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.scan-list,
+.scanned-list,
+#scanList,
+#scannedDocumentsList {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.preview-panel,
+.image-preview-panel,
+.center-panel {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.preview-toolbar,
+.image-toolbar,
+.viewer-toolbar {
+    flex-shrink: 0 !important;
+    margin-bottom: 8px !important;
+}
+
+.preview-container,
+.image-container,
+.image-viewer,
+#imageViewer,
+#previewContainer {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #f8fafc !important;
+    border-radius: 14px !important;
+}
+
+.preview-container img,
+.image-container img,
+.image-viewer img,
+#previewImage,
+#selectedImage {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+}
+
+.result-panel,
+.extraction-result-panel,
+.right-panel {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.result-panel h2,
+.result-panel h3,
+.extraction-result-panel h2,
+.extraction-result-panel h3 {
+    flex-shrink: 0 !important;
+    margin-bottom: 10px !important;
+}
+
+#structuredFields,
+.structured-fields,
+.result-fields {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 4px !important;
+}
+
+.field-card,
+.result-field,
+.extracted-field {
+    margin-bottom: 8px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+}
+
+.actions,
+.extraction-actions,
+.button-row {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+    margin-top: 10px !important;
+}
+
+#approveBtnInsideResult,
+#approveBtnBottom,
+.result-approve-btn {
+    flex-shrink: 0 !important;
+    margin-top: 10px !important;
+}
+
+/* Compact buttons */
+.btn,
+button {
+    white-space: nowrap;
+}
+
+/* Responsive fallback */
+@media (max-width: 1200px) {
+    html,
+    body {
+        overflow: auto;
+    }
+
+    .extraction-layout,
+    .extraction-grid,
+    .scan-extraction-layout {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .scan-list-panel,
+    .scanned-files-panel,
+    .left-panel,
+    .document-list-panel,
+    .preview-panel,
+    .image-preview-panel,
+    .center-panel,
+    .result-panel,
+    .extraction-result-panel,
+    .right-panel {
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    .preview-container,
+    .image-container,
+    .image-viewer,
+    #imageViewer,
+    #previewContainer {
+        height: 520px !important;
+        flex: none !important;
+    }
+}
+
+
+/* AUTO HIDE STATUS MESSAGE */
+.status-box,
+.message-box,
+#statusBox,
+#resultStatus,
+#messageBox {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.status-box.hidden,
+.message-box.hidden,
+#statusBox.hidden,
+#resultStatus.hidden,
+#messageBox.hidden {
+    display: none !important;
+}
+
 </style>
 
 <div class="extract-app">
@@ -385,9 +616,33 @@ let startTranslateY = 0;
 
 const UPLOAD_FIELD_NAME = "document";
 
-function setStatus(message) {
-    document.getElementById("statusBox").innerText = message;
+
+let statusHideTimer = null;
+
+function setStatus(message, type = "info", autoHide = true) {
+    const statusBox = document.getElementById("statusBox")
+        || document.getElementById("resultStatus")
+        || document.getElementById("messageBox")
+        || document.querySelector(".status-box")
+        || document.querySelector(".message-box");
+
+    if (!statusBox) return;
+
+    clearTimeout(statusHideTimer);
+
+    statusBox.innerText = message || "";
+    statusBox.classList.remove("hidden");
+    statusBox.classList.remove("success", "error", "info");
+    statusBox.classList.add(type || "info");
+
+    if (autoHide) {
+        statusHideTimer = setTimeout(function () {
+            statusBox.classList.add("hidden");
+            statusBox.innerText = "";
+        }, 2000);
+    }
 }
+
 
 function updateButtons() {
     document.getElementById("extractBtn").disabled = !selectedDoc;
@@ -562,13 +817,30 @@ window.addEventListener("mouseup", function() {
     document.getElementById("viewerShell").classList.remove("dragging");
 });
 
+
+
 async function startScan() {
-    setStatus("Scanning A5 voucher from ADF... please wait.");
+    setStatus("Scanning document...");
     document.getElementById("startScanBtn").disabled = true;
     document.getElementById("extractBtn").disabled = true;
     if (document.getElementById("approveBtn")) document.getElementById("approveBtn").disabled = true;
+        const insideApproveBtnDone = document.getElementById("approveBtnInsideResult");
+        if (insideApproveBtnDone) {
+            insideApproveBtnDone.disabled = true;
+            insideApproveBtnDone.innerText = "Inserted";
+        }
+        if (document.getElementById("approveBtnBottom")) document.getElementById("approveBtnBottom").disabled = true;
     document.getElementById("structuredFields").classList.add("hidden");
-    
+    const insideApproveBtnReset = document.getElementById("approveBtnInsideResult");
+    if (insideApproveBtnReset) {
+        insideApproveBtnReset.classList.add("hidden");
+        insideApproveBtnReset.disabled = true;
+    }
+    if (document.getElementById("approveBtnBottom")) {
+        document.getElementById("approveBtnBottom").classList.add("hidden");
+        document.getElementById("approveBtnBottom").disabled = true;
+    }
+
     try {
         const response = await fetch("/api/scan-document", {
             method: "POST"
@@ -600,12 +872,14 @@ async function startScan() {
         setStatus("Scan completed. Check image, then click Extract Selected.");
 
     } catch (error) {
-        setStatus("Scan error: " + error.message);
+        setStatus("Scan failed: " + error.message);
     }
 
     document.getElementById("startScanBtn").disabled = false;
     updateButtons();
 }
+
+
 
 async function getSelectedBlob() {
     if (!selectedDoc) return null;
@@ -653,7 +927,22 @@ async function extractSelected() {
     setStatus("Extracting OCR data from selected image...");
     document.getElementById("extractBtn").disabled = true;
     if (document.getElementById("approveBtn")) document.getElementById("approveBtn").disabled = true;
+        const insideApproveBtnDone = document.getElementById("approveBtnInsideResult");
+        if (insideApproveBtnDone) {
+            insideApproveBtnDone.disabled = true;
+            insideApproveBtnDone.innerText = "Inserted";
+        }
+        if (document.getElementById("approveBtnBottom")) document.getElementById("approveBtnBottom").disabled = true;
     document.getElementById("structuredFields").classList.add("hidden");
+    const insideApproveBtnReset = document.getElementById("approveBtnInsideResult");
+    if (insideApproveBtnReset) {
+        insideApproveBtnReset.classList.add("hidden");
+        insideApproveBtnReset.disabled = true;
+    }
+    if (document.getElementById("approveBtnBottom")) {
+        document.getElementById("approveBtnBottom").classList.add("hidden");
+        document.getElementById("approveBtnBottom").disabled = true;
+    }
    
 
     try {
@@ -706,6 +995,10 @@ async function approveOcrVoucher() {
         account_name: (latestExtractedFields.account_head || "").toUpperCase(),
         person_name: latestExtractedFields.person_name || "",
         purpose: latestExtractedFields.purpose || "",
+            invoice_no: latestExtractedFields.invoice_no || "",
+            invoice_date: latestExtractedFields.invoice_date || "",
+            party_code: latestExtractedFields.party_code || "",
+            party_name: latestExtractedFields.party_name || "",
         amount: latestExtractedFields.amount || ""
     };
 

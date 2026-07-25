@@ -230,6 +230,68 @@ def cash_voucher_entry_accounts():
     return jsonify(result)
 
 
+
+@app.route("/api/cash-voucher-entry/parties")
+def cash_voucher_entry_parties():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    search = (request.args.get("search") or "").strip()
+
+    if len(search) < 2:
+        return jsonify({
+            "success": True,
+            "parties": []
+        })
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT PARTYCODE, PARTYNAME
+                FROM SCM.PARTYMASTER
+                WHERE PARTYNAME IS NOT NULL
+                  AND UPPER(PARTYNAME) LIKE '%' || UPPER(:search) || '%'
+                ORDER BY PARTYNAME
+            )
+            WHERE ROWNUM <= 25
+        """, {
+            "search": search
+        })
+
+        parties = []
+        for row in cursor.fetchall():
+            parties.append({
+                "party_code": str(row[0] or ""),
+                "party_name": str(row[1] or "")
+            })
+
+        return jsonify({
+            "success": True,
+            "parties": parties
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @app.route("/api/cash-voucher-entry/save", methods=["POST"])
 def save_cash_voucher_entry():
     if not session.get("logged_in"):
@@ -238,18 +300,22 @@ def save_cash_voucher_entry():
             "message": "Login required"
         }), 401
 
-    data = request.get_json() or {}
+    try:
+        data = request.get_json() or {}
 
-    session_data = {
-        "usercode": session.get("usercode"),
-        "divisioncode": session.get("divisioncode"),
-        "yearcode": session.get("yearcode")
-    }
+        result = insert_cash_voucher_entry(
+            data,
+            session,
+            entry_source=data.get("entry_source") or "MANUAL"
+        )
 
-    result = insert_cash_voucher_entry(data, session_data)
+        return jsonify(result), 200 if result.get("success") else 400
 
-    status_code = 200 if result.get("success") else 400
-    return jsonify(result), status_code
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 
 @app.route("/api/cash-voucher-entry/list", methods=["GET"])
@@ -643,6 +709,8 @@ def approve_ocr_extraction():
             conn.close()
 
 
+
+
 @app.route("/api/scanned-documents", methods=["GET"])
 def scanned_documents():
     if not session.get("logged_in"):
@@ -682,6 +750,8 @@ def scanned_documents():
             "rows": []
         }), 500
 
+
+
 @app.route("/api/scan-document", methods=["POST"])
 def scan_document():
     if not session.get("logged_in"):
@@ -691,18 +761,15 @@ def scan_document():
         }), 401
 
     try:
-        upload_dir = os.path.join(app.root_path, "..", "static", "uploads")
-        upload_dir = os.path.abspath(upload_dir)
+        upload_dir = os.path.abspath(os.path.join(app.root_path, "..", "static", "uploads"))
         os.makedirs(upload_dir, exist_ok=True)
 
         filename = "scan_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".png"
         output_path = os.path.join(upload_dir, filename)
 
-        scanner_device = "escl:http://localhost:60000"
-
         cmd = [
             "scanimage",
-            "-d", scanner_device,
+            "-d", "escl:http://localhost:60000",
             "--source", "ADF",
             "--format=png",
             "--mode", "Gray",
@@ -716,30 +783,37 @@ def scan_document():
                 cmd,
                 stdout=f,
                 stderr=subprocess.PIPE,
-                timeout=120
+                timeout=180
             )
 
+        stderr_text = result.stderr.decode("utf-8", errors="ignore").strip()
+
         if result.returncode != 0:
-            try:
+            if os.path.exists(output_path):
                 os.remove(output_path)
-            except Exception:
-                pass
 
             return jsonify({
                 "success": False,
-                "message": result.stderr.decode("utf-8", errors="ignore") or "Scanner failed"
+                "message": stderr_text or "Scanner failed"
+            }), 500
+
+        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            return jsonify({
+                "success": False,
+                "message": "Scanner produced empty file. Check ADF paper placement."
             }), 500
 
         return jsonify({
             "success": True,
             "filename": filename,
-            "file_url": url_for("static", filename=f"uploads/{filename}")
+            "file_url": url_for("static", filename=f"uploads/{filename}"),
+            "size": os.path.getsize(output_path)
         })
 
     except subprocess.TimeoutExpired:
         return jsonify({
             "success": False,
-            "message": "Scanner timeout. Please check scanner/ADF paper."
+            "message": "Scanner timeout. Check paper/scanner connection."
         }), 500
 
     except Exception as e:
@@ -747,6 +821,7 @@ def scan_document():
             "success": False,
             "message": str(e)
         }), 500
+
 
 @app.route("/upload", methods=["POST"])
 def upload_document():

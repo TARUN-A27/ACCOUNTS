@@ -70,51 +70,46 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
     cursor = None
 
     try:
-        voucher_date = parse_voucher_date(data.get("voucherdate"))
-        account_head_code = str(data.get("account_head_code") or "").strip()
-        account_name = str(data.get("account_name") or "").strip()
-        purpose = str(data.get("purpose") or "").strip()
-        person_name = str(data.get("person_name") or "").strip()
-        amount = clean_amount(data.get("amount"))
+        voucherdate = data.get("voucherdate")
+        account_head_code = (data.get("account_head_code") or "").strip()
+        account_name = (data.get("account_name") or "").strip().upper()
+        person_name = (data.get("person_name") or "").strip()
+        purpose = (data.get("purpose") or "").strip()
+        amount = data.get("amount")
+
+        invoice_no = (data.get("invoice_no") or "").strip()
+        invoice_date = (data.get("invoice_date") or "").strip()
+        party_code = (data.get("party_code") or "").strip()
+        party_name = (data.get("party_name") or "").strip().upper()
 
         usercode = session_data.get("usercode")
         divcode = session_data.get("divisioncode")
         yearcode = session_data.get("yearcode")
 
-        if not usercode:
-            return {"success": False, "message": "User code missing from session"}
+        entry_source = (entry_source or "MANUAL").strip().upper()
 
-        if not divcode:
-            return {"success": False, "message": "Division code missing from session"}
+        if not voucherdate:
+            return {"success": False, "message": "Voucher date is required"}
 
-        if not yearcode:
-            return {"success": False, "message": "Year code missing from session"}
-
-        if not voucher_date:
-            return {"success": False, "message": "Date is required"}
-
-        if not account_name:
-            return {"success": False, "message": "Account head is required"}
-
-        if not account_head_code:
+        if not account_name or not account_head_code:
             return {"success": False, "message": "Please select a valid account head from the list"}
 
-        if not is_valid_petty_cash_account(account_name, account_head_code):
-            return {"success": False, "message": "Invalid account head. Please select from the list only"}
-
         if not person_name:
-            return {"success": False, "message": "Name of the person is required"}
+            return {"success": False, "message": "Person name is required"}
 
         if not purpose:
             return {"success": False, "message": "Purpose is required"}
 
-        if amount <= 0:
-            return {"success": False, "message": "Amount must be greater than zero"}
+        if amount in (None, ""):
+            return {"success": False, "message": "Amount is required"}
+
+        if not is_valid_petty_cash_account(account_name, account_head_code):
+            return {"success": False, "message": "Please select a valid account head from the list"}
 
         conn = get_connection()
         cursor = conn.cursor()
 
-        out_id = cursor.var(int)
+        new_id_var = cursor.var(int)
 
         cursor.execute("""
             INSERT INTO CASHBANKENTRY (
@@ -124,55 +119,70 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                 PERSON_NAME,
                 PURPOSE,
                 AMOUNT,
+                ENTRYDATEANDTIME,
                 USERCODE,
                 DIVCODE,
-                YEARCODE
-            )
-            VALUES (
-                :voucherdate,
+                YEARCODE,
+                ENTRY_SOURCE,
+                INVOICE_NO,
+                INVOICE_DATE,
+                PARTY_CODE,
+                PARTY_NAME
+            ) VALUES (
+                TO_DATE(:voucherdate, 'YYYY-MM-DD'),
                 :account_head_code,
                 :account_name,
                 :person_name,
                 :purpose,
                 :amount,
+                SYSDATE,
                 :usercode,
                 :divcode,
-                :yearcode
+                :yearcode,
+                :entry_source,
+                :invoice_no,
+                CASE
+                    WHEN :invoice_date IS NULL THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                :party_code,
+                :party_name
             )
-            RETURNING ID INTO :out_id
+            RETURNING ID INTO :new_id
         """, {
-            "voucherdate": voucher_date,
+            "voucherdate": voucherdate,
             "account_head_code": account_head_code,
             "account_name": account_name,
             "person_name": person_name,
             "purpose": purpose,
             "amount": amount,
-            "usercode": int(usercode),
-            "divcode": int(divcode),
-            "yearcode": int(yearcode),
-            "out_id": out_id
+            "usercode": usercode,
+            "divcode": divcode,
+            "yearcode": yearcode,
+            "entry_source": entry_source,
+            "invoice_no": invoice_no or None,
+            "invoice_date": invoice_date or None,
+            "party_code": party_code or None,
+            "party_name": party_name or None,
+            "new_id": new_id_var
         })
 
         conn.commit()
 
-        voucher_id = out_id.getvalue()[0]
+        new_id = new_id_var.getvalue()
+        if isinstance(new_id, list):
+            new_id = new_id[0]
 
         return {
             "success": True,
-            "message": "Cash voucher entry saved",
-            "id": voucher_id,
-            "voucherdate": voucher_date.strftime("%d.%m.%Y"),
-            "account_head_code": account_head_code,
-            "account_name": account_name,
-            "person_name": person_name,
-            "purpose": purpose,
-            "amount": amount
+            "message": "Cash voucher entry saved successfully",
+            "id": new_id,
+            "voucher_id": new_id
         }
 
     except Exception as e:
         if conn:
             conn.rollback()
-
         return {
             "success": False,
             "message": str(e)
@@ -181,7 +191,6 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
     finally:
         if cursor:
             cursor.close()
-
         if conn:
             conn.close()
 
@@ -380,7 +389,11 @@ def update_cash_voucher_entry(voucher_id, data):
                 ACCOUNT_NAME = :account_name,
                 PERSON_NAME = :person_name,
                 PURPOSE = :purpose,
-                AMOUNT = :amount
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE WHEN :invoice_date IS NULL THEN NULL ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD') END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
             WHERE ID = :id
         """, {
             "voucherdate": voucher_date,
