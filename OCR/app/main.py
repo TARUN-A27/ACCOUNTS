@@ -555,7 +555,7 @@ def get_history():
                 "date_key": date_key(timestamp),
                 "sort_time": timestamp,
                 "activity": activity,
-                "source_file": source_file,
+                "source_file": safe_source_file,
                 "log_file": filename,
                 "document_type": document_type,
                 "status": status,
@@ -599,7 +599,7 @@ def get_history():
                 "date_key": date_key(timestamp),
                 "sort_time": timestamp,
                 "activity": "OCR Extracted / Pending Review",
-                "source_file": source_file,
+                "source_file": safe_source_file,
                 "log_file": filename,
                 "document_type": classification.get("document_type", "unknown"),
                 "status": "pending",
@@ -1185,82 +1185,104 @@ def search_accounts():
 
 @app.route("/api/validation-documents", methods=["GET"])
 def get_validation_documents():
-    structured_dir = os.path.join(BASE_DIR, "logs", "structured")
-    review_dir = os.path.join(BASE_DIR, "logs", "review")
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required",
+            "documents": []
+        }), 401
 
-    documents = []
+    try:
+        structured_dir = os.path.join(BASE_DIR, "logs", "structured")
+        review_dir = os.path.join(BASE_DIR, "logs", "review")
 
-    os.makedirs(structured_dir, exist_ok=True)
-    os.makedirs(review_dir, exist_ok=True)
+        documents = []
 
-    # Read latest review status by source file
-    review_status_map = {}
-
-    for filename in os.listdir(review_dir):
-        if not filename.endswith(".json"):
-            continue
-
-        review_path = os.path.join(review_dir, filename)
-
-        try:
-            with open(review_path, "r", encoding="utf-8") as f:
-                review_data = json.load(f)
-
-            source_file = review_data.get("source_file")
-            status = review_data.get("status")
-
-            if source_file:
-                review_status_map[source_file] = status
-
-        except Exception as e:
-            print("Review log read error:", filename, str(e))
-
-    # Read structured OCR documents
-    for filename in os.listdir(structured_dir):
-        if not filename.endswith(".json"):
-            continue
-
-        file_path = os.path.join(structured_dir, filename)
-
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            source_file = data.get("source_file")
-            file_url = data.get("file_url")
-
-            classification = data.get("classification", {})
-            fields = data.get("fields", {})
-            validation = data.get("validation", {})
-
-            review_status = review_status_map.get(source_file, "not_reviewed")
-
-            # Hide approved documents
-            if review_status == "approved":
-                continue
-
-            documents.append({
-                "log_file": filename,
-                "source_file": source_file,
-                "file_url": file_url,
-                "document_type": classification.get("document_type", "unknown"),
-                "confidence": classification.get("confidence", "N/A"),
-                "validation_status": review_status if review_status != "not_reviewed" else validation.get("status", "pending"),
-                "review_status": review_status,
-                "requires_review": validation.get("requires_review", True),
-                "missing_fields": validation.get("missing_fields", []),
-                "fields": fields
+        if not os.path.exists(structured_dir):
+            return jsonify({
+                "success": True,
+                "documents": []
             })
 
-        except Exception as e:
-            print("Structured log read error:", filename, str(e))
+        for filename in sorted(os.listdir(structured_dir), reverse=True):
+            if not filename.lower().endswith(".json"):
+                continue
 
-    documents.sort(
-        key=lambda item: item.get("log_file", ""),
-        reverse=True
-    )
+            structured_path = os.path.join(structured_dir, filename)
 
-    return jsonify(documents)
+            try:
+                with open(structured_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                if not isinstance(data, dict):
+                    continue
+
+                base_name = (
+                    filename
+                    .replace("_structured.json", "")
+                    .replace(".json", "")
+                )
+
+                source_file = (
+                    data.get("source_file")
+                    or data.get("filename")
+                    or data.get("original_filename")
+                    or data.get("source_filename")
+                    or data.get("document_name")
+                    or base_name
+                )
+
+                if str(source_file).lower() in ("unknown", "unknown document", "none", "null", ""):
+                    source_file = base_name
+
+                validation = data.get("validation") or {}
+
+                review_file = filename.replace("_structured.json", "_review.json")
+                review_path = os.path.join(review_dir, review_file)
+
+                review_data = {}
+                review_status = "not_reviewed"
+
+                if os.path.exists(review_path):
+                    try:
+                        with open(review_path, "r", encoding="utf-8") as rf:
+                            review_data = json.load(rf)
+                        review_status = review_data.get("status") or review_data.get("review_status") or "reviewed"
+                    except Exception:
+                        review_status = "reviewed"
+
+                documents.append({
+                    "source_file": source_file,
+                    "filename": source_file,
+                    "log_file": filename,
+                    "structured_file": filename,
+                    "review_file": review_file if os.path.exists(review_path) else "",
+                    "document_type": data.get("document_type") or data.get("type") or "Extracted",
+                    "validation_status": review_status if review_status != "not_reviewed" else validation.get("status", "needs_review"),
+                    "requires_review": validation.get("requires_review", True),
+                    "missing_fields": validation.get("missing_fields", []),
+                    "warnings": validation.get("warnings", []),
+                    "errors": validation.get("errors", []),
+                    "data": data,
+                    "review": review_data
+                })
+
+            except Exception as e:
+                print("Validation document read error:", filename, str(e))
+                continue
+
+        return jsonify({
+            "success": True,
+            "documents": documents
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e),
+            "documents": []
+        }), 500
+
 
 @app.route("/api/dashboard", methods=["GET"])
 def get_dashboard():
@@ -1378,7 +1400,7 @@ def get_dashboard():
                 "sort_time": timestamp,
                 "time_display": format_time(timestamp),
                 "activity": activity,
-                "source_file": source_file,
+                "source_file": safe_source_file,
                 "document_type": document_type,
                 "status": status,
                 "amount": corrected_fields.get("amount", "")
@@ -1421,7 +1443,7 @@ def get_dashboard():
                 "sort_time": timestamp,
                 "time_display": format_time(timestamp),
                 "activity": "OCR Extracted / Pending Review",
-                "source_file": source_file,
+                "source_file": safe_source_file,
                 "document_type": classification.get("document_type", "unknown"),
                 "status": "pending",
                 "amount": fields.get("amount", "")

@@ -345,7 +345,7 @@ async function loadValidationDocuments() {
             ? "bg-green-lt"
             : "bg-yellow-lt";
 
-        const displayName = doc.source_file || doc.log_file || "Unknown document";
+        const displayName = doc.source_file || doc.filename || doc.log_file || "Unknown document";
 
         const row = document.createElement("tr");
 
@@ -378,7 +378,7 @@ async function openReviewModal(index) {
     document.body.style.overflow = "hidden";
 
     document.getElementById("modalDocMeta").innerText =
-        selectedReviewDocument.source_file || selectedReviewDocument.log_file || "";
+        selectedReviewDocument.source_file || selectedReviewDocument.filename || selectedReviewDocument.log_file || "";
 
     document.getElementById("modalDocumentType").value =
         selectedReviewDocument.document_type || "unknown";
@@ -388,7 +388,14 @@ async function openReviewModal(index) {
         selectedReviewDocument.validation_status || "needs_review";
 
     renderModalPreview(selectedReviewDocument);
-    await renderModalFields(selectedReviewDocument.fields || {});
+    const modalFields =
+        selectedReviewDocument.fields ||
+        selectedReviewDocument.data?.fields ||
+        selectedReviewDocument.data?.structured_data ||
+        selectedReviewDocument.data?.extracted_fields ||
+        {};
+
+    await renderModalFields(modalFields);
 
     document.getElementById("reviewBackdrop").classList.add("show");
     document.getElementById("reviewModal").classList.add("open");
@@ -405,8 +412,8 @@ function renderModalPreview(doc) {
     const preview = document.getElementById("modalPreview");
     const previewStatus = document.getElementById("previewStatus");
 
-    const fileUrl = doc.file_url;
-    const fileName = doc.source_file || "";
+    const fileUrl = doc.file_url || doc.data?.file_url || "";
+    const fileName = doc.source_file || doc.filename || doc.data?.source_file || "";
 
     preview.classList.remove("zoom-mode");
     preview.classList.add("fit-mode");
