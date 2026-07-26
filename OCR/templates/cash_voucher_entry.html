@@ -354,6 +354,127 @@
     font-size: 11px;
     margin-top: 2px;
 }
+
+/* Optional narration details */
+.details-section {
+    margin-top: 4px;
+}
+
+.details-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.details-table th {
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.details-table td {
+    padding: 8px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.details-table tr:last-child td {
+    border-bottom: none;
+}
+
+.detail-input {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-size: 13px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.detail-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.detail-remove-btn {
+    border: none;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.detail-add-btn {
+    margin-top: 10px;
+}
+
+
+/* Print preview narration row */
+.print-narration-row {
+    border-top: 1.5px solid #1d4ed8;
+    border-bottom: 1.5px solid #1d4ed8;
+    min-height: 70px;
+}
+
+.print-narration-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.print-narration-line {
+    color: #1d4ed8;
+}
+
+
+/* Details overall total */
+.details-grand-total-row {
+    display: grid;
+    grid-template-columns: 42% 14% 18% 18% 8%;
+    gap: 0;
+    border: 1px solid #dbe3ef;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.details-grand-total-label {
+    grid-column: 1 / 4;
+    padding: 11px 12px;
+    font-size: 13px;
+    font-weight: 900;
+    text-align: right;
+    color: #0f172a;
+}
+
+.details-grand-total-value {
+    padding: 11px 12px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+    border-left: 1px solid #dbe3ef;
+}
+
+.details-grand-total-empty {
+    border-left: 1px solid #dbe3ef;
+}
+
 </style>
 
 <div class="voucher-page">
@@ -414,6 +535,30 @@
                 <label class="form-label">Purpose</label>
                 <textarea id="purpose" class="form-control" required placeholder="Enter voucher purpose" oninput="markUnsaved()"></textarea>
             </div>
+
+            <div class="form-group full-width details-section">
+                <label class="form-label">Narration Details <span class="optional-label">(Optional)</span></label>
+
+                <div class="details-table-wrap">
+                    <table class="details-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 42%;">Narration</th>
+                                <th style="width: 14%;">Count</th>
+                                <th style="width: 18%;">Sub Price</th>
+                                <th style="width: 18%;">Total Price</th>
+                                <th style="width: 8%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailsBody"></tbody>
+                    </table>
+                </div>
+
+                <button type="button" class="btn btn-secondary detail-add-btn" onclick="addDetailRow()">
+                    + Add Narration
+                </button>
+            </div>
+
 
             <div class="form-group full-width">
                 <label class="form-label">Amount in Words</label>
@@ -512,7 +657,14 @@
         const mm = String(today.getMonth() + 1).padStart(2, "0");
         const dd = String(today.getDate()).padStart(2, "0");
 
-        document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
+        
+        try {
+            const voucher = getVoucherObjectFromResponse(data);
+            if (voucher && voucher.details) {
+                setDetailsData(voucher.details);
+            }
+        } catch (e) {}
+document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
     }
 
     function markUnsaved() {
@@ -601,7 +753,8 @@
             account_name: document.getElementById("accountHead").value,
             person_name: document.getElementById("personName").value,
             purpose: document.getElementById("purpose").value,
-            amount: document.getElementById("amount").value
+            amount: document.getElementById("amount").value,
+            details: getDetailsData()
         };
     }
 
@@ -829,6 +982,325 @@ function getOptionalVoucherFields() {
         party_name: document.getElementById("partyName") ? document.getElementById("partyName").value.trim().toUpperCase() : ""
     };
 }
+
+
+function addDetailRow(narration = "", count = "", subPrice = "", totalPrice = "") {
+    const body = document.getElementById("detailsBody");
+    if (!body) return;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td>
+            <input type="text" class="detail-input detail-narration" placeholder="Enter narration" value="${narration}">
+        </td>
+        <td>
+            <input type="number" class="detail-input detail-count" min="0" placeholder="0" value="${count}">
+        </td>
+        <td>
+            <input type="number" class="detail-input detail-sub-price" min="0" step="0.01" placeholder="0.00" value="${subPrice}">
+        </td>
+        <td>
+            <input type="number" class="detail-input detail-total-price" min="0" step="0.01" placeholder="0.00" value="${totalPrice}">
+        </td>
+        <td>
+            <button type="button" class="detail-remove-btn" onclick="removeDetailRow(this)">×</button>
+        </td>
+    `;
+
+    body.appendChild(row);
+
+    const countInput = row.querySelector(".detail-count");
+    const subPriceInput = row.querySelector(".detail-sub-price");
+    const totalInput = row.querySelector(".detail-total-price");
+
+    function calculateTotal() {
+        const c = parseFloat(countInput.value || "0");
+        const p = parseFloat(subPriceInput.value || "0");
+
+        if (c > 0 && p > 0) {
+            totalInput.value = (c * p).toFixed(2);
+        }
+
+        if (typeof markUnsaved === "function") {
+            markUnsaved();
+        }
+    }
+
+    countInput.addEventListener("input", calculateTotal);
+    subPriceInput.addEventListener("input", calculateTotal);
+
+    row.querySelectorAll("input").forEach(function (input) {
+        input.addEventListener("input", function () {
+            if (typeof markUnsaved === "function") {
+                markUnsaved();
+            }
+        });
+    });
+}
+
+function removeDetailRow(button) {
+    const row = button.closest("tr");
+    if (row) row.remove();
+
+    if (typeof markUnsaved === "function") {
+        markUnsaved();
+    }
+}
+
+function getDetailsData() {
+    const rows = document.querySelectorAll("#detailsBody tr");
+    const details = [];
+
+    rows.forEach(function (row) {
+        const narration = row.querySelector(".detail-narration")?.value.trim() || "";
+        const count = row.querySelector(".detail-count")?.value.trim() || "";
+        const subPrice = row.querySelector(".detail-sub-price")?.value.trim() || "";
+        const totalPrice = row.querySelector(".detail-total-price")?.value.trim() || "";
+
+        if (narration || count || subPrice || totalPrice) {
+            details.push({
+                narration: narration,
+                count: count,
+                sub_price: subPrice,
+                total_price: totalPrice
+            });
+        }
+    });
+
+    return details;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    if (document.getElementById("detailsBody") && document.querySelectorAll("#detailsBody tr").length === 0) {
+        addDetailRow();
+    }
+});
+
+
+function setDetailsData(details) {
+    const body = document.getElementById("detailsBody");
+    if (!body) return;
+
+    body.innerHTML = "";
+
+    if (!details || details.length === 0) {
+        addDetailRow();
+        return;
+    }
+
+    details.forEach(function (item) {
+        addDetailRow(
+            item.narration || "",
+            item.count || "",
+            item.sub_price || "",
+            item.total_price || ""
+        );
+    });
+}
+
+function getVoucherObjectFromResponse(data) {
+    return data.voucher || data.entry || data.data || data;
+}
+
+
+function renderVoucherNarration(narration) {
+    if (!narration) return "";
+
+    const lines = String(narration)
+        .split(/\n|,/)
+        .map(function (line) { return line.trim(); })
+        .filter(Boolean);
+
+    if (lines.length === 0) return "";
+
+    return `
+        <div class="print-row">
+            <div class="print-label">Narration</div>
+            <div class="print-value">
+                ${lines.map(function (line) { return `<div>${line}</div>`; }).join("")}
+            </div>
+        </div>
+    `;
+}
+
+
+function buildNarrationPrintLines() {
+    if (typeof getDetailsData !== "function") {
+        return [];
+    }
+
+    const details = getDetailsData();
+
+    return details
+        .filter(function (item) {
+            return item.narration || item.count || item.sub_price || item.total_price;
+        })
+        .map(function (item, index) {
+            let parts = [];
+
+            if (item.narration) {
+                parts.push(item.narration);
+            }
+
+            if (item.count) {
+                parts.push("Count: " + item.count);
+            }
+
+            if (item.sub_price) {
+                parts.push("Sub Price: Rs. " + item.sub_price);
+            }
+
+            if (item.total_price) {
+                parts.push("Total: Rs. " + item.total_price);
+            }
+
+            return (index + 1) + ". " + parts.join(" | ");
+        });
+}
+
+function injectNarrationIntoPrintPreview() {
+    const preview = document.getElementById("printPreview");
+    if (!preview) return;
+
+    preview.querySelectorAll(".print-narration-row").forEach(function (el) {
+        el.remove();
+    });
+
+    const lines = buildNarrationPrintLines();
+
+    if (!lines.length) {
+        return;
+    }
+
+    const allElements = Array.from(preview.querySelectorAll("*"));
+
+    const purposeLabel = allElements.find(function (el) {
+        return (el.innerText || "").trim().toUpperCase() === "PURPOSE";
+    });
+
+    if (!purposeLabel) {
+        return;
+    }
+
+    const purposeRow = purposeLabel.closest(".print-row") || purposeLabel.parentElement;
+
+    const narrationRow = document.createElement("div");
+    narrationRow.className = "print-row print-narration-row";
+
+    narrationRow.innerHTML = `
+        <div class="print-label">NARRATION</div>
+        <div class="print-value">
+            <div class="print-narration-lines">
+                ${lines.map(function (line) {
+                    return `<div class="print-narration-line">${line}</div>`;
+                }).join("")}
+            </div>
+        </div>
+    `;
+
+    if (purposeRow && purposeRow.parentNode) {
+        purposeRow.parentNode.insertBefore(narrationRow, purposeRow.nextSibling);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("button").forEach(function (button) {
+        const text = (button.innerText || "").trim().toUpperCase();
+
+        if (text.includes("PRINT PREVIEW") || text.includes("SAVE-PRINT")) {
+            button.addEventListener("click", function () {
+                setTimeout(injectNarrationIntoPrintPreview, 150);
+                setTimeout(injectNarrationIntoPrintPreview, 500);
+            });
+        }
+    });
+});
+
+
+/* ===== CASH ENTRY DETAILS TOTAL + AMOUNT SYNC ===== */
+
+function ensureDetailsGrandTotalBox() {
+    const body = document.getElementById("detailsBody");
+    if (!body) return;
+
+    const tableWrap = body.closest(".details-table-wrap");
+    if (!tableWrap) return;
+
+    if (document.getElementById("detailsGrandTotalBox")) return;
+
+    const box = document.createElement("div");
+    box.id = "detailsGrandTotalBox";
+    box.className = "details-grand-total-row";
+    box.innerHTML = `
+        <div class="details-grand-total-label">Overall Total</div>
+        <div class="details-grand-total-value">Rs. <span id="detailsGrandTotal">0.00</span></div>
+        <div class="details-grand-total-empty"></div>
+    `;
+
+    tableWrap.insertAdjacentElement("afterend", box);
+}
+
+function toNumberSafe(value) {
+    const num = parseFloat(String(value || "").replace(/,/g, "").trim());
+    return Number.isFinite(num) ? num : 0;
+}
+
+function calculateDetailsGrandTotal() {
+    ensureDetailsGrandTotalBox();
+
+    const rows = document.querySelectorAll("#detailsBody tr");
+    let grandTotal = 0;
+
+    rows.forEach(function (row) {
+        const countInput = row.querySelector(".detail-count");
+        const subPriceInput = row.querySelector(".detail-sub-price");
+        const totalInput = row.querySelector(".detail-total-price");
+
+        if (!totalInput) return;
+
+        const count = toNumberSafe(countInput ? countInput.value : 0);
+        const subPrice = toNumberSafe(subPriceInput ? subPriceInput.value : 0);
+
+        if (count > 0 && subPrice > 0) {
+            totalInput.value = (count * subPrice).toFixed(2);
+        }
+
+        grandTotal += toNumberSafe(totalInput.value);
+    });
+
+    const totalSpan = document.getElementById("detailsGrandTotal");
+    if (totalSpan) {
+        totalSpan.innerText = grandTotal.toFixed(2);
+    }
+
+    const amountInput = document.getElementById("amount");
+    if (amountInput && grandTotal > 0) {
+        amountInput.value = grandTotal.toFixed(2);
+
+        if (typeof updateAmountWords === "function") {
+            updateAmountWords();
+        }
+    }
+
+    return grandTotal;
+}
+
+document.addEventListener("input", function (event) {
+    if (
+        event.target.classList.contains("detail-count") ||
+        event.target.classList.contains("detail-sub-price") ||
+        event.target.classList.contains("detail-total-price") ||
+        event.target.classList.contains("detail-narration")
+    ) {
+        calculateDetailsGrandTotal();
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(calculateDetailsGrandTotal, 300);
+    setTimeout(calculateDetailsGrandTotal, 800);
+});
 
 </script>
 {% endblock %}

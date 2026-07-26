@@ -82,6 +82,8 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
         party_code = (data.get("party_code") or "").strip()
         party_name = (data.get("party_name") or "").strip().upper()
 
+        detail_rows = data.get("details") or []
+
         usercode = session_data.get("usercode")
         divcode = session_data.get("divisioncode")
         yearcode = session_data.get("yearcode")
@@ -167,17 +169,73 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
             "new_id": new_id_var
         })
 
-        conn.commit()
-
         new_id = new_id_var.getvalue()
         if isinstance(new_id, list):
             new_id = new_id[0]
+
+        saved_detail_count = 0
+
+        for item in detail_rows:
+            narration = (item.get("narration") or "").strip()
+            item_count = item.get("count")
+            sub_price = item.get("sub_price")
+            total_price = item.get("total_price")
+
+            if not narration and not item_count and not sub_price and not total_price:
+                continue
+
+            try:
+                item_count_value = int(float(str(item_count).strip())) if str(item_count or "").strip() else None
+            except Exception:
+                item_count_value = None
+
+            try:
+                sub_price_value = float(str(sub_price).strip()) if str(sub_price or "").strip() else None
+            except Exception:
+                sub_price_value = None
+
+            try:
+                total_price_value = float(str(total_price).strip()) if str(total_price or "").strip() else None
+            except Exception:
+                total_price_value = None
+
+            if total_price_value is None and item_count_value is not None and sub_price_value is not None:
+                total_price_value = item_count_value * sub_price_value
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYDETAILS (
+                    CASHBANKENTRY_ID,
+                    NARRATION,
+                    ITEM_COUNT,
+                    SUB_PRICE,
+                    TOTAL_PRICE,
+                    ENTRYDATEANDTIME
+                ) VALUES (
+                    :cashbankentry_id,
+                    :narration,
+                    :item_count,
+                    :sub_price,
+                    :total_price,
+                    SYSDATE
+                )
+            """, {
+                "cashbankentry_id": new_id,
+                "narration": narration or None,
+                "item_count": item_count_value,
+                "sub_price": sub_price_value,
+                "total_price": total_price_value
+            })
+
+            saved_detail_count += 1
+
+        conn.commit()
 
         return {
             "success": True,
             "message": "Cash voucher entry saved successfully",
             "id": new_id,
-            "voucher_id": new_id
+            "voucher_id": new_id,
+            "details_saved": saved_detail_count
         }
 
     except Exception as e:
@@ -571,3 +629,415 @@ def authenticate_cash_voucher_entry(voucher_id, auth_usercode):
 
         if conn:
             conn.close()
+
+
+# ============================================================
+# DETAILS FEATURE OVERRIDES
+# Supports CASHBANKENTRYDETAILS for:
+# - edit load
+# - update
+# - voucher draft/list narration display
+# ============================================================
+
+def get_cash_voucher_details(voucher_id, cursor=None):
+    own_conn = None
+    own_cursor = None
+
+    try:
+        if cursor is None:
+            own_conn = get_connection()
+            own_cursor = own_conn.cursor()
+            cursor = own_cursor
+
+        cursor.execute("""
+            SELECT ID,
+                   CASHBANKENTRY_ID,
+                   NARRATION,
+                   ITEM_COUNT,
+                   SUB_PRICE,
+                   TOTAL_PRICE
+            FROM CASHBANKENTRYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+            ORDER BY ID
+        """, {
+            "voucher_id": voucher_id
+        })
+
+        details = []
+        for row in cursor.fetchall():
+            details.append({
+                "id": row[0],
+                "cashbankentry_id": row[1],
+                "narration": row[2] or "",
+                "count": row[3] if row[3] is not None else "",
+                "sub_price": float(row[4]) if row[4] is not None else "",
+                "total_price": float(row[5]) if row[5] is not None else ""
+            })
+
+        return details
+
+    except Exception:
+        return []
+
+    finally:
+        if own_cursor:
+            own_cursor.close()
+        if own_conn:
+            own_conn.close()
+
+
+def save_cash_voucher_details(cursor, voucher_id, detail_rows):
+    cursor.execute("""
+        DELETE FROM CASHBANKENTRYDETAILS
+        WHERE CASHBANKENTRY_ID = :voucher_id
+    """, {
+        "voucher_id": voucher_id
+    })
+
+    saved_count = 0
+
+    for item in detail_rows or []:
+        narration = (item.get("narration") or "").strip()
+        item_count = item.get("count")
+        sub_price = item.get("sub_price")
+        total_price = item.get("total_price")
+
+        if not narration and not item_count and not sub_price and not total_price:
+            continue
+
+        try:
+            item_count_value = int(float(str(item_count).strip())) if str(item_count or "").strip() else None
+        except Exception:
+            item_count_value = None
+
+        try:
+            sub_price_value = float(str(sub_price).strip()) if str(sub_price or "").strip() else None
+        except Exception:
+            sub_price_value = None
+
+        try:
+            total_price_value = float(str(total_price).strip()) if str(total_price or "").strip() else None
+        except Exception:
+            total_price_value = None
+
+        if total_price_value is None and item_count_value is not None and sub_price_value is not None:
+            total_price_value = item_count_value * sub_price_value
+
+        cursor.execute("""
+            INSERT INTO CASHBANKENTRYDETAILS (
+                CASHBANKENTRY_ID,
+                NARRATION,
+                ITEM_COUNT,
+                SUB_PRICE,
+                TOTAL_PRICE,
+                ENTRYDATEANDTIME
+            ) VALUES (
+                :cashbankentry_id,
+                :narration,
+                :item_count,
+                :sub_price,
+                :total_price,
+                SYSDATE
+            )
+        """, {
+            "cashbankentry_id": voucher_id,
+            "narration": narration or None,
+            "item_count": item_count_value,
+            "sub_price": sub_price_value,
+            "total_price": total_price_value
+        })
+
+        saved_count += 1
+
+    return saved_count
+
+
+def list_cash_voucher_entries(limit=100):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT h.ID,
+                       TO_CHAR(h.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       h.ACCOUNT_HEAD_CODE,
+                       h.ACCOUNT_NAME,
+                       h.PERSON_NAME,
+                       h.PURPOSE,
+                       h.AMOUNT,
+                       TO_CHAR(h.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       h.USERCODE,
+                       h.DIVCODE,
+                       h.YEARCODE,
+                       h.AUTHUSERCODE,
+                       TO_CHAR(h.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       NVL(h.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       h.INVOICE_NO,
+                       TO_CHAR(h.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       h.PARTY_CODE,
+                       h.PARTY_NAME,
+                       (
+                           SELECT LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID)
+                           FROM CASHBANKENTRYDETAILS d
+                           WHERE d.CASHBANKENTRY_ID = h.ID
+                             AND d.NARRATION IS NOT NULL
+                       ) AS NARRATION
+                FROM CASHBANKENTRY h
+                ORDER BY h.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """, {
+            "limit": int(limit or 100)
+        })
+
+        entries = []
+
+        for row in cursor.fetchall():
+            entries.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": row[2] or "",
+                "account_name": row[3] or "",
+                "person_name": row[4] or "",
+                "purpose": row[5] or "",
+                "amount": float(row[6]) if row[6] is not None else 0,
+                "entrydateandtime": row[7] or "",
+                "usercode": row[8],
+                "divcode": row[9],
+                "yearcode": row[10],
+                "authusercode": row[11],
+                "authdatetime": row[12] or "",
+                "authenticated": row[11] is not None,
+                "entry_source": row[13] or "MANUAL",
+                "invoice_no": row[14] or "",
+                "invoice_date": row[15] or "",
+                "party_code": row[16] or "",
+                "party_name": row[17] or "",
+                "narration": row[18] or ""
+            })
+
+        return {
+            "success": True,
+            "entries": entries
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": []
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def get_cash_voucher_entry_by_id(voucher_id):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT ID,
+                   TO_CHAR(VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                   ACCOUNT_HEAD_CODE,
+                   ACCOUNT_NAME,
+                   PERSON_NAME,
+                   PURPOSE,
+                   AMOUNT,
+                   TO_CHAR(ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                   USERCODE,
+                   DIVCODE,
+                   YEARCODE,
+                   AUTHUSERCODE,
+                   TO_CHAR(AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                   NVL(ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                   INVOICE_NO,
+                   TO_CHAR(INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                   PARTY_CODE,
+                   PARTY_NAME
+            FROM CASHBANKENTRY
+            WHERE ID = :voucher_id
+        """, {
+            "voucher_id": voucher_id
+        })
+
+        row = cursor.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "Voucher not found"
+            }
+
+        details = get_cash_voucher_details(voucher_id, cursor)
+
+        narration_lines = []
+        for d in details:
+            if d.get("narration"):
+                narration_lines.append(d.get("narration"))
+
+        voucher = {
+            "id": row[0],
+            "voucherdate": row[1],
+            "account_head_code": row[2] or "",
+            "account_name": row[3] or "",
+            "person_name": row[4] or "",
+            "purpose": row[5] or "",
+            "amount": float(row[6]) if row[6] is not None else 0,
+            "entrydateandtime": row[7] or "",
+            "usercode": row[8],
+            "divcode": row[9],
+            "yearcode": row[10],
+            "authusercode": row[11],
+            "authdatetime": row[12] or "",
+            "authenticated": row[11] is not None,
+            "entry_source": row[13] or "MANUAL",
+            "invoice_no": row[14] or "",
+            "invoice_date": row[15] or "",
+            "party_code": row[16] or "",
+            "party_name": row[17] or "",
+            "details": details,
+            "narration": "\n".join(narration_lines)
+        }
+
+        return {
+            "success": True,
+            "voucher": voucher,
+            "entry": voucher
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def update_cash_voucher_entry(voucher_id, data):
+    conn = None
+    cursor = None
+
+    try:
+        voucherdate = data.get("voucherdate")
+        account_head_code = (data.get("account_head_code") or "").strip()
+        account_name = (data.get("account_name") or "").strip().upper()
+        person_name = (data.get("person_name") or "").strip()
+        purpose = (data.get("purpose") or "").strip()
+        amount = data.get("amount")
+
+        invoice_no = (data.get("invoice_no") or "").strip()
+        invoice_date = (data.get("invoice_date") or "").strip()
+        party_code = (data.get("party_code") or "").strip()
+        party_name = (data.get("party_name") or "").strip().upper()
+        detail_rows = data.get("details") or []
+
+        if not voucherdate:
+            return {"success": False, "message": "Voucher date is required"}
+
+        if not account_name or not account_head_code:
+            return {"success": False, "message": "Please select a valid account head from the list"}
+
+        if not person_name:
+            return {"success": False, "message": "Person name is required"}
+
+        if not purpose:
+            return {"success": False, "message": "Purpose is required"}
+
+        if amount in (None, ""):
+            return {"success": False, "message": "Amount is required"}
+
+        if not is_valid_petty_cash_account(account_name, account_head_code):
+            return {"success": False, "message": "Please select a valid account head from the list"}
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT AUTHUSERCODE
+            FROM CASHBANKENTRY
+            WHERE ID = :voucher_id
+        """, {
+            "voucher_id": voucher_id
+        })
+
+        auth_row = cursor.fetchone()
+
+        if not auth_row:
+            return {"success": False, "message": "Voucher not found"}
+
+        if auth_row[0] is not None:
+            return {"success": False, "message": "Authenticated voucher cannot be edited"}
+
+        cursor.execute("""
+            UPDATE CASHBANKENTRY
+            SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
+                ACCOUNT_HEAD_CODE = :account_head_code,
+                ACCOUNT_NAME = :account_name,
+                PERSON_NAME = :person_name,
+                PURPOSE = :purpose,
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE
+                    WHEN :invoice_date IS NULL THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
+            WHERE ID = :voucher_id
+        """, {
+            "voucher_id": voucher_id,
+            "voucherdate": voucherdate,
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": person_name,
+            "purpose": purpose,
+            "amount": amount,
+            "invoice_no": invoice_no or None,
+            "invoice_date": invoice_date or None,
+            "party_code": party_code or None,
+            "party_name": party_name or None
+        })
+
+        details_saved = save_cash_voucher_details(cursor, voucher_id, detail_rows)
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Voucher updated successfully",
+            "id": voucher_id,
+            "details_saved": details_saved
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+

@@ -387,6 +387,182 @@
     border-right: none;
 }
 
+
+/* Edit narration details */
+.details-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    background: #ffffff;
+    margin-top: 8px;
+}
+
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.details-table th {
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.details-table td {
+    padding: 8px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.detail-input {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-size: 13px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.detail-remove-btn {
+    border: none;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.detail-add-btn {
+    margin-top: 10px;
+}
+
+
+/* Voucher draft table alignment fix */
+.draft-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.draft-table th,
+.draft-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.draft-table th {
+    color: #526987;
+    font-size: 12px;
+    font-weight: 800;
+    background: #ffffff;
+}
+
+.draft-action-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.draft-action-cell .btn {
+    width: fit-content;
+    min-width: 70px;
+    padding: 7px 10px;
+    font-size: 12px;
+}
+
+.narration-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+
+/* Clean voucher preview narration layout */
+.preview-box .print-line {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    border-bottom: 1.5px solid #1d4ed8;
+    min-height: 50px;
+}
+
+.preview-box .print-label {
+    border-right: 1.5px solid #1d4ed8;
+    padding: 10px;
+    font-weight: 800;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+}
+
+.preview-box .print-line > div:last-child {
+    padding: 10px;
+    color: #1d4ed8;
+    white-space: pre-wrap;
+}
+
+.preview-box .print-purpose {
+    min-height: 95px;
+}
+
+.preview-box .preview-narration-line {
+    min-height: 70px;
+}
+
+.preview-box .preview-narration-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.preview-box .preview-narration-item {
+    line-height: 1.35;
+}
+
+
+/* Edit details overall total */
+.edit-details-grand-total-row {
+    display: grid;
+    grid-template-columns: 42% 14% 18% 18% 8%;
+    gap: 0;
+    border: 1px solid #dbe3ef;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.edit-details-grand-total-label {
+    grid-column: 1 / 4;
+    padding: 11px 12px;
+    font-size: 13px;
+    font-weight: 900;
+    text-align: right;
+    color: #0f172a;
+}
+
+.edit-details-grand-total-value {
+    padding: 11px 12px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+    border-left: 1px solid #dbe3ef;
+}
+
+.edit-details-grand-total-empty {
+    border-left: 1px solid #dbe3ef;
+}
+
 </style>
 
 <div class="draft-page">
@@ -430,31 +606,45 @@
 
                 <a class="btn btn-primary" href="/cash-voucher-entry">New</a>
                 <button class="btn btn-secondary" onclick="clearDraftFilters()">Clear</button>
-                <button class="btn btn-secondary" onclick="loadDrafts()">Refresh</button>
+                <button class="btn btn-secondary" onclick="loadVouchers()">Refresh</button>
             </div>
         </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>Date</th>
-                    <th>Account Head</th>
-                    <th>Person Name</th>
-                    <th>Purpose</th>
-                    <th>Amount</th>
-                    <th>Entry Time</th>
-                    <th>AUTH STATUS</th>
-                    <th>ACTION</th>
-                </tr>
-            </thead>
+        
+<table class="draft-table">
+    <colgroup>
+        <col style="width: 9%;">
+        <col style="width: 16%;">
+        <col style="width: 14%;">
+        <col style="width: 17%;">
+        <col style="width: 17%;">
+        <col style="width: 8%;">
+        <col style="width: 11%;">
+        <col style="width: 9%;">
+        <col style="width: 9%;">
+    </colgroup>
 
-            <tbody id="draftBody">
-                <tr>
-                    <td colspan="9">Loading...</td>
-                </tr>
-            </tbody>
-        </table>
+    <thead>
+        <tr>
+            <th>DATE</th>
+            <th>ACCOUNT HEAD</th>
+            <th>PERSON NAME</th>
+            <th>PURPOSE</th>
+            <th>NARRATION</th>
+            <th>AMOUNT</th>
+            <th>ENTRY TIME</th>
+            <th>AUTH STATUS</th>
+            <th>ACTION</th>
+        </tr>
+    </thead>
+
+    <tbody id="voucherDraftBody">
+        <tr>
+            <td colspan="9">Loading...</td>
+        </tr>
+    </tbody>
+</table>
+
     </div>
 </div>
 
@@ -490,6 +680,30 @@
             <div class="form-group full-width">
                 <label class="form-label">Purpose</label>
                 <textarea id="editPurpose" class="form-control" required></textarea>
+
+            <div class="form-group full-width">
+                <label class="form-label">Narration Details <span class="optional-label">(Optional)</span></label>
+
+                <div class="details-table-wrap">
+                    <table class="details-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 42%;">Narration</th>
+                                <th style="width: 14%;">Count</th>
+                                <th style="width: 18%;">Sub Price</th>
+                                <th style="width: 18%;">Total Price</th>
+                                <th style="width: 8%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="editDetailsBody"></tbody>
+                    </table>
+                </div>
+
+                <button type="button" class="btn btn-secondary detail-add-btn" onclick="addEditDetailRow()">
+                    + Add Narration
+                </button>
+            </div>
+
             </div>
         </div>
 
@@ -691,6 +905,7 @@
                     <td>${row.account_name || ""}</td>
                     <td>${row.person_name || ""}</td>
                     <td>${row.purpose || ""}</td>
+                        <td>${formatNarrationText(row.narration || "")}</td>
                     <td>${row.amount || ""}</td>
                     <td>${row.entrydateandtime || ""}</td>
                     <td>
@@ -792,6 +1007,10 @@
         document.getElementById("editPurpose").value = row.purpose || "";
         document.getElementById("editAmount").value = row.amount || "";
 
+        if (typeof setEditDetailsData === "function") {
+            setEditDetailsData(row.details || []);
+        }
+
         document.getElementById("editModal").style.display = "block";
     }
 
@@ -862,7 +1081,8 @@
             account_name: document.getElementById("editAccountName").value,
             person_name: document.getElementById("editPersonName").value,
             purpose: document.getElementById("editPurpose").value,
-            amount: document.getElementById("editAmount").value
+            amount: document.getElementById("editAmount").value,
+            details: getEditDetailsData()
         };
 
         const response = await fetch(`/api/cash-voucher-entry/update/${id}`, {
@@ -918,5 +1138,710 @@
 
     loadDraftAccountHeads();
     loadDrafts();
+
+function formatNarrationText(narration) {
+    if (!narration) return "-";
+
+    return String(narration)
+        .split(/\n|,/)
+        .map(function (line) { return line.trim(); })
+        .filter(Boolean)
+        .map(function (line) { return "• " + line; })
+        .join("<br>");
+}
+
+
+function renderVoucherNarration(narration) {
+    if (!narration) return "";
+
+    const lines = String(narration)
+        .split(/\n|,/)
+        .map(function (line) { return line.trim(); })
+        .filter(Boolean);
+
+    if (lines.length === 0) return "";
+
+    return `
+        <div class="print-row">
+            <div class="print-label">Narration</div>
+            <div class="print-value">
+                ${lines.map(function (line) { return `<div>${line}</div>`; }).join("")}
+            </div>
+        </div>
+    `;
+}
+
+
+function escapeHtmlSafe(value) {
+    return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function formatDraftDateSafe(value) {
+    if (!value) return "";
+    const parts = String(value).split("-");
+    if (parts.length === 3) {
+        return parts[2] + "." + parts[1] + "." + parts[0];
+    }
+    return value;
+}
+
+function formatNarrationSafe(value) {
+    if (!value) return "-";
+
+    return String(value)
+        .split(/\n/)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => "• " + escapeHtmlSafe(line))
+        .join("<br>");
+}
+
+
+
+async function loadVouchers() {
+    try {
+        const rowsSelect = document.getElementById("rowsLimit");
+        const limit = rowsSelect ? rowsSelect.value : 100;
+
+        const response = await fetch("/api/cash-voucher-entry/list?limit=" + encodeURIComponent(limit));
+        const data = await response.json();
+
+        if (!data.success) {
+            renderVoucherDraftTable([]);
+            return;
+        }
+
+        let entries = data.entries || data.data || [];
+
+        const searchInput = document.getElementById("searchInput");
+        const accountInput = document.getElementById("accountHeadFilter");
+        const fromDateInput = document.getElementById("fromDate");
+        const toDateInput = document.getElementById("toDate");
+
+        const search = searchInput ? searchInput.value.trim().toUpperCase() : "";
+        const account = accountInput ? accountInput.value.trim().toUpperCase() : "";
+        const fromDate = fromDateInput ? fromDateInput.value : "";
+        const toDate = toDateInput ? toDateInput.value : "";
+
+        entries = entries.filter(row => {
+            const text = [
+                row.id,
+                row.person_name,
+                row.purpose,
+                row.narration,
+                row.account_name,
+                row.invoice_no,
+                row.party_name
+            ].join(" ").toUpperCase();
+
+            if (search && !text.includes(search)) return false;
+            if (account && !String(row.account_name || "").toUpperCase().includes(account)) return false;
+            if (fromDate && String(row.voucherdate || "") < fromDate) return false;
+            if (toDate && String(row.voucherdate || "") > toDate) return false;
+
+            return true;
+        });
+
+        renderVoucherDraftTable(entries);
+
+    } catch (error) {
+        console.error(error);
+        renderVoucherDraftTable([]);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    loadVouchers();
+});
+
+/* ===== FINAL VOUCHER DRAFT BUTTON FIX ===== */
+
+function getVoucherRowFromResult(result) {
+    return result.row || result.voucher || result.entry || result.data || null;
+}
+
+async function loadDrafts() {
+    return loadVouchers();
+}
+
+async function refreshList() {
+    return loadVouchers();
+}
+
+async function openEdit(id) {
+    try {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Failed to load voucher");
+            return;
+        }
+
+        const row = getVoucherRowFromResult(result);
+
+        if (!row) {
+            alert("Voucher data not found");
+            return;
+        }
+
+        document.getElementById("editId").value = row.id || "";
+        document.getElementById("editDate").value = row.voucherdate || "";
+        document.getElementById("editAccountName").value = row.account_name || "";
+        document.getElementById("editAccountCode").value = row.account_head_code || "";
+        document.getElementById("editPersonName").value = row.person_name || "";
+        document.getElementById("editPurpose").value = row.purpose || "";
+        document.getElementById("editAmount").value = row.amount || "";
+
+        document.getElementById("editModal").style.display = "block";
+
+    } catch (error) {
+        alert("Edit failed: " + error.message);
+    }
+}
+
+async function openPreview(id) {
+    try {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Failed to load voucher");
+            return;
+        }
+
+        const row = getVoucherRowFromResult(result);
+
+        if (!row) {
+            alert("Voucher data not found");
+            return;
+        }
+
+        document.getElementById("pvDate").innerText = formatDateForDisplay(row.voucherdate || "");
+
+        if (document.getElementById("pvAccountHead")) {
+            document.getElementById("pvAccountHead").innerText = row.account_name || "";
+        }
+
+        if (document.getElementById("pvPersonName")) {
+            document.getElementById("pvPersonName").innerText = row.person_name || "";
+        }
+
+        if (document.getElementById("pvPurpose")) {
+            document.getElementById("pvPurpose").innerText = row.purpose || "";
+        }
+
+        if (document.getElementById("pvAmount")) {
+            document.getElementById("pvAmount").innerText = row.amount || "";
+        }
+
+        if (document.getElementById("pvAmountWords")) {
+            document.getElementById("pvAmountWords").innerText =
+                numberToWords(row.amount || 0).replace(" Rupees Only", "");
+        }
+
+        const previewBox = document.querySelector("#previewModal .preview-box");
+
+        if (previewBox) {
+            previewBox.querySelectorAll(".preview-narration-line").forEach(el => el.remove());
+
+            const narration = row.narration || "";
+            const lines = String(narration)
+                .split(/\n/)
+                .map(line => line.trim())
+                .filter(Boolean);
+
+            if (lines.length > 0) {
+                const purposeRow = document.getElementById("pvPurpose")?.closest(".print-line");
+
+                const narrationRow = document.createElement("div");
+                narrationRow.className = "print-line preview-narration-line";
+                narrationRow.innerHTML = `
+                    <div class="print-label">NARRATION</div>
+                    <div>
+                        ${lines.map((line, index) => `<div>${index + 1}. ${line}</div>`).join("")}
+                    </div>
+                `;
+
+                if (purposeRow && purposeRow.parentNode) {
+                    purposeRow.parentNode.insertBefore(narrationRow, purposeRow.nextSibling);
+                }
+            }
+        }
+
+        document.getElementById("previewModal").style.display = "block";
+
+    } catch (error) {
+        alert("Preview failed: " + error.message);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(function () {
+        loadVouchers();
+    }, 100);
+});
+
+
+function addEditDetailRow(narration = "", count = "", subPrice = "", totalPrice = "") {
+    const body = document.getElementById("editDetailsBody");
+    if (!body) return;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td>
+            <input type="text" class="detail-input edit-detail-narration" placeholder="Enter narration" value="${String(narration || "").replaceAll('"', '&quot;')}">
+        </td>
+        <td>
+            <input type="number" class="detail-input edit-detail-count" min="0" placeholder="0" value="${count || ""}">
+        </td>
+        <td>
+            <input type="number" class="detail-input edit-detail-sub-price" min="0" step="0.01" placeholder="0.00" value="${subPrice || ""}">
+        </td>
+        <td>
+            <input type="number" class="detail-input edit-detail-total-price" min="0" step="0.01" placeholder="0.00" value="${totalPrice || ""}">
+        </td>
+        <td>
+            <button type="button" class="detail-remove-btn" onclick="removeEditDetailRow(this)">×</button>
+        </td>
+    `;
+
+    body.appendChild(row);
+
+    const countInput = row.querySelector(".edit-detail-count");
+    const subPriceInput = row.querySelector(".edit-detail-sub-price");
+    const totalInput = row.querySelector(".edit-detail-total-price");
+
+    function calculateTotal() {
+        const c = parseFloat(countInput.value || "0");
+        const p = parseFloat(subPriceInput.value || "0");
+
+        if (c > 0 && p > 0) {
+            totalInput.value = (c * p).toFixed(2);
+        }
+    }
+
+    countInput.addEventListener("input", calculateTotal);
+    subPriceInput.addEventListener("input", calculateTotal);
+}
+
+function removeEditDetailRow(button) {
+    const row = button.closest("tr");
+    if (row) row.remove();
+}
+
+function setEditDetailsData(details) {
+    const body = document.getElementById("editDetailsBody");
+    if (!body) return;
+
+    body.innerHTML = "";
+
+    if (!details || details.length === 0) {
+        addEditDetailRow();
+        return;
+    }
+
+    details.forEach(function (item) {
+        addEditDetailRow(
+            item.narration || "",
+            item.count || "",
+            item.sub_price || "",
+            item.total_price || ""
+        );
+    });
+}
+
+function getEditDetailsData() {
+    const rows = document.querySelectorAll("#editDetailsBody tr");
+    const details = [];
+
+    rows.forEach(function (row) {
+        const narration = row.querySelector(".edit-detail-narration")?.value.trim() || "";
+        const count = row.querySelector(".edit-detail-count")?.value.trim() || "";
+        const subPrice = row.querySelector(".edit-detail-sub-price")?.value.trim() || "";
+        const totalPrice = row.querySelector(".edit-detail-total-price")?.value.trim() || "";
+
+        if (narration || count || subPrice || totalPrice) {
+            details.push({
+                narration: narration,
+                count: count,
+                sub_price: subPrice,
+                total_price: totalPrice
+            });
+        }
+    });
+
+    return details;
+}
+
+
+function escapeHtmlSafe(value) {
+    return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function formatDraftDateSafe(value) {
+    if (!value) return "";
+    const parts = String(value).split("-");
+    if (parts.length === 3) {
+        return parts[2] + "." + parts[1] + "." + parts[0];
+    }
+    return value;
+}
+
+function formatNarrationSafe(value) {
+    if (!value) return "-";
+
+    const lines = String(value)
+        .split(/\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (!lines.length) return "-";
+
+    return `<div class="narration-lines">${
+        lines.map(line => `<div>• ${escapeHtmlSafe(line)}</div>`).join("")
+    }</div>`;
+}
+
+function renderVoucherDraftTable(entries) {
+    const tbody = document.getElementById("voucherDraftBody");
+
+    if (!tbody) return;
+
+    if (!entries || entries.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9">No voucher drafts found.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = entries.map(row => {
+        const editButton = !row.authenticated
+            ? `<button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>`
+            : "";
+
+        return `
+            <tr>
+                <td>${formatDraftDateSafe(row.voucherdate || row.date || "")}</td>
+                <td>${escapeHtmlSafe(row.account_name || "")}</td>
+                <td>${escapeHtmlSafe(row.person_name || "")}</td>
+                <td>${escapeHtmlSafe(row.purpose || "")}</td>
+                <td>${formatNarrationSafe(row.narration || "")}</td>
+                <td>${escapeHtmlSafe(row.amount || "")}</td>
+                <td>${escapeHtmlSafe(row.entrydateandtime || row.entry_time || "")}</td>
+                <td>${row.authenticated ? "Authenticated" : "Pending"}</td>
+                <td>
+                    <div class="draft-action-cell">
+                        ${editButton}
+                        <button class="btn btn-dark" onclick="openPreview(${row.id})">Preview</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+
+/* ===== FINAL EDIT NARRATION LOAD + UPDATE FIX ===== */
+
+function getVoucherRowFromResultFinal(result) {
+    return result.row || result.voucher || result.entry || result.data || null;
+}
+
+async function openEdit(id) {
+    try {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Failed to load voucher");
+            return;
+        }
+
+        const row = getVoucherRowFromResultFinal(result);
+
+        if (!row) {
+            alert("Voucher data not found");
+            return;
+        }
+
+        document.getElementById("editId").value = row.id || "";
+        document.getElementById("editDate").value = row.voucherdate || "";
+        document.getElementById("editAccountName").value = row.account_name || "";
+        document.getElementById("editAccountCode").value = row.account_head_code || "";
+        document.getElementById("editPersonName").value = row.person_name || "";
+        document.getElementById("editPurpose").value = row.purpose || "";
+        document.getElementById("editAmount").value = row.amount || "";
+
+        if (typeof setEditDetailsData === "function") {
+            setEditDetailsData(row.details || []);
+        }
+
+        document.getElementById("editModal").style.display = "block";
+
+    } catch (error) {
+        alert("Edit failed: " + error.message);
+    }
+}
+
+async function saveEdit() {
+    if (!validateEditForm()) {
+        return;
+    }
+
+    const id = document.getElementById("editId").value;
+
+    const data = {
+        voucherdate: document.getElementById("editDate").value,
+        account_head_code: document.getElementById("editAccountCode").value,
+        account_name: document.getElementById("editAccountName").value,
+        person_name: document.getElementById("editPersonName").value,
+        purpose: document.getElementById("editPurpose").value,
+        amount: document.getElementById("editAmount").value,
+        details: typeof getEditDetailsData === "function" ? getEditDetailsData() : []
+    };
+
+    const response = await fetch(`/api/cash-voucher-entry/update/${id}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+        alert(result.message || "Update failed");
+        return;
+    }
+
+    closeEditModal();
+
+    if (typeof loadVouchers === "function") {
+        loadVouchers();
+    } else if (typeof loadDrafts === "function") {
+        loadDrafts();
+    }
+}
+
+
+/* ===== CLEAN VOUCHER PREVIEW WITH NARRATION ===== */
+
+function getVoucherRowFromResultPreviewFinal(result) {
+    return result.row || result.voucher || result.entry || result.data || null;
+}
+
+async function openPreview(id) {
+    try {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Failed to load voucher");
+            return;
+        }
+
+        const row = getVoucherRowFromResultPreviewFinal(result);
+
+        if (!row) {
+            alert("Voucher data not found");
+            return;
+        }
+
+        const setText = function (id, value) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = value || "";
+        };
+
+        setText("pvDate", formatDateForDisplay(row.voucherdate || ""));
+        setText("pvAccountHead", row.account_name || "");
+        setText("pvPersonName", row.person_name || "");
+        setText("pvPurpose", row.purpose || "");
+        setText("pvAmount", row.amount || "");
+
+        const amountWordsEl = document.getElementById("pvAmountWords");
+        if (amountWordsEl) {
+            amountWordsEl.innerText = numberToWords(row.amount || 0).replace(" Rupees Only", "");
+        }
+
+        const previewBox = document.querySelector("#previewModal .preview-box");
+
+        if (previewBox) {
+            previewBox.querySelectorAll(".preview-narration-line").forEach(function (el) {
+                el.remove();
+            });
+
+            let narrationLines = [];
+
+            if (row.details && Array.isArray(row.details) && row.details.length > 0) {
+                narrationLines = row.details
+                    .filter(function (item) {
+                        return item.narration || item.count || item.sub_price || item.total_price;
+                    })
+                    .map(function (item, index) {
+                        const parts = [];
+
+                        if (item.narration) {
+                            parts.push(item.narration);
+                        }
+
+                        if (item.count) {
+                            parts.push("Count: " + item.count);
+                        }
+
+                        if (item.sub_price) {
+                            parts.push("Sub Price: Rs. " + item.sub_price);
+                        }
+
+                        if (item.total_price) {
+                            parts.push("Total: Rs. " + item.total_price);
+                        }
+
+                        return (index + 1) + ". " + parts.join(" | ");
+                    });
+            } else if (row.narration) {
+                narrationLines = String(row.narration)
+                    .split(/\n/)
+                    .map(function (line) { return line.trim(); })
+                    .filter(Boolean)
+                    .map(function (line, index) {
+                        return (index + 1) + ". " + line;
+                    });
+            }
+
+            if (narrationLines.length > 0) {
+                const purposeRow = document.getElementById("pvPurpose")?.closest(".print-line");
+
+                const narrationRow = document.createElement("div");
+                narrationRow.className = "print-line preview-narration-line";
+
+                narrationRow.innerHTML = `
+                    <div class="print-label">NARRATION</div>
+                    <div>
+                        <div class="preview-narration-list">
+                            ${narrationLines.map(function (line) {
+                                return `<div class="preview-narration-item">${line}</div>`;
+                            }).join("")}
+                        </div>
+                    </div>
+                `;
+
+                if (purposeRow && purposeRow.parentNode) {
+                    purposeRow.parentNode.insertBefore(narrationRow, purposeRow.nextSibling);
+                }
+            }
+        }
+
+        document.getElementById("previewModal").style.display = "block";
+
+    } catch (error) {
+        alert("Preview failed: " + error.message);
+    }
+}
+
+
+/* ===== EDIT DETAILS TOTAL + AMOUNT SYNC ===== */
+
+function ensureEditDetailsGrandTotalBox() {
+    const body = document.getElementById("editDetailsBody");
+    if (!body) return;
+
+    const tableWrap = body.closest(".details-table-wrap");
+    if (!tableWrap) return;
+
+    if (document.getElementById("editDetailsGrandTotalBox")) return;
+
+    const box = document.createElement("div");
+    box.id = "editDetailsGrandTotalBox";
+    box.className = "edit-details-grand-total-row";
+    box.innerHTML = `
+        <div class="edit-details-grand-total-label">Overall Total</div>
+        <div class="edit-details-grand-total-value">Rs. <span id="editDetailsGrandTotal">0.00</span></div>
+        <div class="edit-details-grand-total-empty"></div>
+    `;
+
+    tableWrap.insertAdjacentElement("afterend", box);
+}
+
+function toNumberSafeEdit(value) {
+    const num = parseFloat(String(value || "").replace(/,/g, "").trim());
+    return Number.isFinite(num) ? num : 0;
+}
+
+function calculateEditDetailsGrandTotal() {
+    ensureEditDetailsGrandTotalBox();
+
+    const rows = document.querySelectorAll("#editDetailsBody tr");
+    let grandTotal = 0;
+
+    rows.forEach(function (row) {
+        const countInput = row.querySelector(".edit-detail-count");
+        const subPriceInput = row.querySelector(".edit-detail-sub-price");
+        const totalInput = row.querySelector(".edit-detail-total-price");
+
+        if (!totalInput) return;
+
+        const count = toNumberSafeEdit(countInput ? countInput.value : 0);
+        const subPrice = toNumberSafeEdit(subPriceInput ? subPriceInput.value : 0);
+
+        if (count > 0 && subPrice > 0) {
+            totalInput.value = (count * subPrice).toFixed(2);
+        }
+
+        grandTotal += toNumberSafeEdit(totalInput.value);
+    });
+
+    const totalSpan = document.getElementById("editDetailsGrandTotal");
+    if (totalSpan) {
+        totalSpan.innerText = grandTotal.toFixed(2);
+    }
+
+    const amountInput = document.getElementById("editAmount");
+    if (amountInput && grandTotal > 0) {
+        amountInput.value = grandTotal.toFixed(2);
+    }
+
+    return grandTotal;
+}
+
+document.addEventListener("input", function (event) {
+    if (
+        event.target.classList.contains("edit-detail-count") ||
+        event.target.classList.contains("edit-detail-sub-price") ||
+        event.target.classList.contains("edit-detail-total-price") ||
+        event.target.classList.contains("edit-detail-narration")
+    ) {
+        calculateEditDetailsGrandTotal();
+    }
+});
+
+document.addEventListener("click", function (event) {
+    if (
+        event.target.innerText &&
+        event.target.innerText.includes("Add Narration")
+    ) {
+        setTimeout(calculateEditDetailsGrandTotal, 100);
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(calculateEditDetailsGrandTotal, 300);
+    setTimeout(calculateEditDetailsGrandTotal, 800);
+});
+
 </script>
 {% endblock %}
