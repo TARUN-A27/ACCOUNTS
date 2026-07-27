@@ -563,6 +563,52 @@
     border-left: 1px solid #dbe3ef;
 }
 
+
+/* Voucher preview details table */
+.preview-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #1d4ed8;
+    font-size: 13px;
+}
+
+.preview-details-table th,
+.preview-details-table td {
+    border: 1px solid #1d4ed8;
+    padding: 5px 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.preview-details-table th {
+    font-weight: 800;
+}
+
+
+/* Final cash voucher preview details table format */
+.preview-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #1d4ed8;
+    font-size: 13px;
+}
+
+.preview-details-table th,
+.preview-details-table td {
+    border: 1px solid #1d4ed8;
+    padding: 5px 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.preview-details-table th {
+    font-weight: 800;
+}
+
+.preview-details-row {
+    min-height: 75px;
+}
+
 </style>
 
 <div class="draft-page">
@@ -740,7 +786,7 @@
             </div>
 
             <div class="print-line print-purpose">
-                <div class="print-label">PURPOSE</div>
+                <div class="print-label">NARRATION</div>
                 <div id="pvPurpose"></div>
             </div>
 
@@ -1127,6 +1173,18 @@
         if (document.getElementById("pvPersonName")) if (document.getElementById("pvPersonName")) document.getElementById("pvPersonName").innerText = row.person_name || "";
         if (document.getElementById("pvPurpose")) if (document.getElementById("pvPurpose")) document.getElementById("pvPurpose").innerText = row.purpose || "";
         if (document.getElementById("pvAmount")) if (document.getElementById("pvAmount")) document.getElementById("pvAmount").innerText = row.amount || "";
+
+        if (typeof applyFinalCashVoucherPreviewFormat === "function") {
+            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
+        }
+
+        if (typeof applyFinalCashVoucherPreviewFormat === "function") {
+            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
+        }
+
+        if (typeof applyPreviewLabelChanges === "function") {
+            applyPreviewLabelChanges((typeof row !== 'undefined' && row) ? row : {});
+        }
         document.getElementById("pvAmountWords").innerText = numberToWords(row.amount).replace(" Rupees Only", "");
 
         document.getElementById("previewModal").style.display = "block";
@@ -1673,6 +1731,14 @@ async function openPreview(id) {
         setText("pvPurpose", row.purpose || "");
         setText("pvAmount", row.amount || "");
 
+        if (typeof applyFinalCashVoucherPreviewFormat === "function") {
+            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
+        }
+
+        if (typeof applyPreviewLabelChanges === "function") {
+            applyPreviewLabelChanges((typeof row !== 'undefined' && row) ? row : {});
+        }
+
         const amountWordsEl = document.getElementById("pvAmountWords");
         if (amountWordsEl) {
             amountWordsEl.innerText = numberToWords(row.amount || 0).replace(" Rupees Only", "");
@@ -1841,6 +1907,195 @@ document.addEventListener("click", function (event) {
 document.addEventListener("DOMContentLoaded", function () {
     setTimeout(calculateEditDetailsGrandTotal, 300);
     setTimeout(calculateEditDetailsGrandTotal, 800);
+});
+
+
+/* ===== FINAL VOUCHER PREVIEW LABEL + DETAILS TABLE FIX ===== */
+
+function buildPreviewDetailsTable(row) {
+    let details = [];
+
+    if (row.details && Array.isArray(row.details) && row.details.length > 0) {
+        details = row.details;
+    } else if (row.narration) {
+        details = String(row.narration)
+            .split(/\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(line => ({
+                narration: line,
+                count: "",
+                sub_price: "",
+                total_price: ""
+            }));
+    }
+
+    if (!details.length) {
+        return "-";
+    }
+
+    return `
+        <table class="preview-details-table">
+            <thead>
+                <tr>
+                    <th>Narration</th>
+                    <th>Count</th>
+                    <th>Sub Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${details.map(item => `
+                    <tr>
+                        <td>${item.narration || ""}</td>
+                        <td>${item.count || item.item_count || ""}</td>
+                        <td>${item.sub_price ? "Rs. " + item.sub_price : ""}</td>
+                        <td>${item.total_price ? "Rs. " + item.total_price : ""}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+function applyPreviewLabelChanges(row) {
+    const purposeLabel = document.getElementById("pvPurpose")?.closest(".print-line")?.querySelector(".print-label");
+    if (purposeLabel) {
+        purposeLabel.innerText = "NARRATION";
+    }
+
+    const previewBox = document.querySelector("#previewModal .preview-box");
+    if (!previewBox) return;
+
+    previewBox.querySelectorAll(".preview-narration-line").forEach(el => el.remove());
+
+    const purposeRow = document.getElementById("pvPurpose")?.closest(".print-line");
+
+    const detailsRow = document.createElement("div");
+    detailsRow.className = "print-line preview-narration-line";
+    detailsRow.innerHTML = `
+        <div class="print-label">DETAILS</div>
+        <div>${buildPreviewDetailsTable(row)}</div>
+    `;
+
+    if (purposeRow && purposeRow.parentNode) {
+        purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+    }
+}
+
+
+/* ===== FINAL CASH VOUCHER PREVIEW FORMAT ALL PAGES ===== */
+
+function buildCashVoucherDetailsTableFinal(row) {
+    let details = [];
+
+    if (row && row.details && Array.isArray(row.details) && row.details.length > 0) {
+        details = row.details;
+    } else if (row && row.narration) {
+        details = String(row.narration)
+            .split(/\n/)
+            .map(function (line) { return line.trim(); })
+            .filter(Boolean)
+            .map(function (line) {
+                return {
+                    narration: line,
+                    count: "",
+                    sub_price: "",
+                    total_price: ""
+                };
+            });
+    } else if (typeof getDetailsData === "function") {
+        details = getDetailsData();
+    } else if (typeof getEditDetailsData === "function") {
+        details = getEditDetailsData();
+    }
+
+    if (!details || details.length === 0) {
+        return "-";
+    }
+
+    return `
+        <table class="preview-details-table">
+            <thead>
+                <tr>
+                    <th>Narration</th>
+                    <th>Count</th>
+                    <th>Sub Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${details.map(function (item) {
+                    const narration = item.narration || "";
+                    const count = item.count || item.item_count || "";
+                    const subPrice = item.sub_price || "";
+                    const totalPrice = item.total_price || "";
+
+                    return `
+                        <tr>
+                            <td>${narration}</td>
+                            <td>${count}</td>
+                            <td>${subPrice ? "Rs. " + subPrice : ""}</td>
+                            <td>${totalPrice ? "Rs. " + totalPrice : ""}</td>
+                        </tr>
+                    `;
+                }).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+function applyFinalCashVoucherPreviewFormat(row = null) {
+    const purposeEl = document.getElementById("pvPurpose") || document.getElementById("printPurpose");
+    const previewBox =
+        document.querySelector("#previewModal .preview-box") ||
+        document.querySelector("#printPreview") ||
+        document.querySelector(".preview-box");
+
+    if (!purposeEl || !previewBox) {
+        return;
+    }
+
+    const purposeRow = purposeEl.closest(".print-line") || purposeEl.closest(".print-row");
+
+    if (!purposeRow) {
+        return;
+    }
+
+    const purposeLabel = purposeRow.querySelector(".print-label");
+
+    if (purposeLabel) {
+        purposeLabel.innerText = "NARRATION";
+    }
+
+    previewBox.querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row").forEach(function (el) {
+        el.remove();
+    });
+
+    const detailsRow = document.createElement("div");
+    detailsRow.className = "print-line preview-details-row preview-narration-line";
+
+    detailsRow.innerHTML = `
+        <div class="print-label">DETAILS</div>
+        <div>${buildCashVoucherDetailsTableFinal((typeof row !== 'undefined' && row) ? row : {})}</div>
+    `;
+
+    purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+}
+
+document.addEventListener("click", function (event) {
+    const text = String(event.target.innerText || "").toUpperCase();
+
+    if (
+        text.includes("PREVIEW") ||
+        text.includes("PRINT") ||
+        text.includes("SAVE-PRINT") ||
+        text.includes("AUTHENTICATE")
+    ) {
+        setTimeout(function () {
+            applyFinalCashVoucherPreviewFormat();
+        }, 300);
+    }
 });
 
 </script>

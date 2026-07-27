@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<a href="/logout" class="dashboard-logout-btn">Logout</a>
+
 <style>
     .dashboard-hero {
         text-align: center;
@@ -145,6 +148,28 @@
             font-size: 28px;
         }
     }
+
+
+.dashboard-logout-btn {
+    position: fixed;
+    top: 24px;
+    right: 32px;
+    background: #020617;
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 14px;
+    z-index: 50;
+}
+
+.dashboard-logout-btn:hover {
+    color: #ffffff;
+    opacity: 0.9;
+}
+
+
 </style>
 
 <div class="dashboard-hero">
