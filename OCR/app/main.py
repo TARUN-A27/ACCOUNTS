@@ -319,17 +319,35 @@ def save_cash_voucher_entry():
 
 
 @app.route("/api/cash-voucher-entry/list", methods=["GET"])
-def list_cash_voucher_entry():
+def cash_voucher_entry_list_api():
     if not session.get("logged_in"):
+        return jsonify({"success": False, "message": "Login required", "rows": [], "entries": []}), 401
+
+    try:
+        limit_raw = request.args.get("limit", "1000")
+
+        if str(limit_raw).lower() == "all":
+            limit = 5000
+        else:
+            limit = int(limit_raw or 1000)
+
+        limit = max(1, min(limit, 5000))
+
+        result = list_cash_voucher_entries(limit=limit)
+
+        entries = result.get("entries") or result.get("rows") or []
+        result["entries"] = entries
+        result["rows"] = entries
+
+        return jsonify(result)
+
+    except Exception as e:
         return jsonify({
             "success": False,
-            "message": "Login required",
-            "rows": []
-        }), 401
-
-    result = list_cash_voucher_entries()
-    return jsonify(result)
-
+            "message": str(e),
+            "rows": [],
+            "entries": []
+        }), 500
 
 
 @app.route("/api/cash-voucher-entry/get/<int:voucher_id>", methods=["GET"])
@@ -755,19 +773,20 @@ def scanned_documents():
 @app.route("/api/scan-document", methods=["POST"])
 def scan_document():
     if not session.get("logged_in"):
-        return jsonify({
-            "success": False,
-            "message": "Login required"
-        }), 401
+        return jsonify({"success": False, "message": "Login required"}), 401
 
     try:
-        upload_dir = os.path.abspath(os.path.join(app.root_path, "..", "static", "uploads"))
-        os.makedirs(upload_dir, exist_ok=True)
+        import subprocess
+        from datetime import datetime
 
-        filename = "scan_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".png"
-        output_path = os.path.join(upload_dir, filename)
+        scan_dir = os.path.join(BASE_DIR, "static", "uploads")
+        os.makedirs(scan_dir, exist_ok=True)
 
-        cmd = [
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = f"scan_{timestamp}.png"
+        output_path = os.path.join(scan_dir, output_filename)
+
+        command = [
             "scanimage",
             "-d", "escl:http://localhost:60000",
             "--source", "ADF",
@@ -778,42 +797,54 @@ def scan_document():
             "-y", "210",
         ]
 
-        with open(output_path, "wb") as f:
+        with open(output_path, "wb") as out_file:
             result = subprocess.run(
-                cmd,
-                stdout=f,
+                command,
+                stdout=out_file,
                 stderr=subprocess.PIPE,
-                timeout=180
+                text=False,
+                timeout=180,
             )
 
-        stderr_text = result.stderr.decode("utf-8", errors="ignore").strip()
-
         if result.returncode != 0:
-            if os.path.exists(output_path):
+            try:
                 os.remove(output_path)
+            except Exception:
+                pass
+
+            error_text = ""
+            try:
+                error_text = result.stderr.decode("utf-8", errors="ignore")
+            except Exception:
+                error_text = str(result.stderr)
 
             return jsonify({
                 "success": False,
-                "message": stderr_text or "Scanner failed"
+                "message": "Scan failed",
+                "error": error_text,
+                "command": " ".join(command),
             }), 500
 
         if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
             return jsonify({
                 "success": False,
-                "message": "Scanner produced empty file. Check ADF paper placement."
+                "message": "Scanner completed but PNG file was not created",
             }), 500
+
+        file_url = url_for("static", filename=f"uploads/{output_filename}")
 
         return jsonify({
             "success": True,
-            "filename": filename,
-            "file_url": url_for("static", filename=f"uploads/{filename}"),
-            "size": os.path.getsize(output_path)
+            "message": "Document scanned successfully",
+            "filename": output_filename,
+            "file_url": file_url,
+            "file_path": output_path,
         })
 
     except subprocess.TimeoutExpired:
         return jsonify({
             "success": False,
-            "message": "Scanner timeout. Check paper/scanner connection."
+            "message": "Scanner timeout. Check ADF paper and try again."
         }), 500
 
     except Exception as e:
@@ -1480,6 +1511,115 @@ def get_dashboard():
 def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000/login")
 
+
+
+@app.route("/api/cash-voucher-entry/purpose-suggestions", methods=["GET"])
+def cash_voucher_purpose_suggestions():
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "message": "Login required", "purposes": []}), 401
+
+    connection = None
+    try:
+        usercode = session.get("usercode")
+        if not usercode:
+            return jsonify({"success": True, "purposes": []})
+
+        connection = get_connection()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT PURPOSE
+                FROM (
+                    SELECT PURPOSE,
+                           MAX(NVL(ENTRYDATEANDTIME, VOUCHERDATE)) AS LAST_USED
+                    FROM CASHBANKENTRY
+                    WHERE USERCODE = :usercode
+                      AND PURPOSE IS NOT NULL
+                      AND TRIM(PURPOSE) IS NOT NULL
+                    GROUP BY PURPOSE
+                    ORDER BY MAX(NVL(ENTRYDATEANDTIME, VOUCHERDATE)) DESC
+                )
+                WHERE ROWNUM <= 10
+                """,
+                {"usercode": int(usercode)},
+            )
+
+            purposes = [
+                str(row[0] or "").strip()
+                for row in cursor.fetchall()
+                if str(row[0] or "").strip()
+            ]
+
+        return jsonify({"success": True, "purposes": purposes})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e), "purposes": []}), 500
+
+    finally:
+        if connection:
+            connection.close()
+
+
+@app.route("/api/cash-voucher-entry/defaults", methods=["GET"])
+def cash_voucher_entry_defaults():
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required",
+            "username": "",
+            "purposes": []
+        }), 401
+
+    connection = None
+    try:
+        username = str(session.get("username") or "").strip()
+        usercode = session.get("usercode")
+        purposes = []
+
+        if usercode:
+            connection = get_connection()
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT PURPOSE
+                    FROM (
+                        SELECT PURPOSE,
+                               MAX(NVL(ENTRYDATEANDTIME, VOUCHERDATE)) AS LAST_USED
+                        FROM CASHBANKENTRY
+                        WHERE USERCODE = :usercode
+                          AND PURPOSE IS NOT NULL
+                          AND TRIM(PURPOSE) IS NOT NULL
+                        GROUP BY PURPOSE
+                        ORDER BY MAX(NVL(ENTRYDATEANDTIME, VOUCHERDATE)) DESC
+                    )
+                    WHERE ROWNUM <= 10
+                    """,
+                    {"usercode": int(usercode)}
+                )
+
+                purposes = [
+                    str(row[0] or "").strip()
+                    for row in cursor.fetchall()
+                    if str(row[0] or "").strip()
+                ]
+
+        return jsonify({
+            "success": True,
+            "username": username,
+            "purposes": purposes
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e),
+            "username": str(session.get("username") or "").strip(),
+            "purposes": []
+        }), 500
+
+    finally:
+        if connection:
+            connection.close()
 
 if __name__ == "__main__":
     Timer(1, open_browser).start()

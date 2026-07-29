@@ -500,6 +500,234 @@
     min-height: 75px;
 }
 
+
+.purpose-suggestion-box {
+    position: absolute;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+    z-index: 9999;
+    max-height: 220px;
+    overflow-y: auto;
+    min-width: 260px;
+    display: none;
+}
+
+.purpose-suggestion-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #111827;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.purpose-suggestion-item:hover {
+    background: #f3f4f6;
+}
+
+
+.ai-purpose-suggestions {
+    position: absolute;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+    z-index: 99999;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+}
+
+.ai-purpose-suggestion-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #111827;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ai-purpose-suggestion-item:hover {
+    background: #eef2ff;
+}
+
+
+
+/* FINAL VOUCHER GAP FIX */
+#printPreview.preview-card {
+    padding: 42px 72px 56px 72px !important;
+    background: #f8fafc !important;
+    overflow-x: auto !important;
+    box-sizing: border-box !important;
+}
+
+#printPreview .print-box {
+    width: 760px !important;
+    max-width: 760px !important;
+    margin: 0 auto 38px auto !important;
+    padding: 22px 26px 10px 26px !important;
+    box-sizing: border-box !important;
+}
+
+#previewModal .modal-box {
+    max-width: 940px !important;
+    padding: 42px !important;
+    box-sizing: border-box !important;
+}
+
+#previewModal .preview-box,
+.preview-box {
+    width: 760px !important;
+    max-width: 760px !important;
+    margin: 0 auto !important;
+    padding: 22px 26px 10px 26px !important;
+    box-sizing: border-box !important;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 16mm 14mm !important;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    #printPreview {
+        display: block !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+    }
+
+    #previewModal {
+        position: static !important;
+        inset: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    #printPreview .print-box,
+    #previewModal .preview-box,
+    .preview-box {
+        width: 170mm !important;
+        max-width: 170mm !important;
+        margin: 0 auto !important;
+        padding: 7mm 7mm 3mm 7mm !important;
+        box-sizing: border-box !important;
+    }
+
+    .modal-box {
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+    }
+}
+
+
+/* FINAL FIX: fill inner voucher line gaps */
+.print-box,
+.preview-box {
+    overflow: hidden !important;
+}
+
+.print-top-row,
+.print-line,
+.print-amount-row,
+.print-signatures {
+    margin-left: -26px !important;
+    margin-right: -26px !important;
+    width: calc(100% + 52px) !important;
+    box-sizing: border-box !important;
+}
+
+.print-top-row > div:first-child,
+.print-line > .print-label,
+.print-amount-words,
+.print-sign-cell:first-child {
+    padding-left: 26px !important;
+}
+
+.print-top-row > div:last-child,
+.print-line > .print-value,
+.print-amount-value,
+.print-sign-cell:last-child {
+    padding-right: 26px !important;
+}
+
+.print-signatures {
+    margin-bottom: 0 !important;
+}
+
+@media print {
+    .print-top-row,
+    .print-line,
+    .print-amount-row,
+    .print-signatures {
+        margin-left: -7mm !important;
+        margin-right: -7mm !important;
+        width: calc(100% + 14mm) !important;
+    }
+
+    .print-top-row > div:first-child,
+    .print-line > .print-label,
+    .print-amount-words,
+    .print-sign-cell:first-child {
+        padding-left: 7mm !important;
+    }
+
+    .print-top-row > div:last-child,
+    .print-line > .print-value,
+    .print-amount-value,
+    .print-sign-cell:last-child {
+        padding-right: 7mm !important;
+    }
+}
+
+
+
+/* LAST 10 PURPOSE DROPDOWN FIX */
+.purpose-last10-box {
+    display: none;
+    margin-top: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 9999;
+}
+
+.purpose-last10-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #0f172a;
+    border-bottom: 1px solid #eef2f7;
+    line-height: 1.35;
+}
+
+.purpose-last10-item:hover {
+    background: #eff6ff;
+}
+
+.purpose-last10-empty {
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #64748b;
+}
+
 </style>
 
 <div class="voucher-page">
@@ -553,7 +781,7 @@
         </div>
 
                 <label class="form-label">Name of the Person</label>
-                <input type="text" id="personName" class="form-control" required placeholder="Enter person name" oninput="markUnsaved()">
+                <input type="text" id="personName" class="form-control" required placeholder="Enter person name" value="{{ session.get('username') or '' }}" oninput="markUnsaved()">
             </div>
 
             <div class="form-group full-width">
@@ -918,7 +1146,7 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
         fillPrintPreview(savedVoucherId);
 
         setTimeout(() => {
-            window.print();
+            printVoucherPreviewOnly();
         }, 300);
     }
 
@@ -927,7 +1155,7 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
 
         document.getElementById("accountHead").value = "";
         document.getElementById("accountHeadCode").value = "";
-        document.getElementById("personName").value = "";
+        document.getElementById("personName").value = {{ (session.get("username") or "")|tojson }};
         document.getElementById("purpose").value = "";
         document.getElementById("amount").value = "";
         document.getElementById("amountWords").innerText = "Amount in words will appear here";
@@ -1447,4 +1675,417 @@ document.addEventListener("click", function (event) {
 });
 
 </script>
+
+<script>
+/* FINAL IFRAME VOUCHER PRINT FIX */
+(function () {
+    window.printVoucherPreviewOnly = function () {
+        const source =
+            document.querySelector("#previewModal .preview-box") ||
+            document.querySelector("#printPreview .print-box") ||
+            document.querySelector(".preview-box") ||
+            document.querySelector(".print-box");
+
+        if (!source) {
+            alert("Voucher preview not found. Open preview first.");
+            return;
+        }
+
+        const oldFrame = document.getElementById("voucherPrintFrame");
+        if (oldFrame) oldFrame.remove();
+
+        const frame = document.createElement("iframe");
+        frame.id = "voucherPrintFrame";
+        frame.style.position = "fixed";
+        frame.style.left = "-10000px";
+        frame.style.top = "0";
+        frame.style.width = "1px";
+        frame.style.height = "1px";
+        frame.style.border = "0";
+        frame.style.visibility = "visible";
+        document.body.appendChild(frame);
+
+        const clone = source.cloneNode(true);
+
+        const printCss = `
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
+            html, body {
+                margin: 0;
+                padding: 0;
+                background: white;
+                color: #0047ff;
+                font-family: Arial, sans-serif;
+            }
+
+            .print-box,
+            .preview-box {
+                width: 180mm;
+                max-width: 180mm;
+                margin: 0 auto;
+                border: 1.5px solid #0047ff;
+                color: #0047ff;
+                padding: 7mm 7mm 3mm 7mm;
+                box-sizing: border-box;
+                overflow: hidden;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-company {
+                text-align: center;
+                font-size: 18px;
+                font-weight: 800;
+                line-height: 1.1;
+                margin-bottom: 1px;
+            }
+
+            .print-address {
+                text-align: center;
+                font-size: 10px;
+                font-weight: 700;
+                margin-bottom: 6px;
+                line-height: 1.2;
+            }
+
+            .print-title {
+                text-align: center;
+                display: block;
+                width: fit-content;
+                margin: 0 auto 9px auto;
+                border: 1.5px solid #0047ff;
+                padding: 3px 10px;
+                font-size: 13px;
+                font-weight: 800;
+                letter-spacing: 0.4px;
+            }
+
+            .print-top-row {
+                display: grid;
+                grid-template-columns: 1fr 170px;
+                border-top: 1.2px solid #0047ff;
+                border-bottom: 1.2px solid #0047ff;
+                font-size: 11px;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+            }
+
+            .print-top-row > div {
+                padding: 5px 7mm;
+                box-sizing: border-box;
+            }
+
+            .print-top-row > div:last-child {
+                border-left: 1.2px solid #0047ff;
+                text-align: right;
+            }
+
+            .print-line {
+                display: grid;
+                grid-template-columns: 42mm 1fr;
+                min-height: 10mm;
+                border-bottom: 1.2px solid #0047ff;
+                font-size: 11px;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-label {
+                font-weight: 800;
+                border-right: 1.2px solid #0047ff;
+                padding: 5px 5mm 5px 7mm;
+                display: flex;
+                align-items: center;
+                box-sizing: border-box;
+            }
+
+            .print-value,
+            .print-line > div:last-child {
+                padding: 5px 7mm 5px 5mm;
+                display: flex;
+                align-items: center;
+                white-space: pre-wrap;
+                box-sizing: border-box;
+            }
+
+            .print-purpose {
+                min-height: 24mm;
+            }
+
+            .preview-narration-line,
+            .preview-details-row {
+                min-height: 20mm;
+            }
+
+            .print-amount-row {
+                display: grid;
+                grid-template-columns: 1fr 38mm;
+                border-bottom: 1.2px solid #0047ff;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+                font-size: 11px;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-amount-words {
+                min-height: 11mm;
+                padding: 5px 5mm 5px 7mm;
+                border-right: 1.2px solid #0047ff;
+                box-sizing: border-box;
+            }
+
+            .print-amount-value {
+                min-height: 11mm;
+                padding: 5px 7mm 5px 5mm;
+                box-sizing: border-box;
+                font-weight: 800;
+            }
+
+            .print-signatures {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                border-top: 1.2px solid #0047ff;
+                margin-top: 8mm;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-sign-cell {
+                min-height: 18mm;
+                border-right: 1.2px solid #0047ff;
+                padding: 4px;
+                display: flex;
+                align-items: end;
+                justify-content: center;
+                text-align: center;
+                font-size: 9px;
+                font-weight: 800;
+                box-sizing: border-box;
+            }
+
+            .print-sign-cell:last-child {
+                border-right: none;
+            }
+
+            .preview-details-table {
+                width: 100%;
+                border-collapse: collapse;
+                color: #0047ff;
+                font-size: 9px;
+            }
+
+            .preview-details-table th,
+            .preview-details-table td {
+                border: 1px solid #0047ff;
+                padding: 3px 4px;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            .modal-title,
+            .modal-actions,
+            button {
+                display: none !important;
+            }
+        `;
+
+        const doc = frame.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <!doctype html>
+            <html>
+            <head>
+                <title>Voucher Print</title>
+                <style>${printCss}</style>
+            </head>
+            <body></body>
+            </html>
+        `);
+        doc.close();
+
+        doc.body.appendChild(clone);
+
+        setTimeout(function () {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+
+            setTimeout(function () {
+                frame.remove();
+            }, 1200);
+        }, 250);
+    };
+})();
+</script>
+
+
+<script>
+/* LAST 10 PURPOSE DROPDOWN FIX */
+(function () {
+    let lastPurposes = [];
+    let defaultUsername = {{ (session.get("username") or "")|tojson }};
+
+    function personInput() {
+        return document.getElementById("personName");
+    }
+
+    function purposeInput() {
+        return document.getElementById("purpose");
+    }
+
+    function setDefaultPerson(force = false) {
+        const input = personInput();
+        if (!input || !defaultUsername) return;
+
+        if (force || !String(input.value || "").trim()) {
+            input.value = defaultUsername;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[<>&"]/g, function (s) {
+            return {
+                "<": "&lt;",
+                ">": "&gt;",
+                "&": "&amp;",
+                '"': "&quot;"
+            }[s];
+        });
+    }
+
+    function ensurePurposeBox() {
+        const field = purposeInput();
+        if (!field) return null;
+
+        let box = document.getElementById("purposeLast10Box");
+        if (!box) {
+            box = document.createElement("div");
+            box.id = "purposeLast10Box";
+            box.className = "purpose-last10-box";
+            field.insertAdjacentElement("afterend", box);
+        }
+
+        return box;
+    }
+
+    function renderPurposeSuggestions() {
+        const field = purposeInput();
+        const box = ensurePurposeBox();
+        if (!field || !box) return;
+
+        const query = String(field.value || "").trim().toLowerCase();
+
+        const filtered = lastPurposes
+            .filter(function (purpose) {
+                if (!query) return true;
+                return String(purpose).toLowerCase().includes(query);
+            })
+            .slice(0, 10);
+
+        if (!filtered.length) {
+            box.innerHTML = `<div class="purpose-last10-empty">No previous purpose found</div>`;
+            box.style.display = lastPurposes.length ? "block" : "none";
+            return;
+        }
+
+        box.innerHTML = filtered.map(function (purpose) {
+            return `
+                <div class="purpose-last10-item" data-purpose="${escapeHtml(purpose)}">
+                    ${escapeHtml(purpose)}
+                </div>
+            `;
+        }).join("");
+
+        box.style.display = "block";
+    }
+
+    async function loadPurposeDefaults() {
+        try {
+            const response = await fetch("/api/cash-voucher-entry/defaults", {
+                cache: "no-store"
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                defaultUsername = result.username || defaultUsername || "";
+                lastPurposes = Array.isArray(result.purposes) ? result.purposes : [];
+            }
+        } catch (error) {
+            console.warn("Purpose defaults failed:", error);
+        }
+
+        setDefaultPerson(false);
+    }
+
+    function attachEvents() {
+        const field = purposeInput();
+        if (!field) return;
+
+        ensurePurposeBox();
+
+        field.addEventListener("focus", renderPurposeSuggestions);
+        field.addEventListener("input", renderPurposeSuggestions);
+
+        document.addEventListener("mousedown", function (event) {
+            const item = event.target.closest(".purpose-last10-item");
+            const box = document.getElementById("purposeLast10Box");
+
+            if (item) {
+                event.preventDefault();
+                field.value = item.getAttribute("data-purpose") || item.innerText || "";
+                field.dispatchEvent(new Event("input", { bubbles: true }));
+                field.dispatchEvent(new Event("change", { bubbles: true }));
+                if (typeof markUnsaved === "function") markUnsaved();
+                if (box) box.style.display = "none";
+                field.focus();
+                return;
+            }
+
+            if (box && !box.contains(event.target) && event.target !== field) {
+                box.style.display = "none";
+            }
+        });
+    }
+
+    const oldResetForm = window.resetForm;
+    window.resetForm = function () {
+        const result = typeof oldResetForm === "function"
+            ? oldResetForm.apply(this, arguments)
+            : undefined;
+
+        setTimeout(function () {
+            setDefaultPerson(true);
+            renderPurposeSuggestions();
+        }, 100);
+
+        return result;
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+        attachEvents();
+        loadPurposeDefaults();
+
+        setTimeout(setDefaultPerson, 300);
+        setTimeout(setDefaultPerson, 900);
+    });
+})();
+</script>
+
 {% endblock %}

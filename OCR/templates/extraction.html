@@ -530,6 +530,20 @@ button {
     display: none !important;
 }
 
+
+.preview-pdf {
+    width: 100%;
+    height: 100%;
+    min-height: 520px;
+    border: none;
+    background: #ffffff;
+    border-radius: 10px;
+}
+
+.preview-pdf.hidden {
+    display: none;
+}
+
 </style>
 
 <div class="extract-app">
@@ -576,6 +590,7 @@ button {
                     Select or scan a document to preview.
                 </div>
                 <img id="previewImage" class="preview-image hidden" draggable="false">
+                <iframe id="previewPdf" class="preview-pdf hidden"></iframe>
             </div>
         </div>
 

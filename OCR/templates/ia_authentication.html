@@ -560,9 +560,175 @@
     min-height: 75px;
 }
 
+
+        .ia-logout-btn {
+            position: fixed;
+            top: 18px;
+            right: 24px;
+            background: #111827;
+            color: #ffffff;
+            padding: 9px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9999;
+            border: 1px solid #111827;
+        }
+
+        .ia-logout-btn:hover {
+            background: #374151;
+        }
+
+    
+
+/* FINAL VOUCHER GAP FIX */
+#printPreview.preview-card {
+    padding: 42px 72px 56px 72px !important;
+    background: #f8fafc !important;
+    overflow-x: auto !important;
+    box-sizing: border-box !important;
+}
+
+#printPreview .print-box {
+    width: 760px !important;
+    max-width: 760px !important;
+    margin: 0 auto 38px auto !important;
+    padding: 22px 26px 10px 26px !important;
+    box-sizing: border-box !important;
+}
+
+#previewModal .modal-box {
+    max-width: 940px !important;
+    padding: 42px !important;
+    box-sizing: border-box !important;
+}
+
+#previewModal .preview-box,
+.preview-box {
+    width: 760px !important;
+    max-width: 760px !important;
+    margin: 0 auto !important;
+    padding: 22px 26px 10px 26px !important;
+    box-sizing: border-box !important;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 16mm 14mm !important;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    #printPreview {
+        display: block !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+    }
+
+    #previewModal {
+        position: static !important;
+        inset: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    #printPreview .print-box,
+    #previewModal .preview-box,
+    .preview-box {
+        width: 170mm !important;
+        max-width: 170mm !important;
+        margin: 0 auto !important;
+        padding: 7mm 7mm 3mm 7mm !important;
+        box-sizing: border-box !important;
+    }
+
+    .modal-box {
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+    }
+}
+
+
+/* FINAL FIX: fill inner voucher line gaps */
+.print-box,
+.preview-box {
+    overflow: hidden !important;
+}
+
+.print-top-row,
+.print-line,
+.print-amount-row,
+.print-signatures {
+    margin-left: -26px !important;
+    margin-right: -26px !important;
+    width: calc(100% + 52px) !important;
+    box-sizing: border-box !important;
+}
+
+.print-top-row > div:first-child,
+.print-line > .print-label,
+.print-amount-words,
+.print-sign-cell:first-child {
+    padding-left: 26px !important;
+}
+
+.print-top-row > div:last-child,
+.print-line > .print-value,
+.print-amount-value,
+.print-sign-cell:last-child {
+    padding-right: 26px !important;
+}
+
+.print-signatures {
+    margin-bottom: 0 !important;
+}
+
+@media print {
+    .print-top-row,
+    .print-line,
+    .print-amount-row,
+    .print-signatures {
+        margin-left: -7mm !important;
+        margin-right: -7mm !important;
+        width: calc(100% + 14mm) !important;
+    }
+
+    .print-top-row > div:first-child,
+    .print-line > .print-label,
+    .print-amount-words,
+    .print-sign-cell:first-child {
+        padding-left: 7mm !important;
+    }
+
+    .print-top-row > div:last-child,
+    .print-line > .print-value,
+    .print-amount-value,
+    .print-sign-cell:last-child {
+        padding-right: 7mm !important;
+    }
+}
+
+
 </style>
 </head>
 <body>
+<a href="/logout" class="ia-logout-btn">Logout</a>
+
     <div class="standalone-page">
 
 <div class="draft-page">
@@ -1156,7 +1322,11 @@
             return;
         }
 
-        window.print();
+        if (typeof window.printVoucherPreviewOnly === "function") {
+            window.printVoucherPreviewOnly();
+        } else {
+            alert("Print function not loaded. Hard refresh and try again.");
+        }
         loadDrafts();
     }
 
@@ -1393,7 +1563,7 @@ async function openPreview(id) {
                 const narrationRow = document.createElement("div");
                 narrationRow.className = "print-line preview-narration-line";
                 narrationRow.innerHTML = `
-                    <div class="print-label">NARRATION</div>
+                    <div class="print-label">DETAILS</div>
                     <div>
                         ${lines.map((line, index) => `<div>${index + 1}. ${line}</div>`).join("")}
                     </div>
@@ -1671,7 +1841,11 @@ async function authenticateAndPrint() {
             return;
         }
 
-        window.print();
+        if (typeof window.printVoucherPreviewOnly === "function") {
+            window.printVoucherPreviewOnly();
+        } else {
+            alert("Print function not loaded. Hard refresh and try again.");
+        }
 
         closePreviewModal();
 
@@ -1858,25 +2032,890 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
 }
 
-document.addEventListener("click", function (event) {
-    const text = String(event.target.innerText || "").toUpperCase();
-
-    if (
-        text.includes("PREVIEW") ||
-        text.includes("PRINT") ||
-        text.includes("SAVE-PRINT") ||
-        text.includes("AUTHENTICATE")
-    ) {
-        setTimeout(function () {
-            applyFinalCashVoucherPreviewFormat();
-        }, 300);
-    }
-});
-
 </script>
 
 
 
     </div>
+
+<style>
+/* IA CLEAN PRINT ONLY FIX */
+#iaPrintOnly {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    body.ia-print-active > *:not(#iaPrintOnly) {
+        display: none !important;
+    }
+
+    body.ia-print-active #iaPrintOnly {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .preview-box {
+        width: 180mm !important;
+        max-width: 180mm !important;
+        margin: 0 auto !important;
+        border: 1.5px solid #0047ff !important;
+        color: #0047ff !important;
+        padding: 7mm 7mm 3mm 7mm !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .modal-title,
+    body.ia-print-active #iaPrintOnly .modal-actions,
+    body.ia-print-active #iaPrintOnly button {
+        display: none !important;
+    }
+}
+
+/* IA PRINT BLANK VISIBILITY FIX */
+@media print {
+    body.ia-print-active #iaPrintOnly,
+    body.ia-print-active #iaPrintOnly * {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    body.ia-print-active #iaPrintOnly {
+        position: static !important;
+        display: block !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .preview-box {
+        display: block !important;
+        visibility: visible !important;
+    }
+}
+
+</style>
+
+<script>
+/* IA CLEAN PRINT ONLY FIX */
+(function () {
+    function fixIALabels() {
+        const previewBox = document.querySelector("#previewModal .preview-box");
+        if (!previewBox) return;
+
+        const purpose = document.getElementById("pvPurpose");
+        const purposeRow = purpose ? purpose.closest(".print-line") : null;
+
+        if (purposeRow) {
+            const label = purposeRow.querySelector(".print-label");
+            if (label) label.innerText = "NARRATION";
+        }
+
+        previewBox.querySelectorAll(
+            ".preview-narration-line .print-label, .preview-details-row .print-label, .ia-final-details-row .print-label"
+        ).forEach(function (label) {
+            label.innerText = "DETAILS";
+        });
+    }
+
+    function cleanupPrintOnly() {
+        document.body.classList.remove("ia-print-active");
+        const old = document.getElementById("iaPrintOnly");
+        if (old) old.remove();
+    }
+
+    window.printVoucherPreviewOnly = function () {
+        fixIALabels();
+
+        const source = document.querySelector("#previewModal .preview-box");
+        if (!source) {
+            alert("Voucher preview not found. Open preview first.");
+            return;
+        }
+
+        cleanupPrintOnly();
+
+        const printOnly = document.createElement("div");
+        printOnly.id = "iaPrintOnly";
+        printOnly.appendChild(source.cloneNode(true));
+
+        document.body.appendChild(printOnly);
+        document.body.classList.add("ia-print-active");
+
+        setTimeout(function () {
+            window.print();
+        }, 120);
+    };
+
+    window.addEventListener("afterprint", function () {
+        setTimeout(cleanupPrintOnly, 200);
+    });
+
+    document.addEventListener("click", function () {
+        setTimeout(fixIALabels, 100);
+        setTimeout(fixIALabels, 400);
+    }, true);
+})();
+</script>
+
+
+<script>
+/* IA KEEP DETAILS DURING PRINT FIX */
+(function () {
+    let lastGoodDetailsHTML = "";
+
+    function getPreviewBox() {
+        return document.querySelector("#previewModal .preview-box");
+    }
+
+    function getDetailsRow() {
+        const box = getPreviewBox();
+        if (!box) return null;
+
+        return box.querySelector(".ia-final-details-row") ||
+               box.querySelector(".preview-details-row") ||
+               box.querySelector(".preview-narration-line");
+    }
+
+    function rememberDetails() {
+        const row = getDetailsRow();
+        if (!row) return;
+
+        const valueCell = row.children && row.children[1] ? row.children[1] : null;
+        if (!valueCell) return;
+
+        const html = String(valueCell.innerHTML || "").trim();
+
+        if (html && html !== "-" && !html.includes("> - <")) {
+            lastGoodDetailsHTML = html;
+        }
+
+        const label = row.querySelector(".print-label");
+        if (label) label.innerText = "DETAILS";
+    }
+
+    function restoreDetailsIfMissing() {
+        const row = getDetailsRow();
+        if (!row) return;
+
+        const label = row.querySelector(".print-label");
+        if (label) label.innerText = "DETAILS";
+
+        const valueCell = row.children && row.children[1] ? row.children[1] : null;
+        if (!valueCell) return;
+
+        const now = String(valueCell.innerText || valueCell.innerHTML || "").trim();
+
+        if ((!now || now === "-") && lastGoodDetailsHTML) {
+            valueCell.innerHTML = lastGoodDetailsHTML;
+        }
+
+        const purpose = document.getElementById("pvPurpose");
+        const purposeRow = purpose ? purpose.closest(".print-line") : null;
+        const purposeLabel = purposeRow ? purposeRow.querySelector(".print-label") : null;
+        if (purposeLabel) purposeLabel.innerText = "NARRATION";
+    }
+
+    // Wrap openPreview so every preview stores its correct DETAILS.
+    const oldOpenPreview = window.openPreview;
+    if (typeof oldOpenPreview === "function") {
+        window.openPreview = async function () {
+            const result = await oldOpenPreview.apply(this, arguments);
+            setTimeout(rememberDetails, 100);
+            setTimeout(rememberDetails, 500);
+            setTimeout(rememberDetails, 1000);
+            return result;
+        };
+    }
+
+    // Wrap print so details are restored immediately before print.
+    const oldPrintVoucherPreviewOnly = window.printVoucherPreviewOnly;
+    window.printVoucherPreviewOnly = function () {
+        restoreDetailsIfMissing();
+        rememberDetails();
+
+        if (typeof oldPrintVoucherPreviewOnly === "function") {
+            return oldPrintVoucherPreviewOnly.apply(this, arguments);
+        }
+
+        window.print();
+    };
+
+    document.addEventListener("click", function (event) {
+        const text = String(event.target?.innerText || "").toUpperCase();
+
+        if (text.includes("PREVIEW")) {
+            setTimeout(rememberDetails, 300);
+            setTimeout(rememberDetails, 800);
+        }
+
+        if (text.includes("AUTHENTICATE") || text.includes("PRINT")) {
+            restoreDetailsIfMissing();
+            setTimeout(restoreDetailsIfMissing, 50);
+            setTimeout(restoreDetailsIfMissing, 150);
+            setTimeout(restoreDetailsIfMissing, 300);
+        }
+    }, true);
+})();
+</script>
+
+<script>
+/* FILTER ONLY FIX - KEEP EXISTING PREVIEW UI */
+(function () {
+    const isIAAuthPage =
+        window.location.pathname.includes("ia-authentication") ||
+        !!document.querySelector(".ia-auth-table");
+
+    function getEl(id) {
+        return document.getElementById(id);
+    }
+
+    function normalize(value) {
+        return String(value ?? "").trim().toUpperCase();
+    }
+
+    function toISODate(value) {
+        value = String(value || "").trim();
+
+        if (!value) return "";
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+        if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
+            const p = value.split(".");
+            return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+            const p = value.split("/");
+            return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        return value.slice(0, 10);
+    }
+
+    function getRows() {
+        if (Array.isArray(window.draftRows)) return window.draftRows;
+
+        try {
+            if (Array.isArray(draftRows)) return draftRows;
+        } catch (e) {}
+
+        return [];
+    }
+
+    function setRows(rows) {
+        window.draftRows = rows;
+
+        try {
+            draftRows = rows;
+        } catch (e) {}
+    }
+
+    function getLimit() {
+        const value = getEl("rowLimitFilter")?.value || "10";
+        return value;
+    }
+
+    window.applyDraftFilters = function () {
+        const searchText = normalize(getEl("draftSearch")?.value || "");
+        const accountText = normalize(getEl("accountFilter")?.value || "");
+        const fromDate = toISODate(getEl("fromDateFilter")?.value || "");
+        const toDate = toISODate(getEl("toDateFilter")?.value || "");
+        const rowLimit = getLimit();
+
+        let filtered = getRows().filter(function (row) {
+            const rowDate = toISODate(row.voucherdate || row.date || "");
+
+            const rowSearch = normalize([
+                row.id,
+                row.voucherdate,
+                row.account_name,
+                row.person_name,
+                row.purpose,
+                row.narration,
+                row.amount,
+                row.entrydateandtime,
+                row.entry_time,
+                row.authdateandtime,
+                row.authdatetime
+            ].join(" "));
+
+            const rowAccount = normalize(row.account_name || "");
+
+            if (isIAAuthPage) {
+                const source = normalize(row.entry_source || "MANUAL");
+                if (row.authenticated || source !== "MANUAL") {
+                    return false;
+                }
+            }
+
+            if (searchText && !rowSearch.includes(searchText)) return false;
+            if (accountText && !rowAccount.includes(accountText)) return false;
+            if (fromDate && rowDate && rowDate < fromDate) return false;
+            if (toDate && rowDate && rowDate > toDate) return false;
+
+            return true;
+        });
+
+        if (rowLimit !== "all") {
+            filtered = filtered.slice(0, parseInt(rowLimit || "10", 10));
+        }
+
+        if (typeof window.renderDraftRows === "function") {
+            window.renderDraftRows(filtered);
+        } else if (typeof renderDraftRows === "function") {
+            renderDraftRows(filtered);
+        }
+    };
+
+    window.clearDraftFilters = function () {
+        if (getEl("draftSearch")) getEl("draftSearch").value = "";
+        if (getEl("accountFilter")) getEl("accountFilter").value = "";
+        if (getEl("fromDateFilter")) getEl("fromDateFilter").value = "";
+        if (getEl("toDateFilter")) getEl("toDateFilter").value = "";
+        if (getEl("rowLimitFilter")) getEl("rowLimitFilter").value = "10";
+
+        window.applyDraftFilters();
+    };
+
+    window.loadDrafts = async function () {
+        const body = getEl("draftBody") || getEl("voucherDraftBody");
+        const colCount = isIAAuthPage ? 8 : 10;
+
+        if (body) {
+            body.innerHTML = `<tr><td colspan="${colCount}">Loading...</td></tr>`;
+        }
+
+        try {
+            const response = await fetch("/api/cash-voucher-entry/list", {
+                cache: "no-store"
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                if (body) {
+                    body.innerHTML = `<tr><td colspan="${colCount}">${result.message || "Failed to load drafts"}</td></tr>`;
+                }
+                return;
+            }
+
+            const rows = result.rows || result.entries || [];
+            setRows(rows);
+
+            window.applyDraftFilters();
+
+        } catch (error) {
+            console.error("Load drafts failed:", error);
+
+            if (body) {
+                body.innerHTML = `<tr><td colspan="${colCount}">Failed to load drafts</td></tr>`;
+            }
+        }
+    };
+
+    function bindFilters() {
+        ["draftSearch", "accountFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el && !el.dataset.filterOnlyBound) {
+                el.dataset.filterOnlyBound = "1";
+                el.addEventListener("input", window.applyDraftFilters);
+            }
+        });
+
+        ["fromDateFilter", "toDateFilter", "rowLimitFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el && !el.dataset.filterOnlyBound) {
+                el.dataset.filterOnlyBound = "1";
+                el.addEventListener("change", window.applyDraftFilters);
+            }
+        });
+
+        if (getEl("rowLimitFilter") && !getEl("rowLimitFilter").value) {
+            getEl("rowLimitFilter").value = "10";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        bindFilters();
+        setTimeout(bindFilters, 300);
+        setTimeout(window.loadDrafts, 150);
+    });
+})();
+</script>
+
+
+<script>
+/* IA LIST FILTER ONLY FINAL FIX */
+(function () {
+    function getEl(id) {
+        return document.getElementById(id);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[<>&"]/g, function (s) {
+            return {
+                "<": "&lt;",
+                ">": "&gt;",
+                "&": "&amp;",
+                '"': "&quot;"
+            }[s];
+        });
+    }
+
+    function normalize(value) {
+        return String(value ?? "").trim().toUpperCase();
+    }
+
+    function toISODate(value) {
+        value = String(value || "").trim();
+
+        if (!value) return "";
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value;
+        }
+
+        if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
+            const p = value.split(".");
+            return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+            const p = value.split("/");
+            return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        return value.slice(0, 10);
+    }
+
+    function displayDate(value) {
+        const iso = toISODate(value);
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+            const p = iso.split("-");
+            return `${p[2]}.${p[1]}.${p[0]}`;
+        }
+
+        return value || "";
+    }
+
+    function formatNarration(value) {
+        const lines = String(value || "")
+            .split(/\n|,/)
+            .map(function (line) { return line.trim(); })
+            .filter(Boolean);
+
+        if (!lines.length) return "-";
+
+        return lines
+            .map(function (line) {
+                return `<div>• ${escapeHtml(line)}</div>`;
+            })
+            .join("");
+    }
+
+    function getLimit() {
+        const value = getEl("rowLimitFilter")?.value || "10";
+        return value;
+    }
+
+    function isPendingManual(row) {
+        const source = normalize(row.entry_source || "MANUAL");
+        return !row.authenticated && source === "MANUAL";
+    }
+
+    window.renderDraftRows = function (rows) {
+        const body = getEl("draftBody");
+        if (!body) return;
+
+        if (!rows || !rows.length) {
+            body.innerHTML = `<tr><td colspan="8">No pending IA vouchers found.</td></tr>`;
+            return;
+        }
+
+        body.innerHTML = rows.map(function (row) {
+            return `
+                <tr>
+                    <td>${escapeHtml(displayDate(row.voucherdate || row.date || ""))}</td>
+                    <td>${escapeHtml(row.account_name || "")}</td>
+                    <td>${escapeHtml(row.person_name || "")}</td>
+                    <td>${escapeHtml(row.purpose || "")}</td>
+                    <td>${formatNarration(row.narration || "")}</td>
+                    <td>${escapeHtml(row.amount || "")}</td>
+                    <td>${escapeHtml(row.entrydateandtime || row.entry_time || "")}</td>
+                    <td>
+                        <div class="ia-action-cell">
+                            <button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>
+                            <button class="btn btn-primary" onclick="openPreview(${row.id})">Preview</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    };
+
+    window.applyDraftFilters = function () {
+        const searchText = normalize(getEl("draftSearch")?.value || "");
+        const accountText = normalize(getEl("accountFilter")?.value || "");
+        const fromDate = toISODate(getEl("fromDateFilter")?.value || "");
+        const toDate = toISODate(getEl("toDateFilter")?.value || "");
+        const rowLimit = getLimit();
+
+        let rows = Array.isArray(window.draftRows) ? window.draftRows : [];
+
+        rows = rows
+            .filter(isPendingManual)
+            .filter(function (row) {
+                const rowDate = toISODate(row.voucherdate || row.date || "");
+
+                const searchArea = normalize([
+                    row.id,
+                    row.voucherdate,
+                    row.account_name,
+                    row.person_name,
+                    row.purpose,
+                    row.narration,
+                    row.amount,
+                    row.entrydateandtime,
+                    row.entry_time
+                ].join(" "));
+
+                const accountArea = normalize(row.account_name || "");
+
+                if (searchText && !searchArea.includes(searchText)) return false;
+                if (accountText && !accountArea.includes(accountText)) return false;
+                if (fromDate && rowDate && rowDate < fromDate) return false;
+                if (toDate && rowDate && rowDate > toDate) return false;
+
+                return true;
+            });
+
+        // Latest first by ID, fallback to entry time
+        rows.sort(function (a, b) {
+            const aid = Number(a.id || 0);
+            const bid = Number(b.id || 0);
+
+            if (aid !== bid) return bid - aid;
+
+            return String(b.entrydateandtime || b.entry_time || "").localeCompare(
+                String(a.entrydateandtime || a.entry_time || "")
+            );
+        });
+
+        if (rowLimit !== "all") {
+            rows = rows.slice(0, parseInt(rowLimit || "10", 10));
+        }
+
+        window.renderDraftRows(rows);
+    };
+
+    window.clearDraftFilters = function () {
+        if (getEl("draftSearch")) getEl("draftSearch").value = "";
+        if (getEl("accountFilter")) getEl("accountFilter").value = "";
+        if (getEl("fromDateFilter")) getEl("fromDateFilter").value = "";
+        if (getEl("toDateFilter")) getEl("toDateFilter").value = "";
+        if (getEl("rowLimitFilter")) getEl("rowLimitFilter").value = "10";
+
+        window.applyDraftFilters();
+    };
+
+    window.loadDrafts = async function () {
+        const body = getEl("draftBody");
+
+        if (body) {
+            body.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
+        }
+
+        try {
+            const response = await fetch("/api/cash-voucher-entry/list?limit=1000", {
+                cache: "no-store"
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                if (body) {
+                    body.innerHTML = `<tr><td colspan="8">${escapeHtml(result.message || "Failed to load drafts")}</td></tr>`;
+                }
+                return;
+            }
+
+            window.draftRows = result.rows || result.entries || [];
+
+            try {
+                draftRows = window.draftRows;
+            } catch (e) {}
+
+            window.applyDraftFilters();
+
+        } catch (error) {
+            console.error("IA latest load failed:", error);
+
+            if (body) {
+                body.innerHTML = `<tr><td colspan="8">Failed to load latest IA vouchers</td></tr>`;
+            }
+        }
+    };
+
+    function bindIAFilters() {
+        ["draftSearch", "accountFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el && !el.dataset.iaFinalFilterBound) {
+                el.dataset.iaFinalFilterBound = "1";
+                el.addEventListener("input", window.applyDraftFilters);
+            }
+        });
+
+        ["fromDateFilter", "toDateFilter", "rowLimitFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el && !el.dataset.iaFinalFilterBound) {
+                el.dataset.iaFinalFilterBound = "1";
+                el.addEventListener("change", window.applyDraftFilters);
+            }
+        });
+
+        if (getEl("rowLimitFilter") && !getEl("rowLimitFilter").value) {
+            getEl("rowLimitFilter").value = "10";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        bindIAFilters();
+
+        // Run after old scripts, so this final version wins.
+        setTimeout(bindIAFilters, 300);
+        setTimeout(window.loadDrafts, 300);
+        setTimeout(window.loadDrafts, 1200);
+    });
+})();
+</script>
+
+
+<style>
+/* IA DETAILS TABLE FORMAT FIX */
+.ia-details-table-row .print-value,
+.ia-details-table-row > div:last-child {
+    align-items: flex-start !important;
+}
+
+.ia-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #0047ff;
+    font-size: 12px;
+}
+
+.ia-details-table th,
+.ia-details-table td {
+    border: 1px solid #0047ff;
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.ia-details-table th {
+    font-weight: 800;
+}
+</style>
+
+
+<script>
+/* IA DETAILS TABLE FORMAT FIX */
+(function () {
+    let lastIAFullRow = null;
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[<>&"]/g, function (s) {
+            return {
+                "<": "&lt;",
+                ">": "&gt;",
+                "&": "&amp;",
+                '"': "&quot;"
+            }[s];
+        });
+    }
+
+    function getRowFromResult(result) {
+        return result.row || result.voucher || result.entry || result.data || result;
+    }
+
+    function normalizeDetails(row) {
+        if (row && Array.isArray(row.details) && row.details.length > 0) {
+            return row.details.filter(function (item) {
+                return String(item.narration || "").trim() ||
+                       String(item.count || item.item_count || "").trim() ||
+                       String(item.sub_price || "").trim() ||
+                       String(item.total_price || "").trim();
+            });
+        }
+
+        const narration = String(row && row.narration ? row.narration : "").trim();
+
+        if (!narration || narration === "-") {
+            return [];
+        }
+
+        return narration
+            .split(/\n|,/)
+            .map(function (line) {
+                return line.trim();
+            })
+            .filter(Boolean)
+            .map(function (line) {
+                return {
+                    narration: line.replace(/^\d+\.\s*/, ""),
+                    count: "",
+                    sub_price: "",
+                    total_price: ""
+                };
+            });
+    }
+
+    function buildDetailsTable(row) {
+        const details = normalizeDetails(row);
+
+        if (!details.length) {
+            return "-";
+        }
+
+        return `
+            <table class="ia-details-table">
+                <thead>
+                    <tr>
+                        <th>Narration</th>
+                        <th>Count</th>
+                        <th>Sub Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${details.map(function (item) {
+                        const count = item.count || item.item_count || "";
+                        const subPrice = item.sub_price || "";
+                        const totalPrice = item.total_price || "";
+
+                        return `
+                            <tr>
+                                <td>${escapeHtml(item.narration || "")}</td>
+                                <td>${escapeHtml(count)}</td>
+                                <td>${subPrice !== "" ? "Rs. " + escapeHtml(subPrice) : ""}</td>
+                                <td>${totalPrice !== "" ? "Rs. " + escapeHtml(totalPrice) : ""}</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function applyIADetailsTable(row) {
+        if (!row) {
+            row = lastIAFullRow;
+        }
+
+        if (!row) return;
+
+        lastIAFullRow = row;
+        window.lastIAFullRow = row;
+
+        const previewBox = document.querySelector("#previewModal .preview-box");
+        const purpose = document.getElementById("pvPurpose");
+        const purposeRow = purpose ? purpose.closest(".print-line") : null;
+
+        if (!previewBox || !purposeRow) return;
+
+        const purposeLabel = purposeRow.querySelector(".print-label");
+        if (purposeLabel) {
+            purposeLabel.innerText = "NARRATION";
+        }
+
+        previewBox
+            .querySelectorAll(".preview-narration-line, .preview-details-row, .ia-final-details-row, .ia-details-table-row")
+            .forEach(function (el) {
+                el.remove();
+            });
+
+        const detailsRow = document.createElement("div");
+        detailsRow.className = "print-line preview-details-row ia-details-table-row";
+        detailsRow.innerHTML = `
+            <div class="print-label">DETAILS</div>
+            <div class="print-value">${buildDetailsTable(row)}</div>
+        `;
+
+        purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+    }
+
+    const oldOpenPreview = window.openPreview;
+
+    window.openPreview = async function (id) {
+        let result;
+
+        if (typeof oldOpenPreview === "function") {
+            result = await oldOpenPreview.apply(this, arguments);
+        }
+
+        try {
+            const response = await fetch(`/api/cash-voucher-entry/get/${id}`, {
+                cache: "no-store"
+            });
+
+            const apiResult = await response.json();
+
+            if (apiResult.success) {
+                const row = getRowFromResult(apiResult);
+                applyIADetailsTable(row);
+                setTimeout(function () { applyIADetailsTable(row); }, 250);
+                setTimeout(function () { applyIADetailsTable(row); }, 700);
+            }
+        } catch (error) {
+            console.warn("IA details table fetch failed:", error);
+        }
+
+        return result;
+    };
+
+    const oldPrintVoucherPreviewOnly = window.printVoucherPreviewOnly;
+
+    window.printVoucherPreviewOnly = function () {
+        applyIADetailsTable(lastIAFullRow || window.lastIAFullRow);
+
+        if (typeof oldPrintVoucherPreviewOnly === "function") {
+            return oldPrintVoucherPreviewOnly.apply(this, arguments);
+        }
+
+        return window.print();
+    };
+
+    document.addEventListener("click", function (event) {
+        const text = String(event.target?.innerText || "").toUpperCase();
+
+        if (text.includes("PREVIEW")) {
+            setTimeout(function () { applyIADetailsTable(lastIAFullRow || window.lastIAFullRow); }, 500);
+        }
+
+        if (text.includes("PRINT") || text.includes("AUTHENTICATE")) {
+            applyIADetailsTable(lastIAFullRow || window.lastIAFullRow);
+            setTimeout(function () { applyIADetailsTable(lastIAFullRow || window.lastIAFullRow); }, 100);
+        }
+    }, true);
+})();
+</script>
+
 </body>
 </html>

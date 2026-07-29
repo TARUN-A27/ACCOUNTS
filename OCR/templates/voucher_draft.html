@@ -609,6 +609,176 @@
     min-height: 75px;
 }
 
+
+
+/* FINAL VOUCHER GAP FIX */
+#printPreview.preview-card {
+    padding: 42px 72px 56px 72px !important;
+    background: #f8fafc !important;
+    overflow-x: auto !important;
+    box-sizing: border-box !important;
+}
+
+#printPreview .print-box {
+    width: 760px !important;
+    max-width: 760px !important;
+    margin: 0 auto 38px auto !important;
+    padding: 22px 26px 10px 26px !important;
+    box-sizing: border-box !important;
+}
+
+#previewModal .modal-box {
+    max-width: 940px !important;
+    padding: 42px !important;
+    box-sizing: border-box !important;
+}
+
+#previewModal .preview-box,
+.preview-box {
+    width: 760px !important;
+    max-width: 760px !important;
+    margin: 0 auto !important;
+    padding: 22px 26px 10px 26px !important;
+    box-sizing: border-box !important;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 16mm 14mm !important;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    #printPreview {
+        display: block !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+    }
+
+    #previewModal {
+        position: static !important;
+        inset: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    #printPreview .print-box,
+    #previewModal .preview-box,
+    .preview-box {
+        width: 170mm !important;
+        max-width: 170mm !important;
+        margin: 0 auto !important;
+        padding: 7mm 7mm 3mm 7mm !important;
+        box-sizing: border-box !important;
+    }
+
+    .modal-box {
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+    }
+}
+
+
+/* FINAL FIX: fill inner voucher line gaps */
+.print-box,
+.preview-box {
+    overflow: hidden !important;
+}
+
+.print-top-row,
+.print-line,
+.print-amount-row,
+.print-signatures {
+    margin-left: -26px !important;
+    margin-right: -26px !important;
+    width: calc(100% + 52px) !important;
+    box-sizing: border-box !important;
+}
+
+.print-top-row > div:first-child,
+.print-line > .print-label,
+.print-amount-words,
+.print-sign-cell:first-child {
+    padding-left: 26px !important;
+}
+
+.print-top-row > div:last-child,
+.print-line > .print-value,
+.print-amount-value,
+.print-sign-cell:last-child {
+    padding-right: 26px !important;
+}
+
+.print-signatures {
+    margin-bottom: 0 !important;
+}
+
+@media print {
+    .print-top-row,
+    .print-line,
+    .print-amount-row,
+    .print-signatures {
+        margin-left: -7mm !important;
+        margin-right: -7mm !important;
+        width: calc(100% + 14mm) !important;
+    }
+
+    .print-top-row > div:first-child,
+    .print-line > .print-label,
+    .print-amount-words,
+    .print-sign-cell:first-child {
+        padding-left: 7mm !important;
+    }
+
+    .print-top-row > div:last-child,
+    .print-line > .print-value,
+    .print-amount-value,
+    .print-sign-cell:last-child {
+        padding-right: 7mm !important;
+    }
+}
+
+
+
+/* VOUCHER DRAFT DETAILS TABLE KEEP FIX */
+.draft-final-details-row .print-value,
+.draft-final-details-row > div:last-child {
+    align-items: flex-start !important;
+}
+
+.draft-final-details-row .preview-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #1d4ed8;
+    font-size: 13px;
+}
+
+.draft-final-details-row .preview-details-table th,
+.draft-final-details-row .preview-details-table td {
+    border: 1px solid #1d4ed8;
+    padding: 5px 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.draft-final-details-row .preview-details-table th {
+    font-weight: 800;
+}
+
 </style>
 
 <div class="draft-page">
@@ -811,7 +981,7 @@
 
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closePreviewModal()">Close</button>
-            <button class="btn btn-primary" onclick="window.print()">Print</button>
+            <button class="btn btn-primary" onclick="printVoucherPreviewOnly()">Print</button>
         </div>
     </div>
 </div>
@@ -1796,7 +1966,7 @@ async function openPreview(id) {
                 narrationRow.className = "print-line preview-narration-line";
 
                 narrationRow.innerHTML = `
-                    <div class="print-label">NARRATION</div>
+                    <div class="print-label">DETAILS</div>
                     <div>
                         <div class="preview-narration-list">
                             ${narrationLines.map(function (line) {
@@ -2083,20 +2253,716 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
 }
 
-document.addEventListener("click", function (event) {
-    const text = String(event.target.innerText || "").toUpperCase();
-
-    if (
-        text.includes("PREVIEW") ||
-        text.includes("PRINT") ||
-        text.includes("SAVE-PRINT") ||
-        text.includes("AUTHENTICATE")
-    ) {
-        setTimeout(function () {
-            applyFinalCashVoucherPreviewFormat();
-        }, 300);
-    }
-});
-
 </script>
+
+<script>
+/* FINAL IFRAME VOUCHER PRINT FIX */
+(function () {
+    window.printVoucherPreviewOnly = function () {
+        const source =
+            document.querySelector("#previewModal .preview-box") ||
+            document.querySelector("#printPreview .print-box") ||
+            document.querySelector(".preview-box") ||
+            document.querySelector(".print-box");
+
+        if (!source) {
+            alert("Voucher preview not found. Open preview first.");
+            return;
+        }
+
+        const oldFrame = document.getElementById("voucherPrintFrame");
+        if (oldFrame) oldFrame.remove();
+
+        const frame = document.createElement("iframe");
+        frame.id = "voucherPrintFrame";
+        frame.style.position = "fixed";
+        frame.style.left = "-10000px";
+        frame.style.top = "0";
+        frame.style.width = "1px";
+        frame.style.height = "1px";
+        frame.style.border = "0";
+        frame.style.visibility = "visible";
+        document.body.appendChild(frame);
+
+        const clone = source.cloneNode(true);
+
+        const printCss = `
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
+            html, body {
+                margin: 0;
+                padding: 0;
+                background: white;
+                color: #0047ff;
+                font-family: Arial, sans-serif;
+            }
+
+            .print-box,
+            .preview-box {
+                width: 180mm;
+                max-width: 180mm;
+                margin: 0 auto;
+                border: 1.5px solid #0047ff;
+                color: #0047ff;
+                padding: 7mm 7mm 3mm 7mm;
+                box-sizing: border-box;
+                overflow: hidden;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-company {
+                text-align: center;
+                font-size: 18px;
+                font-weight: 800;
+                line-height: 1.1;
+                margin-bottom: 1px;
+            }
+
+            .print-address {
+                text-align: center;
+                font-size: 10px;
+                font-weight: 700;
+                margin-bottom: 6px;
+                line-height: 1.2;
+            }
+
+            .print-title {
+                text-align: center;
+                display: block;
+                width: fit-content;
+                margin: 0 auto 9px auto;
+                border: 1.5px solid #0047ff;
+                padding: 3px 10px;
+                font-size: 13px;
+                font-weight: 800;
+                letter-spacing: 0.4px;
+            }
+
+            .print-top-row {
+                display: grid;
+                grid-template-columns: 1fr 170px;
+                border-top: 1.2px solid #0047ff;
+                border-bottom: 1.2px solid #0047ff;
+                font-size: 11px;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+            }
+
+            .print-top-row > div {
+                padding: 5px 7mm;
+                box-sizing: border-box;
+            }
+
+            .print-top-row > div:last-child {
+                border-left: 1.2px solid #0047ff;
+                text-align: right;
+            }
+
+            .print-line {
+                display: grid;
+                grid-template-columns: 42mm 1fr;
+                min-height: 10mm;
+                border-bottom: 1.2px solid #0047ff;
+                font-size: 11px;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-label {
+                font-weight: 800;
+                border-right: 1.2px solid #0047ff;
+                padding: 5px 5mm 5px 7mm;
+                display: flex;
+                align-items: center;
+                box-sizing: border-box;
+            }
+
+            .print-value,
+            .print-line > div:last-child {
+                padding: 5px 7mm 5px 5mm;
+                display: flex;
+                align-items: center;
+                white-space: pre-wrap;
+                box-sizing: border-box;
+            }
+
+            .print-purpose {
+                min-height: 24mm;
+            }
+
+            .preview-narration-line,
+            .preview-details-row {
+                min-height: 20mm;
+            }
+
+            .print-amount-row {
+                display: grid;
+                grid-template-columns: 1fr 38mm;
+                border-bottom: 1.2px solid #0047ff;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+                font-size: 11px;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-amount-words {
+                min-height: 11mm;
+                padding: 5px 5mm 5px 7mm;
+                border-right: 1.2px solid #0047ff;
+                box-sizing: border-box;
+            }
+
+            .print-amount-value {
+                min-height: 11mm;
+                padding: 5px 7mm 5px 5mm;
+                box-sizing: border-box;
+                font-weight: 800;
+            }
+
+            .print-signatures {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                border-top: 1.2px solid #0047ff;
+                margin-top: 8mm;
+                margin-left: -7mm;
+                margin-right: -7mm;
+                width: calc(100% + 14mm);
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-sign-cell {
+                min-height: 18mm;
+                border-right: 1.2px solid #0047ff;
+                padding: 4px;
+                display: flex;
+                align-items: end;
+                justify-content: center;
+                text-align: center;
+                font-size: 9px;
+                font-weight: 800;
+                box-sizing: border-box;
+            }
+
+            .print-sign-cell:last-child {
+                border-right: none;
+            }
+
+            .preview-details-table {
+                width: 100%;
+                border-collapse: collapse;
+                color: #0047ff;
+                font-size: 9px;
+            }
+
+            .preview-details-table th,
+            .preview-details-table td {
+                border: 1px solid #0047ff;
+                padding: 3px 4px;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            .modal-title,
+            .modal-actions,
+            button {
+                display: none !important;
+            }
+        `;
+
+        const doc = frame.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <!doctype html>
+            <html>
+            <head>
+                <title>Voucher Print</title>
+                <style>${printCss}</style>
+            </head>
+            <body></body>
+            </html>
+        `);
+        doc.close();
+
+        doc.body.appendChild(clone);
+
+        setTimeout(function () {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+
+            setTimeout(function () {
+                frame.remove();
+            }, 1200);
+        }, 250);
+    };
+})();
+</script>
+
+
+<script>
+/* VOUCHER DRAFT DETAILS TABLE KEEP FIX */
+(function () {
+    let lastDraftPreviewRow = null;
+    let lastGoodDetailsHTML = "";
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[<>&"]/g, function (s) {
+            return {
+                "<": "&lt;",
+                ">": "&gt;",
+                "&": "&amp;",
+                '"': "&quot;"
+            }[s];
+        });
+    }
+
+    function getRowFromApi(result) {
+        return result.entry || result.voucher || result.row || result.data || result;
+    }
+
+    function getPreviewBox() {
+        return document.querySelector("#previewModal .preview-box");
+    }
+
+    function getPurposeRow() {
+        const purpose = document.getElementById("pvPurpose");
+        return purpose ? purpose.closest(".print-line") : null;
+    }
+
+    function detailsFromRow(row) {
+        if (row && Array.isArray(row.details) && row.details.length > 0) {
+            return row.details.filter(function (item) {
+                return String(item.narration || "").trim() ||
+                       String(item.count || item.item_count || "").trim() ||
+                       String(item.sub_price || "").trim() ||
+                       String(item.total_price || "").trim();
+            });
+        }
+
+        const narration = String(row && row.narration ? row.narration : "").trim();
+
+        if (!narration) {
+            return [];
+        }
+
+        return narration
+            .split(/\n|,/)
+            .map(function (line) { return line.trim(); })
+            .filter(Boolean)
+            .map(function (line) {
+                return {
+                    narration: line,
+                    count: "",
+                    sub_price: "",
+                    total_price: ""
+                };
+            });
+    }
+
+    function buildDetailsTable(row) {
+        const details = detailsFromRow(row);
+
+        if (!details.length) {
+            return "-";
+        }
+
+        return `
+            <table class="preview-details-table">
+                <thead>
+                    <tr>
+                        <th>Narration</th>
+                        <th>Count</th>
+                        <th>Sub Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${details.map(function (item) {
+                        const count = item.count || item.item_count || "";
+                        const subPrice = item.sub_price || "";
+                        const totalPrice = item.total_price || "";
+
+                        return `
+                            <tr>
+                                <td>${escapeHtml(item.narration || "")}</td>
+                                <td>${escapeHtml(count)}</td>
+                                <td>${subPrice !== "" ? "Rs. " + escapeHtml(subPrice) : ""}</td>
+                                <td>${totalPrice !== "" ? "Rs. " + escapeHtml(totalPrice) : ""}</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function renderDraftDetailsTable(row) {
+        const previewBox = getPreviewBox();
+        const purposeRow = getPurposeRow();
+
+        if (!previewBox || !purposeRow || !row) {
+            return;
+        }
+
+        lastDraftPreviewRow = row;
+        window.lastDraftPreviewRow = row;
+
+        const purposeLabel = purposeRow.querySelector(".print-label");
+        if (purposeLabel) {
+            purposeLabel.innerText = "NARRATION";
+        }
+
+        previewBox
+            .querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row, .draft-final-details-row")
+            .forEach(function (el) {
+                el.remove();
+            });
+
+        const detailsRow = document.createElement("div");
+        detailsRow.className = "print-line preview-details-row draft-final-details-row";
+
+        detailsRow.innerHTML = `
+            <div class="print-label">DETAILS</div>
+            <div class="print-value">${buildDetailsTable(row)}</div>
+        `;
+
+        purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+
+        const valueCell = detailsRow.children && detailsRow.children[1] ? detailsRow.children[1] : null;
+        if (valueCell) {
+            const html = String(valueCell.innerHTML || "").trim();
+            if (html && html !== "-") {
+                lastGoodDetailsHTML = html;
+            }
+        }
+    }
+
+    async function fetchVoucherRow(id) {
+        const response = await fetch(`/api/cash-voucher-entry/get/${id}`, {
+            cache: "no-store"
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            return null;
+        }
+
+        return getRowFromApi(result);
+    }
+
+    function restoreDetailsIfMissing() {
+        const previewBox = getPreviewBox();
+        const purposeRow = getPurposeRow();
+
+        if (!previewBox || !purposeRow) {
+            return;
+        }
+
+        let detailsRow =
+            previewBox.querySelector(".draft-final-details-row") ||
+            previewBox.querySelector(".preview-details-row") ||
+            previewBox.querySelector(".preview-narration-line");
+
+        if (!detailsRow) {
+            detailsRow = document.createElement("div");
+            detailsRow.className = "print-line preview-details-row draft-final-details-row";
+            detailsRow.innerHTML = `
+                <div class="print-label">DETAILS</div>
+                <div class="print-value">-</div>
+            `;
+            purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+        }
+
+        const label = detailsRow.querySelector(".print-label");
+        if (label) {
+            label.innerText = "DETAILS";
+        }
+
+        const purposeLabel = purposeRow.querySelector(".print-label");
+        if (purposeLabel) {
+            purposeLabel.innerText = "NARRATION";
+        }
+
+        const valueCell = detailsRow.children && detailsRow.children[1] ? detailsRow.children[1] : null;
+        if (!valueCell) {
+            return;
+        }
+
+        const now = String(valueCell.innerText || valueCell.innerHTML || "").trim();
+
+        if ((!now || now === "-") && lastGoodDetailsHTML) {
+            valueCell.innerHTML = lastGoodDetailsHTML;
+        }
+    }
+
+    const oldOpenPreview = window.openPreview;
+    window.openPreview = async function (id) {
+        let result;
+
+        if (typeof oldOpenPreview === "function") {
+            result = await oldOpenPreview.apply(this, arguments);
+        }
+
+        try {
+            const row = await fetchVoucherRow(id);
+            if (row) {
+                renderDraftDetailsTable(row);
+                setTimeout(function () { renderDraftDetailsTable(row); }, 250);
+                setTimeout(function () { renderDraftDetailsTable(row); }, 800);
+            }
+        } catch (error) {
+            console.warn("Draft details table load failed:", error);
+        }
+
+        return result;
+    };
+
+    const oldPrintVoucherPreviewOnly = window.printVoucherPreviewOnly;
+    window.printVoucherPreviewOnly = function () {
+        if (lastDraftPreviewRow) {
+            renderDraftDetailsTable(lastDraftPreviewRow);
+        }
+
+        restoreDetailsIfMissing();
+
+        const result = typeof oldPrintVoucherPreviewOnly === "function"
+            ? oldPrintVoucherPreviewOnly.apply(this, arguments)
+            : window.print();
+
+        setTimeout(restoreDetailsIfMissing, 300);
+        setTimeout(restoreDetailsIfMissing, 1000);
+        setTimeout(restoreDetailsIfMissing, 1800);
+
+        return result;
+    };
+
+    window.addEventListener("afterprint", function () {
+        setTimeout(function () {
+            if (lastDraftPreviewRow) {
+                renderDraftDetailsTable(lastDraftPreviewRow);
+            }
+            restoreDetailsIfMissing();
+        }, 300);
+    });
+
+    document.addEventListener("click", function (event) {
+        const text = String(event.target && event.target.innerText ? event.target.innerText : "").toUpperCase();
+
+        if (text.includes("PREVIEW")) {
+            setTimeout(restoreDetailsIfMissing, 500);
+        }
+
+        if (text.includes("PRINT")) {
+            if (lastDraftPreviewRow) {
+                renderDraftDetailsTable(lastDraftPreviewRow);
+            }
+            restoreDetailsIfMissing();
+            setTimeout(restoreDetailsIfMissing, 300);
+            setTimeout(restoreDetailsIfMissing, 1000);
+        }
+    }, true);
+})();
+</script>
+
+<script>
+/* FILTER ONLY FIX - KEEP EXISTING PREVIEW UI */
+(function () {
+    const isIAAuthPage =
+        window.location.pathname.includes("ia-authentication") ||
+        !!document.querySelector(".ia-auth-table");
+
+    function getEl(id) {
+        return document.getElementById(id);
+    }
+
+    function normalize(value) {
+        return String(value ?? "").trim().toUpperCase();
+    }
+
+    function toISODate(value) {
+        value = String(value || "").trim();
+
+        if (!value) return "";
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+        if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
+            const p = value.split(".");
+            return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+            const p = value.split("/");
+            return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        return value.slice(0, 10);
+    }
+
+    function getRows() {
+        if (Array.isArray(window.draftRows)) return window.draftRows;
+
+        try {
+            if (Array.isArray(draftRows)) return draftRows;
+        } catch (e) {}
+
+        return [];
+    }
+
+    function setRows(rows) {
+        window.draftRows = rows;
+
+        try {
+            draftRows = rows;
+        } catch (e) {}
+    }
+
+    function getLimit() {
+        const value = getEl("rowLimitFilter")?.value || "10";
+        return value;
+    }
+
+    window.applyDraftFilters = function () {
+        const searchText = normalize(getEl("draftSearch")?.value || "");
+        const accountText = normalize(getEl("accountFilter")?.value || "");
+        const fromDate = toISODate(getEl("fromDateFilter")?.value || "");
+        const toDate = toISODate(getEl("toDateFilter")?.value || "");
+        const rowLimit = getLimit();
+
+        let filtered = getRows().filter(function (row) {
+            const rowDate = toISODate(row.voucherdate || row.date || "");
+
+            const rowSearch = normalize([
+                row.id,
+                row.voucherdate,
+                row.account_name,
+                row.person_name,
+                row.purpose,
+                row.narration,
+                row.amount,
+                row.entrydateandtime,
+                row.entry_time,
+                row.authdateandtime,
+                row.authdatetime
+            ].join(" "));
+
+            const rowAccount = normalize(row.account_name || "");
+
+            if (isIAAuthPage) {
+                const source = normalize(row.entry_source || "MANUAL");
+                if (row.authenticated || source !== "MANUAL") {
+                    return false;
+                }
+            }
+
+            if (searchText && !rowSearch.includes(searchText)) return false;
+            if (accountText && !rowAccount.includes(accountText)) return false;
+            if (fromDate && rowDate && rowDate < fromDate) return false;
+            if (toDate && rowDate && rowDate > toDate) return false;
+
+            return true;
+        });
+
+        if (rowLimit !== "all") {
+            filtered = filtered.slice(0, parseInt(rowLimit || "10", 10));
+        }
+
+        if (typeof window.renderDraftRows === "function") {
+            window.renderDraftRows(filtered);
+        } else if (typeof renderDraftRows === "function") {
+            renderDraftRows(filtered);
+        }
+    };
+
+    window.clearDraftFilters = function () {
+        if (getEl("draftSearch")) getEl("draftSearch").value = "";
+        if (getEl("accountFilter")) getEl("accountFilter").value = "";
+        if (getEl("fromDateFilter")) getEl("fromDateFilter").value = "";
+        if (getEl("toDateFilter")) getEl("toDateFilter").value = "";
+        if (getEl("rowLimitFilter")) getEl("rowLimitFilter").value = "10";
+
+        window.applyDraftFilters();
+    };
+
+    window.loadDrafts = async function () {
+        const body = getEl("draftBody") || getEl("voucherDraftBody");
+        const colCount = isIAAuthPage ? 8 : 10;
+
+        if (body) {
+            body.innerHTML = `<tr><td colspan="${colCount}">Loading...</td></tr>`;
+        }
+
+        try {
+            const response = await fetch("/api/cash-voucher-entry/list", {
+                cache: "no-store"
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                if (body) {
+                    body.innerHTML = `<tr><td colspan="${colCount}">${result.message || "Failed to load drafts"}</td></tr>`;
+                }
+                return;
+            }
+
+            const rows = result.rows || result.entries || [];
+            setRows(rows);
+
+            window.applyDraftFilters();
+
+        } catch (error) {
+            console.error("Load drafts failed:", error);
+
+            if (body) {
+                body.innerHTML = `<tr><td colspan="${colCount}">Failed to load drafts</td></tr>`;
+            }
+        }
+    };
+
+    function bindFilters() {
+        ["draftSearch", "accountFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el && !el.dataset.filterOnlyBound) {
+                el.dataset.filterOnlyBound = "1";
+                el.addEventListener("input", window.applyDraftFilters);
+            }
+        });
+
+        ["fromDateFilter", "toDateFilter", "rowLimitFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el && !el.dataset.filterOnlyBound) {
+                el.dataset.filterOnlyBound = "1";
+                el.addEventListener("change", window.applyDraftFilters);
+            }
+        });
+
+        if (getEl("rowLimitFilter") && !getEl("rowLimitFilter").value) {
+            getEl("rowLimitFilter").value = "10";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        bindFilters();
+        setTimeout(bindFilters, 300);
+        setTimeout(window.loadDrafts, 150);
+    });
+})();
+</script>
+
 {% endblock %}
