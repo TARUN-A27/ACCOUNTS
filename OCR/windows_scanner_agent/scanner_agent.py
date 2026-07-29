@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, make_response
 from pathlib import Path
 from datetime import datetime
 import subprocess
@@ -8,15 +8,23 @@ app = Flask(__name__)
 SCAN_DIR = Path(r"C:\AIAccountsScanner\scans")
 SCAN_DIR.mkdir(parents=True, exist_ok=True)
 
-# Change this path if NAPS2 is installed in another location
 NAPS2_CONSOLE = r"C:\Program Files\NAPS2\NAPS2.Console.exe"
-
-# Create this profile inside NAPS2 on Windows
 PROFILE_NAME = "AI_ACCOUNTS_ADF_A5"
 
 
-@app.route("/health", methods=["GET"])
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route("/health", methods=["GET", "OPTIONS"])
 def health():
+    if request_is_options():
+        return options_response()
+
     return jsonify({
         "success": True,
         "message": "AI-Accounts Windows Scanner Agent running",
@@ -25,8 +33,11 @@ def health():
     })
 
 
-@app.route("/scan", methods=["GET", "POST"])
+@app.route("/scan", methods=["GET", "POST", "OPTIONS"])
 def scan():
+    if request_is_options():
+        return options_response()
+
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = SCAN_DIR / f"scan_{timestamp}.pdf"
@@ -81,5 +92,14 @@ def scan():
         }), 500
 
 
+def request_is_options():
+    from flask import request
+    return request.method == "OPTIONS"
+
+
+def options_response():
+    return make_response("", 204)
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=6060, debug=False)
+    app.run(host="127.0.0.1", port=6060, debug=False)
