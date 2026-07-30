@@ -1052,16 +1052,58 @@ loadScannedDocuments();
 </script>
 
 <script>
-/* WINDOWS LOCAL SCANNER BUTTONS FINAL */
+/* START EXTRACTION WINDOWS SCAN FINAL */
 (function () {
     const LOCAL_AGENT = "http://127.0.0.1:6060";
 
-    function showStatus(message, isError) {
-        let box = document.getElementById("windowsScannerStatus");
-        if (!box) return;
+    function findButtonByText(text) {
+        const target = text.trim().toLowerCase();
 
+        return Array.from(document.querySelectorAll("button, a")).find(function (btn) {
+            return (btn.innerText || "").trim().toLowerCase() === target;
+        });
+    }
+
+    function getResultPanel() {
+        return (
+            document.getElementById("extractionResult") ||
+            document.getElementById("resultContent") ||
+            document.getElementById("resultPanel") ||
+            document.querySelector(".extraction-result") ||
+            document.querySelector(".result-panel") ||
+            Array.from(document.querySelectorAll("h1,h2,h3,div"))
+                .find(function (el) {
+                    return (el.innerText || "").trim().toLowerCase() === "extraction result";
+                })?.parentElement
+        );
+    }
+
+    function setResultMessage(message, isError = false) {
+        const panel = getResultPanel();
+
+        if (!panel) {
+            alert(message);
+            return;
+        }
+
+        let box = document.getElementById("startExtractionStatusBox");
+
+        if (!box) {
+            box = document.createElement("div");
+            box.id = "startExtractionStatusBox";
+            box.style.margin = "12px 0";
+            box.style.padding = "12px 14px";
+            box.style.borderRadius = "12px";
+            box.style.fontWeight = "800";
+            box.style.fontSize = "13px";
+            box.style.whiteSpace = "pre-line";
+            panel.appendChild(box);
+        }
+
+        box.style.background = isError ? "#fee2e2" : "#eaf2ff";
+        box.style.color = isError ? "#991b1b" : "#0f3f8f";
+        box.style.border = isError ? "1px solid #fecaca" : "1px solid #bfdbfe";
         box.innerText = message || "";
-        box.style.color = isError ? "#b91c1c" : "#334155";
     }
 
     function base64ToBlob(base64, mimeType) {
@@ -1075,41 +1117,84 @@ loadScannedDocuments();
         return new Blob([bytes], { type: mimeType || "application/pdf" });
     }
 
-    async function checkWindowsScannerAgent() {
-        showStatus("Checking scanner agent on this Windows PC...");
+    function renderLatestExtractionResult(result) {
+        const panel = getResultPanel();
+        if (!panel) return;
+
+        const old = document.getElementById("latestExtractionResultBox");
+        if (old) old.remove();
+
+        const data =
+            result.structured ||
+            result.extracted ||
+            result.extraction ||
+            result.data ||
+            result.result ||
+            result;
+
+        const rows = [];
+
+        function add(label, value) {
+            if (value !== undefined && value !== null && String(value).trim() !== "") {
+                rows.push(`
+                    <div style="display:grid;grid-template-columns:130px 1fr;border-bottom:1px solid #e5e7eb;">
+                        <div style="padding:8px 10px;font-weight:900;background:#f8fafc;color:#0f172a;">${label}</div>
+                        <div style="padding:8px 10px;color:#111827;white-space:pre-wrap;">${String(value)}</div>
+                    </div>
+                `);
+            }
+        }
+
+        add("Voucher No", data.voucher_no || data.voucherNo);
+        add("Date", data.date || data.voucherdate || data.voucher_date);
+        add("Account Head", data.account_head || data.account_name || data.accountHead);
+        add("Person", data.person_name || data.name_of_person || data.person);
+        add("Purpose", data.purpose || data.narration);
+        add("Amount", data.amount || data.amount_rs);
+        add("Amount Words", data.amount_words || data.amountInWords);
+
+        const box = document.createElement("div");
+        box.id = "latestExtractionResultBox";
+        box.style.marginTop = "12px";
+        box.style.border = "1px solid #dbe3ef";
+        box.style.borderRadius = "14px";
+        box.style.overflow = "hidden";
+        box.style.background = "#ffffff";
+
+        box.innerHTML = `
+            <div style="padding:11px 13px;font-weight:900;background:#f1f5f9;color:#0f172a;">
+                Latest Extracted Result
+            </div>
+            ${rows.length ? rows.join("") : `
+                <pre style="margin:0;padding:12px;white-space:pre-wrap;font-size:12px;">${JSON.stringify(data, null, 2)}</pre>
+            `}
+        `;
+
+        panel.appendChild(box);
+    }
+
+    async function startExtractionFromWindowsPc() {
+        const startBtn = findButtonByText("Start Extraction");
 
         try {
-            const response = await fetch(LOCAL_AGENT + "/health", {
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.innerText = "Scanning...";
+            }
+
+            setResultMessage("Checking scanner agent on this Windows PC...");
+
+            const healthResponse = await fetch(LOCAL_AGENT + "/health", {
                 cache: "no-store"
             });
 
-            const result = await response.json();
+            const health = await healthResponse.json();
 
-            if (!result.success) {
-                throw new Error(result.message || "Scanner agent not ready");
+            if (!health.success) {
+                throw new Error(health.message || "Scanner agent not ready");
             }
 
-            showStatus(
-                "Scanner agent ready.\nProfile: " + (result.profile || "AI_ACCOUNTS_ADF_A5")
-            );
-
-            return true;
-
-        } catch (error) {
-            showStatus(
-                "Scanner agent not reachable on this Windows PC.\nKeep PowerShell agent running: python scanner_agent.py\n" + error.message,
-                true
-            );
-            return false;
-        }
-    }
-
-    async function scanAndExtractFromThisPc() {
-        try {
-            const ready = await checkWindowsScannerAgent();
-            if (!ready) return;
-
-            showStatus("Scanning from this Windows PC...");
+            setResultMessage("Scanner ready. Scanning voucher from feeder...");
 
             const scanResponse = await fetch(LOCAL_AGENT + "/scan", {
                 method: "POST",
@@ -1123,7 +1208,7 @@ loadScannedDocuments();
                 throw new Error(scanResult.message || "Scan failed");
             }
 
-            showStatus("Scan completed. Uploading to server for OCR extraction...");
+            setResultMessage("Scan completed. Uploading latest voucher for OCR extraction...");
 
             const blob = base64ToBlob(scanResult.file_base64, scanResult.mime_type);
             const filename = scanResult.filename || "ai_accounts_scan.pdf";
@@ -1140,6 +1225,7 @@ loadScannedDocuments();
             });
 
             const contentType = uploadResponse.headers.get("content-type") || "";
+
             if (!contentType.includes("application/json")) {
                 throw new Error("Server returned non-JSON. Login again and retry.");
             }
@@ -1150,80 +1236,59 @@ loadScannedDocuments();
                 throw new Error(uploadResult.message || uploadResult.error || "OCR extraction failed");
             }
 
-            showStatus("Scan and OCR extraction completed.");
+            setResultMessage("Latest voucher scanned and OCR extraction completed.");
+            renderLatestExtractionResult(uploadResult);
 
             if (typeof loadScannedDocuments === "function") {
-                try { loadScannedDocuments(); } catch (e) {}
+                try {
+                    await loadScannedDocuments();
+                } catch (e) {}
             }
-
-            alert("Scan and extraction completed. Refresh/Select latest scanned file if needed.");
 
         } catch (error) {
-            console.error(error);
-            showStatus(error.message || "Scan and extraction failed", true);
-        }
-    }
+            console.error("Start extraction error:", error);
+            setResultMessage(error.message || "Start extraction failed", true);
 
-    function addWindowsButtons() {
-        if (document.getElementById("windowsScannerPanel")) return;
-
-        const panel = document.createElement("div");
-        panel.id = "windowsScannerPanel";
-        panel.style.margin = "12px 0 16px 0";
-        panel.style.padding = "14px 16px";
-        panel.style.border = "1px solid #dbe3ef";
-        panel.style.borderRadius = "14px";
-        panel.style.background = "#ffffff";
-        panel.style.boxShadow = "0 8px 20px rgba(15,23,42,0.06)";
-
-        panel.innerHTML = `
-            <div style="font-weight:900;margin-bottom:8px;color:#0f172a;">
-                Windows Scanner Extraction
-            </div>
-
-            <div style="font-size:13px;color:#52637a;margin-bottom:10px;">
-                Use this on any Windows PC. It scans from that PC's local scanner agent and uploads to this server.
-            </div>
-
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <button type="button" id="checkWindowsScannerBtn"
-                        style="border:none;border-radius:10px;padding:10px 14px;font-weight:900;background:#e2e8f0;color:#0f172a;cursor:pointer;">
-                    Check Scanner Agent
-                </button>
-
-                <button type="button" id="scanExtractWindowsBtn"
-                        style="border:none;border-radius:10px;padding:10px 14px;font-weight:900;background:#020617;color:#ffffff;cursor:pointer;">
-                    Scan & Extract From This PC
-                </button>
-            </div>
-
-            <div id="windowsScannerStatus"
-                 style="margin-top:10px;font-size:13px;font-weight:700;white-space:pre-line;color:#334155;"></div>
-        `;
-
-        const pageTitle =
-            Array.from(document.querySelectorAll("h1,h2,h3"))
-                .find(el => (el.innerText || "").toLowerCase().includes("document extraction"));
-
-        if (pageTitle && pageTitle.parentNode) {
-            const subtitle = pageTitle.nextElementSibling;
-            if (subtitle && subtitle.parentNode) {
-                subtitle.insertAdjacentElement("afterend", panel);
-            } else {
-                pageTitle.insertAdjacentElement("afterend", panel);
+        } finally {
+            if (startBtn) {
+                startBtn.disabled = false;
+                startBtn.innerText = "Start Extraction";
             }
-        } else {
-            document.body.prepend(panel);
         }
-
-        document.getElementById("checkWindowsScannerBtn").onclick = checkWindowsScannerAgent;
-        document.getElementById("scanExtractWindowsBtn").onclick = scanAndExtractFromThisPc;
     }
 
-    window.checkWindowsScannerAgent = checkWindowsScannerAgent;
-    window.scanAndExtractFromThisPc = scanAndExtractFromThisPc;
+    function installStartButtonOverride() {
+        // Remove visible third-party/local scanner panel if old cached HTML created it
+        const oldPanel =
+            document.getElementById("windowsScannerPanel") ||
+            document.getElementById("windowsScanPanel");
 
-    document.addEventListener("DOMContentLoaded", addWindowsButtons);
+        if (oldPanel) {
+            oldPanel.remove();
+        }
+
+        const startBtn = findButtonByText("Start Extraction");
+
+        if (!startBtn) {
+            setTimeout(installStartButtonOverride, 500);
+            return;
+        }
+
+        const cleanBtn = startBtn.cloneNode(true);
+        startBtn.parentNode.replaceChild(cleanBtn, startBtn);
+
+        cleanBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            startExtractionFromWindowsPc();
+        }, true);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        installStartButtonOverride();
+        setTimeout(installStartButtonOverride, 500);
+        setTimeout(installStartButtonOverride, 1500);
+    });
 })();
 </script>
 
