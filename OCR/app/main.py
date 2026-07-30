@@ -226,7 +226,10 @@ def cash_voucher_entry_accounts():
             "rows": []
         }), 401
 
-    result = list_petty_cash_accounts()
+    account_type = (request.args.get("type") or "others").strip().lower()
+
+
+    result = list_petty_cash_accounts(account_type=account_type)
     return jsonify(result)
 
 

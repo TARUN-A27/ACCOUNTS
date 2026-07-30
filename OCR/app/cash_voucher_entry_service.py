@@ -43,9 +43,15 @@ def is_valid_petty_cash_account(account_name, account_head_code):
         cursor.execute("""
             SELECT COUNT(*)
             FROM accounts
-            WHERE pettycashflag = 1
-              AND TRIM(UPPER(name)) = TRIM(UPPER(:account_name))
+            WHERE TRIM(UPPER(name)) = TRIM(UPPER(:account_name))
               AND TRIM(UPPER(accode)) = TRIM(UPPER(:account_head_code))
+              AND (
+                    pettycashflag = 1
+                    OR (
+                        pettycashflag = 0
+                        AND REGEXP_LIKE(UPPER(name), '(^|[^A-Z])ADVANCE([^A-Z]|$)')
+                    )
+                  )
         """, {
             "account_name": account_name,
             "account_head_code": account_head_code
@@ -492,39 +498,53 @@ def update_cash_voucher_entry(voucher_id, data):
             conn.close()
 
 
-def list_petty_cash_accounts():
+def list_petty_cash_accounts(account_type="others"):
     conn = None
     cursor = None
 
     try:
+        account_type = (account_type or "others").strip().lower()
+
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT name, accode
-            FROM accounts
-            WHERE pettycashflag = 1
-            ORDER BY name
-        """)
+        if account_type == "advance":
+            cursor.execute("""
+                SELECT name, accode
+                FROM accounts
+                WHERE pettycashflag = 0
+                  AND REGEXP_LIKE(UPPER(name), '(^|[^A-Z])ADVANCE([^A-Z]|$)')
+                ORDER BY name
+            """)
+        else:
+            cursor.execute("""
+                SELECT name, accode
+                FROM accounts
+                WHERE pettycashflag = 1
+                ORDER BY name
+            """)
 
         rows = []
 
         for row in cursor.fetchall():
             rows.append({
                 "name": str(row[0] or ""),
-                "accode": str(row[1] or "")
+                "accode": str(row[1] or ""),
+                "type": account_type
             })
 
         return {
             "success": True,
-            "rows": rows
+            "rows": rows,
+            "type": account_type
         }
 
     except Exception as e:
         return {
             "success": False,
             "message": str(e),
-            "rows": []
+            "rows": [],
+            "type": account_type
         }
 
     finally:

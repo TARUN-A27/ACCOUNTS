@@ -728,6 +728,56 @@
     color: #64748b;
 }
 
+
+/* INVOICE INLINE LAYOUT FIX */
+.invoice-inline-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.invoice-inline-grid .form-group {
+    margin-bottom: 0 !important;
+}
+
+@media (max-width: 768px) {
+    .invoice-inline-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+
+/* ACCOUNT HEAD ADVANCE OTHERS FIX */
+.account-head-type-box {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 8px 0 10px 0;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+}
+
+.account-head-type-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    cursor: pointer;
+}
+
+.account-head-type-option input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 </style>
 
 <div class="voucher-page">
@@ -762,15 +812,17 @@
 
             <div class="form-group full-width">
         <div class="form-row optional-row">
-            <div class="form-group">
+            
+<div class="invoice-inline-grid">
+    <div class="form-group">
                 <label>Invoice No <span class="optional-label">(Optional)</span></label>
                 <input type="text" class="form-control" id="invoiceNo" placeholder="Enter invoice no">
             </div>
-
-            <div class="form-group">
+    <div class="form-group">
                 <label>Invoice Date <span class="optional-label">(Optional)</span></label>
                 <input type="date" class="form-control" id="invoiceDate">
             </div>
+</div>
         </div>
 
         <div class="form-group optional-row">
@@ -2084,6 +2136,166 @@ document.addEventListener("click", function (event) {
 
         setTimeout(setDefaultPerson, 300);
         setTimeout(setDefaultPerson, 900);
+    });
+})();
+</script>
+
+
+<script>
+/* ACCOUNT HEAD ADVANCE OTHERS FIX */
+(function () {
+    let finalAccountHeads = [];
+
+    function getMode() {
+        const advance = document.getElementById("accountTypeAdvance");
+        return advance && advance.checked ? "advance" : "others";
+    }
+
+    function setMode(mode) {
+        const others = document.getElementById("accountTypeOthers");
+        const advance = document.getElementById("accountTypeAdvance");
+
+        if (!others || !advance) return;
+
+        if (mode === "advance") {
+            advance.checked = true;
+            others.checked = false;
+        } else {
+            others.checked = true;
+            advance.checked = false;
+        }
+
+        const accountHead = document.getElementById("accountHead");
+        const accountCode = document.getElementById("accountHeadCode");
+
+        if (accountHead) accountHead.value = "";
+        if (accountCode) accountCode.value = "";
+
+        if (typeof markUnsaved === "function") {
+            markUnsaved();
+        }
+
+        window.loadAccountHeads();
+    }
+
+    function ensureAccountTypeUI() {
+        const accountHead = document.getElementById("accountHead");
+        if (!accountHead) return;
+
+        const group = accountHead.closest(".form-group") || accountHead.parentElement;
+        if (!group || document.getElementById("accountHeadTypeBox")) return;
+
+        const box = document.createElement("div");
+        box.id = "accountHeadTypeBox";
+        box.className = "account-head-type-box";
+        box.innerHTML = `
+            <label class="account-head-type-option">
+                <input type="checkbox" id="accountTypeOthers" checked>
+                Others
+            </label>
+            <label class="account-head-type-option">
+                <input type="checkbox" id="accountTypeAdvance">
+                Advance
+            </label>
+        `;
+
+        const label = group.querySelector("label");
+        if (label) {
+            label.insertAdjacentElement("afterend", box);
+        } else {
+            group.insertBefore(box, accountHead);
+        }
+
+        document.getElementById("accountTypeOthers").addEventListener("change", function () {
+            setMode("others");
+        });
+
+        document.getElementById("accountTypeAdvance").addEventListener("change", function () {
+            setMode("advance");
+        });
+    }
+
+    window.loadAccountHeads = async function () {
+        ensureAccountTypeUI();
+
+        const mode = getMode();
+
+        try {
+            const response = await fetch("/api/cash-voucher-entry/accounts?type=" + encodeURIComponent(mode), {
+                cache: "no-store"
+            });
+
+            const result = await response.json();
+
+            finalAccountHeads = result.rows || [];
+
+            try {
+                accountHeadAccounts = finalAccountHeads;
+            } catch (e) {
+                window.accountHeadAccounts = finalAccountHeads;
+            }
+
+            const list = document.getElementById("accountHeadList");
+            if (!list) return;
+
+            list.innerHTML = "";
+
+            finalAccountHeads.forEach(function (account) {
+                const option = document.createElement("option");
+                option.value = account.name;
+                list.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error("Account head load error:", error);
+            finalAccountHeads = [];
+        }
+    };
+
+    window.handleAccountHeadInput = function () {
+        const input = document.getElementById("accountHead");
+        const code = document.getElementById("accountHeadCode");
+
+        if (!input || !code) return;
+
+        const value = input.value.trim().toUpperCase();
+
+        const matched = finalAccountHeads.find(function (account) {
+            return String(account.name || "").trim().toUpperCase() === value;
+        });
+
+        code.value = matched ? matched.accode : "";
+    };
+
+    const oldGetFormData = window.getFormData;
+
+    window.getFormData = function () {
+        let data = {};
+
+        if (typeof oldGetFormData === "function") {
+            data = oldGetFormData();
+        } else {
+            window.handleAccountHeadInput();
+
+            data = {
+                voucherdate: document.getElementById("voucherDate")?.value || "",
+                account_head_code: document.getElementById("accountHeadCode")?.value || "",
+                account_name: document.getElementById("accountHead")?.value || "",
+                person_name: document.getElementById("personName")?.value || "",
+                purpose: document.getElementById("purpose")?.value || "",
+                amount: document.getElementById("amount")?.value || "",
+                details: typeof getDetailsData === "function" ? getDetailsData() : []
+            };
+        }
+
+        data.account_type = getMode();
+        return data;
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+        ensureAccountTypeUI();
+        setTimeout(window.loadAccountHeads, 100);
+        setTimeout(window.loadAccountHeads, 500);
     });
 })();
 </script>
