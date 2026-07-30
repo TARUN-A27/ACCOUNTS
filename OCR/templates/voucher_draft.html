@@ -2965,4 +2965,224 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
 })();
 </script>
 
+
+<script>
+/* FINAL VOUCHER DRAFT DISPLAY FILTER FIX */
+(function () {
+    let finalDraftRows = [];
+
+    function getEl(id) {
+        return document.getElementById(id);
+    }
+
+    function safeText(value) {
+        if (value === null || value === undefined) return "";
+        return String(value);
+    }
+
+    function formatAmount(value) {
+        const n = Number(value || 0);
+        return n.toFixed(2);
+    }
+
+    function normalizeDate(value) {
+        if (!value) return "";
+
+        const text = String(value).trim();
+
+        // Already YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+            return text;
+        }
+
+        // DD.MM.YYYY or DD/MM/YYYY
+        let m = text.match(/^(\d{2})[./-](\d{2})[./-](\d{4})/);
+        if (m) {
+            return `${m[3]}-${m[2]}-${m[1]}`;
+        }
+
+        return text.substring(0, 10);
+    }
+
+    function getRowsFromApiResult(result) {
+        if (!result) return [];
+        if (Array.isArray(result.entries)) return result.entries;
+        if (Array.isArray(result.rows)) return result.rows;
+        if (Array.isArray(result.data)) return result.data;
+        if (result.vouchers && Array.isArray(result.vouchers)) return result.vouchers;
+        return [];
+    }
+
+    window.renderDraftRows = function (rows) {
+        const body = getEl("draftTableBody") || document.querySelector("#draftTable tbody") || document.querySelector("tbody");
+        if (!body) return;
+
+        if (!rows || rows.length === 0) {
+            body.innerHTML = `<tr><td colspan="9">No voucher drafts found</td></tr>`;
+            return;
+        }
+
+        body.innerHTML = rows.map(function (row) {
+            const isAuth = !!row.authenticated || !!row.authusercode;
+            const authText = isAuth ? "Authenticated" : "Pending";
+
+            return `
+                <tr>
+                    <td>${safeText(row.voucherdate)}</td>
+                    <td>${safeText(row.account_name)}</td>
+                    <td>${safeText(row.person_name)}</td>
+                    <td>${safeText(row.purpose)}</td>
+                    <td style="white-space: pre-line;">${safeText(row.narration)}</td>
+                    <td>${formatAmount(row.amount)}</td>
+                    <td>${safeText(row.entrydateandtime)}</td>
+                    <td>${authText}</td>
+                    <td>
+                        ${!isAuth ? `<button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>` : ``}
+                        <button class="btn btn-primary" onclick="openPreview(${row.id})">Preview</button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    };
+
+    window.applyDraftFilters = function () {
+        const search = safeText(getEl("draftSearch")?.value).trim().toLowerCase();
+        const account = safeText(getEl("accountFilter")?.value).trim().toLowerCase();
+        const fromDate = safeText(getEl("fromDateFilter")?.value).trim();
+        const toDate = safeText(getEl("toDateFilter")?.value).trim();
+        const rowLimit = safeText(getEl("rowLimitFilter")?.value || "10");
+
+        let filtered = finalDraftRows.slice();
+
+        if (search) {
+            filtered = filtered.filter(function (row) {
+                const combined = [
+                    row.id,
+                    row.voucherdate,
+                    row.account_name,
+                    row.person_name,
+                    row.purpose,
+                    row.narration,
+                    row.amount,
+                    row.entrydateandtime,
+                    row.entry_source
+                ].map(safeText).join(" ").toLowerCase();
+
+                return combined.includes(search);
+            });
+        }
+
+        if (account) {
+            filtered = filtered.filter(function (row) {
+                return safeText(row.account_name).toLowerCase().includes(account);
+            });
+        }
+
+        if (fromDate) {
+            filtered = filtered.filter(function (row) {
+                const d = normalizeDate(row.voucherdate);
+                return d >= fromDate;
+            });
+        }
+
+        if (toDate) {
+            filtered = filtered.filter(function (row) {
+                const d = normalizeDate(row.voucherdate);
+                return d <= toDate;
+            });
+        }
+
+        if (rowLimit !== "all") {
+            filtered = filtered.slice(0, Number(rowLimit || 10));
+        }
+
+        window.renderDraftRows(filtered);
+    };
+
+    window.clearDraftFilters = function () {
+        if (getEl("draftSearch")) getEl("draftSearch").value = "";
+        if (getEl("accountFilter")) getEl("accountFilter").value = "";
+        if (getEl("fromDateFilter")) getEl("fromDateFilter").value = "";
+        if (getEl("toDateFilter")) getEl("toDateFilter").value = "";
+        if (getEl("rowLimitFilter")) getEl("rowLimitFilter").value = "10";
+
+        window.applyDraftFilters();
+    };
+
+    window.loadDrafts = async function () {
+        const body = getEl("draftTableBody") || document.querySelector("#draftTable tbody") || document.querySelector("tbody");
+
+        if (body) {
+            body.innerHTML = `<tr><td colspan="9">Loading drafts...</td></tr>`;
+        }
+
+        try {
+            const limitValue = getEl("rowLimitFilter")?.value || "100";
+            const apiLimit = limitValue === "all" ? "500" : "500";
+
+            const response = await fetch("/api/cash-voucher-entry/list?limit=" + encodeURIComponent(apiLimit), {
+                cache: "no-store",
+                credentials: "same-origin"
+            });
+
+            const contentType = response.headers.get("content-type") || "";
+
+            if (!contentType.includes("application/json")) {
+                throw new Error("Login expired or API returned HTML. Please login again.");
+            }
+
+            const result = await response.json();
+
+            if (result.success === false) {
+                throw new Error(result.message || "Failed to load drafts");
+            }
+
+            finalDraftRows = getRowsFromApiResult(result);
+
+            window.allDraftRows = finalDraftRows;
+            window.draftRows = finalDraftRows;
+
+            const accountList = getEl("accountFilterList");
+            if (accountList) {
+                const names = [...new Set(finalDraftRows.map(function (r) {
+                    return safeText(r.account_name);
+                }).filter(Boolean))].sort();
+
+                accountList.innerHTML = names.map(function (name) {
+                    return `<option value="${name}"></option>`;
+                }).join("");
+            }
+
+            window.applyDraftFilters();
+
+        } catch (error) {
+            console.error("Voucher draft load error:", error);
+
+            if (body) {
+                body.innerHTML = `<tr><td colspan="9">${error.message || "Failed to load drafts"}</td></tr>`;
+            }
+        }
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+        ["draftSearch", "accountFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el) {
+                el.oninput = window.applyDraftFilters;
+            }
+        });
+
+        ["fromDateFilter", "toDateFilter", "rowLimitFilter"].forEach(function (id) {
+            const el = getEl(id);
+            if (el) {
+                el.onchange = window.applyDraftFilters;
+            }
+        });
+
+        setTimeout(window.loadDrafts, 100);
+        setTimeout(window.loadDrafts, 500);
+    });
+})();
+</script>
+
 {% endblock %}
