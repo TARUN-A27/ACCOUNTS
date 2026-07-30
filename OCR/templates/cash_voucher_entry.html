@@ -2148,7 +2148,7 @@ document.addEventListener("click", function (event) {
 
     function getMode() {
         const advance = document.getElementById("accountTypeAdvance");
-        return advance && advance.checked ? "advance" : "others";
+        return !advance || advance.checked ? "advance" : "others";
     }
 
     function setMode(mode) {
@@ -2190,11 +2190,11 @@ document.addEventListener("click", function (event) {
         box.className = "account-head-type-box";
         box.innerHTML = `
             <label class="account-head-type-option">
-                <input type="checkbox" id="accountTypeOthers" checked>
+                <input type="checkbox" id="accountTypeOthers">
                 Others
             </label>
             <label class="account-head-type-option">
-                <input type="checkbox" id="accountTypeAdvance">
+                <input type="checkbox" id="accountTypeAdvance" checked>
                 Advance
             </label>
         `;

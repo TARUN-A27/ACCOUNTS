@@ -45,13 +45,6 @@ def is_valid_petty_cash_account(account_name, account_head_code):
             FROM accounts
             WHERE TRIM(UPPER(name)) = TRIM(UPPER(:account_name))
               AND TRIM(UPPER(accode)) = TRIM(UPPER(:account_head_code))
-              AND (
-                    pettycashflag = 1
-                    OR (
-                        pettycashflag = 0
-                        AND REGEXP_LIKE(UPPER(name), '(^|[^A-Z])ADVANCE([^A-Z]|$)')
-                    )
-                  )
         """, {
             "account_name": account_name,
             "account_head_code": account_head_code
@@ -512,8 +505,6 @@ def list_petty_cash_accounts(account_type="others"):
             cursor.execute("""
                 SELECT name, accode
                 FROM accounts
-                WHERE pettycashflag = 0
-                  AND REGEXP_LIKE(UPPER(name), '(^|[^A-Z])ADVANCE([^A-Z]|$)')
                 ORDER BY name
             """)
         else:
