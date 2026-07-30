@@ -1050,4 +1050,181 @@ async function approveOcrVoucher() {
 
 loadScannedDocuments();
 </script>
+
+<script>
+/* WINDOWS LOCAL SCANNER BUTTONS FINAL */
+(function () {
+    const LOCAL_AGENT = "http://127.0.0.1:6060";
+
+    function showStatus(message, isError) {
+        let box = document.getElementById("windowsScannerStatus");
+        if (!box) return;
+
+        box.innerText = message || "";
+        box.style.color = isError ? "#b91c1c" : "#334155";
+    }
+
+    function base64ToBlob(base64, mimeType) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        return new Blob([bytes], { type: mimeType || "application/pdf" });
+    }
+
+    async function checkWindowsScannerAgent() {
+        showStatus("Checking scanner agent on this Windows PC...");
+
+        try {
+            const response = await fetch(LOCAL_AGENT + "/health", {
+                cache: "no-store"
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.message || "Scanner agent not ready");
+            }
+
+            showStatus(
+                "Scanner agent ready.\nProfile: " + (result.profile || "AI_ACCOUNTS_ADF_A5")
+            );
+
+            return true;
+
+        } catch (error) {
+            showStatus(
+                "Scanner agent not reachable on this Windows PC.\nKeep PowerShell agent running: python scanner_agent.py\n" + error.message,
+                true
+            );
+            return false;
+        }
+    }
+
+    async function scanAndExtractFromThisPc() {
+        try {
+            const ready = await checkWindowsScannerAgent();
+            if (!ready) return;
+
+            showStatus("Scanning from this Windows PC...");
+
+            const scanResponse = await fetch(LOCAL_AGENT + "/scan", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({format: "pdf"})
+            });
+
+            const scanResult = await scanResponse.json();
+
+            if (!scanResult.success) {
+                throw new Error(scanResult.message || "Scan failed");
+            }
+
+            showStatus("Scan completed. Uploading to server for OCR extraction...");
+
+            const blob = base64ToBlob(scanResult.file_base64, scanResult.mime_type);
+            const filename = scanResult.filename || "ai_accounts_scan.pdf";
+
+            const formData = new FormData();
+            formData.append("file", new File([blob], filename, {
+                type: scanResult.mime_type || "application/pdf"
+            }));
+
+            const uploadResponse = await fetch("/upload", {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin"
+            });
+
+            const contentType = uploadResponse.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+                throw new Error("Server returned non-JSON. Login again and retry.");
+            }
+
+            const uploadResult = await uploadResponse.json();
+
+            if (uploadResult.success === false) {
+                throw new Error(uploadResult.message || uploadResult.error || "OCR extraction failed");
+            }
+
+            showStatus("Scan and OCR extraction completed.");
+
+            if (typeof loadScannedDocuments === "function") {
+                try { loadScannedDocuments(); } catch (e) {}
+            }
+
+            alert("Scan and extraction completed. Refresh/Select latest scanned file if needed.");
+
+        } catch (error) {
+            console.error(error);
+            showStatus(error.message || "Scan and extraction failed", true);
+        }
+    }
+
+    function addWindowsButtons() {
+        if (document.getElementById("windowsScannerPanel")) return;
+
+        const panel = document.createElement("div");
+        panel.id = "windowsScannerPanel";
+        panel.style.margin = "12px 0 16px 0";
+        panel.style.padding = "14px 16px";
+        panel.style.border = "1px solid #dbe3ef";
+        panel.style.borderRadius = "14px";
+        panel.style.background = "#ffffff";
+        panel.style.boxShadow = "0 8px 20px rgba(15,23,42,0.06)";
+
+        panel.innerHTML = `
+            <div style="font-weight:900;margin-bottom:8px;color:#0f172a;">
+                Windows Scanner Extraction
+            </div>
+
+            <div style="font-size:13px;color:#52637a;margin-bottom:10px;">
+                Use this on any Windows PC. It scans from that PC's local scanner agent and uploads to this server.
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="button" id="checkWindowsScannerBtn"
+                        style="border:none;border-radius:10px;padding:10px 14px;font-weight:900;background:#e2e8f0;color:#0f172a;cursor:pointer;">
+                    Check Scanner Agent
+                </button>
+
+                <button type="button" id="scanExtractWindowsBtn"
+                        style="border:none;border-radius:10px;padding:10px 14px;font-weight:900;background:#020617;color:#ffffff;cursor:pointer;">
+                    Scan & Extract From This PC
+                </button>
+            </div>
+
+            <div id="windowsScannerStatus"
+                 style="margin-top:10px;font-size:13px;font-weight:700;white-space:pre-line;color:#334155;"></div>
+        `;
+
+        const pageTitle =
+            Array.from(document.querySelectorAll("h1,h2,h3"))
+                .find(el => (el.innerText || "").toLowerCase().includes("document extraction"));
+
+        if (pageTitle && pageTitle.parentNode) {
+            const subtitle = pageTitle.nextElementSibling;
+            if (subtitle && subtitle.parentNode) {
+                subtitle.insertAdjacentElement("afterend", panel);
+            } else {
+                pageTitle.insertAdjacentElement("afterend", panel);
+            }
+        } else {
+            document.body.prepend(panel);
+        }
+
+        document.getElementById("checkWindowsScannerBtn").onclick = checkWindowsScannerAgent;
+        document.getElementById("scanExtractWindowsBtn").onclick = scanAndExtractFromThisPc;
+    }
+
+    window.checkWindowsScannerAgent = checkWindowsScannerAgent;
+    window.scanAndExtractFromThisPc = scanAndExtractFromThisPc;
+
+    document.addEventListener("DOMContentLoaded", addWindowsButtons);
+})();
+</script>
+
 {% endblock %}
