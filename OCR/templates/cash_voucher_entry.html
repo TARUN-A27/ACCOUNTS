@@ -1,6 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Cash Voucher Entry{% endblock %}
+{% block title %}Cash Voucher Entry
+<style>
+/* FINAL OVERRIDE: voucher signature labels near bottom line */
+.print-signatures {
+    align-items: stretch !important;
+}
+
+.print-sign-cell {
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    text-align: center !important;
+    vertical-align: bottom !important;
+    padding: 34px 6px 6px 6px !important;
+    line-height: 1.05 !important;
+    min-height: 58px !important;
+    box-sizing: border-box !important;
+}
+</style>
+
+{% endblock %}
 
 {% block content %}
 <style>
@@ -778,7 +798,22 @@
     cursor: pointer;
 }
 
+
+/* Final voucher signature alignment */
+.print-sign-cell {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding-top: 36px !important;
+    padding-bottom: 7px !important;
+    line-height: 1.1 !important;
+    vertical-align: bottom !important;
+}
+
 </style>
+
+
+<input type="hidden" id="loggedInUsernameValue" value="{{ session.get('username') or '' }}">
 
 <div class="voucher-page">
     <div class="page-header">
@@ -920,7 +955,7 @@
             <div class="print-signatures">
                 <div class="print-sign-cell">DEPT. HEAD</div>
                 <div class="print-sign-cell">MD/JMD</div>
-                <div class="print-sign-cell">J.O.(Accounts)</div>
+                <div class="print-sign-cell">Accounts</div>
                 <div class="print-sign-cell">I.A.</div>
                 <div class="print-sign-cell">CASHIER</div>
                 <div class="print-sign-cell">RECEIVED BY</div>
@@ -928,6 +963,14 @@
         </div>
     </div>
 </div>
+
+
+<script>
+function getLoggedInUsernameValue() {
+    const el = document.getElementById("loggedInUsernameValue");
+    return el ? el.value : "";
+}
+</script>
 
 <script>
     let savedVoucherId = null;
@@ -1207,7 +1250,7 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
 
         document.getElementById("accountHead").value = "";
         document.getElementById("accountHeadCode").value = "";
-        document.getElementById("personName").value = {{ (session.get("username") or "")|tojson }};
+        document.getElementById("personName").value = getLoggedInUsernameValue();
         document.getElementById("purpose").value = "";
         document.getElementById("amount").value = "";
         document.getElementById("amountWords").innerText = "Amount in words will appear here";
@@ -1990,7 +2033,7 @@ document.addEventListener("click", function (event) {
 /* LAST 10 PURPOSE DROPDOWN FIX */
 (function () {
     let lastPurposes = [];
-    let defaultUsername = {{ (session.get("username") or "")|tojson }};
+    let defaultUsername = getLoggedInUsernameValue();
 
     function personInput() {
         return document.getElementById("personName");
