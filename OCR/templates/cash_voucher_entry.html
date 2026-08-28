@@ -1,24 +1,86 @@
 {% extends "base.html" %}
 
 {% block title %}Cash Voucher Entry
-<style>
-/* FINAL OVERRIDE: voucher signature labels near bottom line */
-.print-signatures {
-    align-items: stretch !important;
-}
 
-.print-sign-cell {
-    display: flex !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    text-align: center !important;
-    vertical-align: bottom !important;
-    padding: 34px 6px 6px 6px !important;
-    line-height: 1.05 !important;
-    min-height: 58px !important;
-    box-sizing: border-box !important;
+
+
+<!-- FINAL_PRINT_SIGNATURE_FIX_START -->
+<style>
+@media screen, print {
+    .print-signatures {
+        height: 92px !important;
+        min-height: 92px !important;
+        align-items: stretch !important;
+    }
+
+    .print-sign-cell {
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        text-align: center !important;
+        vertical-align: bottom !important;
+        height: 92px !important;
+        min-height: 92px !important;
+        padding: 0 6px 9px 6px !important;
+        line-height: 1.05 !important;
+        box-sizing: border-box !important;
+    }
 }
 </style>
+
+<script>
+(function () {
+    function fixVoucherSignatureCellsFinal() {
+        document.querySelectorAll(".print-sign-cell").forEach(function (cell) {
+            const text = String(cell.textContent || "").trim();
+
+            if (/J\.?\s*O\.?\s*\(?\s*Accounts\s*\)?/i.test(text)) {
+                cell.textContent = "Accounts";
+            }
+
+            cell.style.setProperty("display", "flex", "important");
+            cell.style.setProperty("align-items", "flex-end", "important");
+            cell.style.setProperty("justify-content", "center", "important");
+            cell.style.setProperty("text-align", "center", "important");
+            cell.style.setProperty("vertical-align", "bottom", "important");
+            cell.style.setProperty("height", "92px", "important");
+            cell.style.setProperty("min-height", "92px", "important");
+            cell.style.setProperty("padding", "0 6px 9px 6px", "important");
+            cell.style.setProperty("line-height", "1.05", "important");
+            cell.style.setProperty("box-sizing", "border-box", "important");
+        });
+    }
+
+    window.fixVoucherSignatureCellsFinal = fixVoucherSignatureCellsFinal;
+
+    document.addEventListener("DOMContentLoaded", function () {
+        fixVoucherSignatureCellsFinal();
+
+        setTimeout(fixVoucherSignatureCellsFinal, 300);
+        setTimeout(fixVoucherSignatureCellsFinal, 800);
+    });
+
+    window.addEventListener("beforeprint", fixVoucherSignatureCellsFinal);
+
+    const originalPrint = window.print;
+    window.print = function () {
+        fixVoucherSignatureCellsFinal();
+        setTimeout(fixVoucherSignatureCellsFinal, 50);
+        return originalPrint.call(window);
+    };
+
+    const observer = new MutationObserver(function () {
+        fixVoucherSignatureCellsFinal();
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+})();
+</script>
+<!-- FINAL_PRINT_SIGNATURE_FIX_END -->
 
 {% endblock %}
 
@@ -748,28 +810,6 @@
     color: #64748b;
 }
 
-
-/* INVOICE INLINE LAYOUT FIX */
-.invoice-inline-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    width: 100%;
-    margin-top: 10px;
-}
-
-.invoice-inline-grid .form-group {
-    margin-bottom: 0 !important;
-}
-
-@media (max-width: 768px) {
-    .invoice-inline-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-}
-
-
 /* ACCOUNT HEAD ADVANCE OTHERS FIX */
 .account-head-type-box {
     display: flex;
@@ -797,23 +837,7 @@
     height: 16px;
     cursor: pointer;
 }
-
-
-/* Final voucher signature alignment */
-.print-sign-cell {
-    align-items: flex-end !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding-top: 36px !important;
-    padding-bottom: 7px !important;
-    line-height: 1.1 !important;
-    vertical-align: bottom !important;
-}
-
 </style>
-
-
-<input type="hidden" id="loggedInUsernameValue" value="{{ session.get('username') or '' }}">
 
 <div class="voucher-page">
     <div class="page-header">
@@ -822,18 +846,23 @@
     </div>
 
     <div class="voucher-card">
-        <div class="form-grid">
-            <div class="form-group">
+        <div class="form-grid cv-locked-grid">
+            <div class="form-group cv-date">
                 <label class="form-label">Date</label>
                 <input type="date" id="voucherDate" class="form-control" required>
             </div>
 
-            <div class="form-group">
+            <div class="form-group cv-amount">
                 <label class="form-label">Amount</label>
                 <input type="number" id="amount" class="form-control" required placeholder="Enter amount" oninput="updateAmountWords(); markUnsaved();">
             </div>
 
-            <div class="form-group full-width">
+            <div class="form-group full-width cv-person">
+                <label class="form-label">Name of the Person</label>
+                <input type="text" id="personName" class="form-control" required placeholder="Enter person name" value="{{ session.get('username') or '' }}" oninput="markUnsaved()">
+            </div>
+
+            <div class="form-group full-width cv-account">
                 <label class="form-label">Account Head</label>
                 <input type="text"
                        id="accountHead"
@@ -845,38 +874,12 @@
                 <datalist id="accountHeadList"></datalist>
             </div>
 
-            <div class="form-group full-width">
-        <div class="form-row optional-row">
-            
-<div class="invoice-inline-grid">
-    <div class="form-group">
-                <label>Invoice No <span class="optional-label">(Optional)</span></label>
-                <input type="text" class="form-control" id="invoiceNo" placeholder="Enter invoice no">
-            </div>
-    <div class="form-group">
-                <label>Invoice Date <span class="optional-label">(Optional)</span></label>
-                <input type="date" class="form-control" id="invoiceDate">
-            </div>
-</div>
-        </div>
-
-        <div class="form-group optional-row">
-            <label>Party Name <span class="optional-label">(Optional)</span></label>
-            <input type="text" class="form-control" id="partyName" placeholder="Search party name" autocomplete="off">
-            <input type="hidden" id="partyCode">
-            <div id="partySuggestions" class="suggestions hidden"></div>
-        </div>
-
-                <label class="form-label">Name of the Person</label>
-                <input type="text" id="personName" class="form-control" required placeholder="Enter person name" value="{{ session.get('username') or '' }}" oninput="markUnsaved()">
-            </div>
-
-            <div class="form-group full-width">
+            <div class="form-group full-width cv-purpose">
                 <label class="form-label">Purpose</label>
                 <textarea id="purpose" class="form-control" required placeholder="Enter voucher purpose" oninput="markUnsaved()"></textarea>
             </div>
 
-            <div class="form-group full-width details-section">
+            <div class="form-group full-width details-section cv-details">
                 <label class="form-label">Narration Details <span class="optional-label">(Optional)</span></label>
 
                 <div class="details-table-wrap">
@@ -899,8 +902,28 @@
                 </button>
             </div>
 
+            <div class="form-group full-width cv-optional">
+                <div class="cv-optional-grid">
+                    <div class="cv-optional-cell">
+                        <label>Invoice No <span class="optional-label">(Optional)</span></label>
+                        <input type="text" class="form-control" id="invoiceNo" placeholder="Enter invoice no">
+                    </div>
 
-            <div class="form-group full-width">
+                    <div class="cv-optional-cell">
+                        <label>Invoice Date <span class="optional-label">(Optional)</span></label>
+                        <input type="date" class="form-control" id="invoiceDate">
+                    </div>
+
+                    <div class="cv-optional-cell">
+                        <label>Party Name <span class="optional-label">(Optional)</span></label>
+                        <input type="text" class="form-control" id="partyName" placeholder="Search party name" autocomplete="off">
+                        <input type="hidden" id="partyCode">
+                        <div id="partySuggestions" class="suggestions hidden"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group full-width cv-amount-words">
                 <label class="form-label">Amount in Words</label>
                 <div id="amountWords" class="amount-words-box">Amount in words will appear here</div>
             </div>
@@ -963,14 +986,6 @@
         </div>
     </div>
 </div>
-
-
-<script>
-function getLoggedInUsernameValue() {
-    const el = document.getElementById("loggedInUsernameValue");
-    return el ? el.value : "";
-}
-</script>
 
 <script>
     let savedVoucherId = null;
@@ -1250,7 +1265,7 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
 
         document.getElementById("accountHead").value = "";
         document.getElementById("accountHeadCode").value = "";
-        document.getElementById("personName").value = getLoggedInUsernameValue();
+        document.getElementById("personName").value = {{ (session.get("username") or "")|tojson }};
         document.getElementById("purpose").value = "";
         document.getElementById("amount").value = "";
         document.getElementById("amountWords").innerText = "Amount in words will appear here";
@@ -2033,7 +2048,7 @@ document.addEventListener("click", function (event) {
 /* LAST 10 PURPOSE DROPDOWN FIX */
 (function () {
     let lastPurposes = [];
-    let defaultUsername = getLoggedInUsernameValue();
+    let defaultUsername = {{ (session.get("username") or "")|tojson }};
 
     function personInput() {
         return document.getElementById("personName");
@@ -2342,5 +2357,1593 @@ document.addEventListener("click", function (event) {
     });
 })();
 </script>
+
+<style>
+/* CASH VOUCHER FRONTEND FINAL FIX */
+.voucher-optional-one-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 14px !important;
+    align-items: start !important;
+    width: 100% !important;
+    margin-bottom: 10px !important;
+}
+
+.voucher-optional-one-row > * {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.cash-save-print-hidden {
+    display: none !important;
+}
+
+.form-actions,
+.action-row,
+.button-row,
+.actions {
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+}
+
+@media (max-width: 900px) {
+    .voucher-optional-one-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+
+<script>
+/* CASH VOUCHER FRONTEND FINAL FIX */
+(function () {
+    const LOGIN_USERNAME = {{ (session.get("username") or "")|tojson }};
+
+    function byId(id) {
+        return document.getElementById(id);
+    }
+
+    function closestField(el) {
+        if (!el) return null;
+
+        return (
+            el.closest(".form-group") ||
+            el.closest(".field-group") ||
+            el.closest(".input-group-wrap") ||
+            el.closest(".form-field") ||
+            el.closest(".col") ||
+            el.parentElement
+        );
+    }
+
+    function arrangeOptionalFieldsOneRow() {
+        const invoiceNo =
+            byId("invoiceNo") ||
+            byId("invoice_no") ||
+            document.querySelector('[name="invoice_no"]');
+
+        const invoiceDate =
+            byId("invoiceDate") ||
+            byId("invoice_date") ||
+            document.querySelector('[name="invoice_date"]');
+
+        const partyName =
+            byId("partyName") ||
+            byId("party_name") ||
+            document.querySelector('[name="party_name"]');
+
+        const fields = [
+            closestField(invoiceNo),
+            closestField(invoiceDate),
+            closestField(partyName)
+        ].filter(Boolean);
+
+        if (fields.length < 3) return;
+        if (document.querySelector(".voucher-optional-one-row")) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "voucher-optional-one-row";
+
+        fields[0].parentElement.insertBefore(wrapper, fields[0]);
+
+        fields.forEach(function (field) {
+            wrapper.appendChild(field);
+        });
+    }
+
+    function removeSavePrintButton() {
+        Array.from(document.querySelectorAll("button, a, input[type='button'], input[type='submit']")).forEach(function (el) {
+            const text = String(el.innerText || el.value || "").trim().toLowerCase();
+
+            if (
+                text === "save-print" ||
+                text === "save & print" ||
+                text === "save and print" ||
+                text.includes("save-print")
+            ) {
+                el.classList.add("cash-save-print-hidden");
+                el.style.display = "none";
+                el.disabled = true;
+            }
+        });
+    }
+
+    function clearValue(selector) {
+        const el = document.querySelector(selector);
+        if (!el) return;
+
+        el.value = "";
+        el.dispatchEvent(new Event("input", {bubbles: true}));
+        el.dispatchEvent(new Event("change", {bubbles: true}));
+    }
+
+    window.clearCashVoucherEntryAfterSave = function () {
+        const today = new Date().toISOString().slice(0, 10);
+
+        [
+            "#accountHead",
+            "#accountName",
+            "#account_head",
+            "#account_name",
+            "#accountHeadCode",
+            "#account_head_code",
+            "#purpose",
+            "#amount",
+            "#invoiceNo",
+            "#invoice_no",
+            "#invoiceDate",
+            "#invoice_date",
+            "#partyName",
+            "#party_name",
+            "#partyCode",
+            "#party_code",
+            "[name='account_name']",
+            "[name='account_head']",
+            "[name='purpose']",
+            "[name='amount']",
+            "[name='invoice_no']",
+            "[name='invoice_date']",
+            "[name='party_name']",
+            "[name='party_code']"
+        ].forEach(clearValue);
+
+        const personName =
+            byId("personName") ||
+            byId("person_name") ||
+            document.querySelector('[name="person_name"]');
+
+        if (personName) {
+            personName.value = LOGIN_USERNAME || "";
+            personName.dispatchEvent(new Event("input", {bubbles: true}));
+            personName.dispatchEvent(new Event("change", {bubbles: true}));
+        }
+
+        const voucherDate =
+            byId("voucherDate") ||
+            byId("voucherdate") ||
+            document.querySelector('[name="voucherdate"]');
+
+        if (voucherDate) {
+            voucherDate.value = today;
+            voucherDate.dispatchEvent(new Event("input", {bubbles: true}));
+            voucherDate.dispatchEvent(new Event("change", {bubbles: true}));
+        }
+
+        const detailsBody =
+            byId("detailsBody") ||
+            byId("narrationDetailsBody") ||
+            document.querySelector("#detailsTable tbody") ||
+            document.querySelector(".details-table tbody");
+
+        if (detailsBody) {
+            detailsBody.innerHTML = "";
+        }
+
+        if (typeof addDetailRow === "function") {
+            try { addDetailRow(); } catch (e) {}
+        }
+
+        if (typeof calculateDetailsGrandTotal === "function") {
+            try { calculateDetailsGrandTotal(); } catch (e) {}
+        }
+
+        removeSavePrintButton();
+        arrangeOptionalFieldsOneRow();
+
+        const focusEl =
+            byId("accountHead") ||
+            byId("accountName") ||
+            byId("account_head") ||
+            byId("purpose");
+
+        if (focusEl) focusEl.focus();
+    };
+
+    if (!window.__cashVoucherSaveAutoClearInstalled) {
+        window.__cashVoucherSaveAutoClearInstalled = true;
+
+        const originalFetch = window.fetch;
+
+        window.fetch = async function () {
+            const response = await originalFetch.apply(this, arguments);
+
+            try {
+                const requestArg = arguments[0];
+                const url = typeof requestArg === "string"
+                    ? requestArg
+                    : (requestArg && requestArg.url ? requestArg.url : "");
+
+                if (String(url).includes("/api/cash-voucher-entry/save")) {
+                    response.clone().json().then(function (data) {
+                        if (response.ok && data && data.success !== false) {
+                            setTimeout(function () {
+                                window.clearCashVoucherEntryAfterSave();
+                            }, 350);
+                        }
+                    }).catch(function () {});
+                }
+            } catch (e) {}
+
+            return response;
+        };
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        arrangeOptionalFieldsOneRow();
+        removeSavePrintButton();
+
+        setTimeout(arrangeOptionalFieldsOneRow, 500);
+        setTimeout(removeSavePrintButton, 500);
+        setTimeout(arrangeOptionalFieldsOneRow, 1500);
+        setTimeout(removeSavePrintButton, 1500);
+    });
+})();
+</script>
+
+<style>
+/* OPTIONAL FIELDS FULL WIDTH FINAL */
+.voucher-optional-full-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 14px 0 18px 0 !important;
+    align-items: start !important;
+    grid-column: 1 / -1 !important;
+}
+
+.voucher-optional-full-row > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+.voucher-optional-full-row label {
+    display: block !important;
+    margin-bottom: 6px !important;
+}
+
+.voucher-optional-full-row input,
+.voucher-optional-full-row select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.voucher-party-full-field {
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+.voucher-party-full-field input {
+    width: 100% !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+}
+
+#partySuggestions,
+#partySuggestionBox,
+#partyDropdown,
+.party-suggestions,
+.party-suggestion-box,
+.party-dropdown,
+.suggestions,
+.suggestion-list {
+    position: absolute !important;
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    z-index: 9999 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18) !important;
+    max-height: 230px !important;
+    overflow-y: auto !important;
+}
+
+/* Remove old underline/extra spacing under Party Name */
+.voucher-party-full-field::after,
+.voucher-optional-full-row::after {
+    display: none !important;
+    content: none !important;
+}
+
+@media (max-width: 900px) {
+    .voucher-optional-full-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+
+<script>
+/* OPTIONAL FIELDS FULL WIDTH FINAL */
+(function () {
+    function byId(id) {
+        return document.getElementById(id);
+    }
+
+    function q(selector) {
+        return document.querySelector(selector);
+    }
+
+    function inputByPossibleNames(ids, names, placeholderText) {
+        for (const id of ids) {
+            const el = byId(id);
+            if (el) return el;
+        }
+
+        for (const name of names) {
+            const el = q(`[name="${name}"]`);
+            if (el) return el;
+        }
+
+        if (placeholderText) {
+            const inputs = Array.from(document.querySelectorAll("input"));
+            return inputs.find(function (el) {
+                return String(el.placeholder || "").toLowerCase().includes(placeholderText);
+            }) || null;
+        }
+
+        return null;
+    }
+
+    function fieldBox(el) {
+        if (!el) return null;
+
+        return (
+            el.closest(".form-group") ||
+            el.closest(".field-group") ||
+            el.closest(".form-field") ||
+            el.closest(".input-group-wrap") ||
+            el.closest(".col") ||
+            el.parentElement
+        );
+    }
+
+    function findPersonField() {
+        const person =
+            byId("personName") ||
+            byId("person_name") ||
+            q('[name="person_name"]') ||
+            Array.from(document.querySelectorAll("input")).find(function (el) {
+                return String(el.placeholder || "").toLowerCase().includes("person");
+            });
+
+        return fieldBox(person);
+    }
+
+    function findFullParent() {
+        const personField = findPersonField();
+
+        if (personField && personField.parentElement) {
+            return personField.parentElement;
+        }
+
+        return (
+            q("form") ||
+            q(".card-body") ||
+            q(".voucher-form") ||
+            q(".cash-voucher-form") ||
+            q(".main-card") ||
+            q(".content-card")
+        );
+    }
+
+    function moveOptionalFieldsFullWidth() {
+        const invoiceNo = inputByPossibleNames(
+            ["invoiceNo", "invoice_no"],
+            ["invoice_no"],
+            "invoice no"
+        );
+
+        const invoiceDate = inputByPossibleNames(
+            ["invoiceDate", "invoice_date"],
+            ["invoice_date"],
+            ""
+        ) || Array.from(document.querySelectorAll('input[type="date"]')).find(function (el) {
+            const boxText = String(fieldBox(el)?.innerText || "").toLowerCase();
+            return boxText.includes("invoice");
+        });
+
+        const partyName = inputByPossibleNames(
+            ["partyName", "party_name"],
+            ["party_name"],
+            "party"
+        );
+
+        const invoiceNoBox = fieldBox(invoiceNo);
+        const invoiceDateBox = fieldBox(invoiceDate);
+        const partyBox = fieldBox(partyName);
+
+        if (!invoiceNoBox || !invoiceDateBox || !partyBox) return;
+
+        const parent = findFullParent();
+        const personField = findPersonField();
+
+        if (!parent) return;
+
+        let row = document.querySelector(".voucher-optional-full-row");
+
+        if (!row) {
+            row = document.createElement("div");
+            row.className = "voucher-optional-full-row";
+
+            if (personField && personField.parentElement === parent) {
+                parent.insertBefore(row, personField);
+            } else {
+                parent.appendChild(row);
+            }
+        }
+
+        [invoiceNoBox, invoiceDateBox, partyBox].forEach(function (box) {
+            if (box.parentElement !== row) {
+                row.appendChild(box);
+            }
+            box.style.width = "100%";
+            box.style.maxWidth = "none";
+        });
+
+        partyBox.classList.add("voucher-party-full-field");
+
+        if (invoiceNo) invoiceNo.style.width = "100%";
+        if (invoiceDate) invoiceDate.style.width = "100%";
+        if (partyName) partyName.style.width = "100%";
+
+        fixPartyDropdown(partyBox);
+    }
+
+    function fixPartyDropdown(partyBox) {
+        if (!partyBox) return;
+
+        const dropdowns = Array.from(document.querySelectorAll(`
+            #partySuggestions,
+            #partySuggestionBox,
+            #partyDropdown,
+            .party-suggestions,
+            .party-suggestion-box,
+            .party-dropdown,
+            .suggestions,
+            .suggestion-list
+        `));
+
+        dropdowns.forEach(function (dropdown) {
+            if (dropdown.parentElement !== partyBox) {
+                try {
+                    partyBox.appendChild(dropdown);
+                } catch (e) {}
+            }
+        });
+    }
+
+    function hidePartyDropdownOnSelect() {
+        const partyName =
+            byId("partyName") ||
+            byId("party_name") ||
+            q('[name="party_name"]');
+
+        if (!partyName || partyName.dataset.optionalFullWidthInstalled === "1") return;
+
+        partyName.dataset.optionalFullWidthInstalled = "1";
+
+        ["change", "blur"].forEach(function (eventName) {
+            partyName.addEventListener(eventName, function () {
+                setTimeout(function () {
+                    document.querySelectorAll(`
+                        #partySuggestions,
+                        #partySuggestionBox,
+                        #partyDropdown,
+                        .party-suggestions,
+                        .party-suggestion-box,
+                        .party-dropdown,
+                        .suggestions,
+                        .suggestion-list
+                    `).forEach(function (el) {
+                        el.style.display = "none";
+                    });
+                }, 150);
+            });
+        });
+    }
+
+    function run() {
+        moveOptionalFieldsFullWidth();
+        hidePartyDropdownOnSelect();
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        run();
+        setTimeout(run, 300);
+        setTimeout(run, 900);
+        setTimeout(run, 1800);
+    });
+
+    window.fixCashVoucherOptionalFullWidth = run;
+})();
+</script>
+
+
+<style>
+/* PARTY AUTOCOMPLETE FINAL FIX */
+.ai-party-autocomplete-wrap {
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.ai-party-autocomplete-wrap input {
+    width: 100% !important;
+}
+
+#aiPartyDropdownFinal {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 999999;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.20);
+    padding: 6px;
+}
+
+.ai-party-option-final {
+    padding: 10px 11px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #0f172a;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ai-party-option-final:hover,
+.ai-party-option-final.active {
+    background: #eff6ff;
+}
+
+.ai-party-option-name-final {
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.25;
+    color: #0f172a;
+}
+
+.ai-party-option-code-final {
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+}
+
+.ai-party-empty-final {
+    padding: 10px 11px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.voucher-optional-full-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) !important;
+}
+</style>
+
+
+<script>
+/* PARTY AUTOCOMPLETE FINAL FIX */
+(function () {
+    function byId(id) {
+        return document.getElementById(id);
+    }
+
+    function findPartyInput() {
+        return (
+            byId("partyName") ||
+            byId("party_name") ||
+            document.querySelector('[name="party_name"]') ||
+            Array.from(document.querySelectorAll("input")).find(function (el) {
+                return String(el.placeholder || "").toLowerCase().includes("party");
+            })
+        );
+    }
+
+    function findPartyCodeInput() {
+        let input =
+            byId("partyCode") ||
+            byId("party_code") ||
+            document.querySelector('[name="party_code"]');
+
+        if (!input) {
+            input = document.createElement("input");
+            input.type = "hidden";
+            input.id = "partyCode";
+            input.name = "party_code";
+            document.body.appendChild(input);
+        }
+
+        return input;
+    }
+
+    function closestField(el) {
+        if (!el) return null;
+
+        return (
+            el.closest(".form-group") ||
+            el.closest(".field-group") ||
+            el.closest(".form-field") ||
+            el.closest(".input-group-wrap") ||
+            el.closest(".col") ||
+            el.parentElement
+        );
+    }
+
+    function ensurePartyWrap() {
+        const input = findPartyInput();
+
+        if (!input) return null;
+
+        let field = closestField(input);
+
+        if (!field) {
+            field = input.parentElement;
+        }
+
+        if (!field.classList.contains("ai-party-autocomplete-wrap")) {
+            field.classList.add("ai-party-autocomplete-wrap");
+        }
+
+        let dropdown = byId("aiPartyDropdownFinal");
+
+        if (!dropdown) {
+            dropdown = document.createElement("div");
+            dropdown.id = "aiPartyDropdownFinal";
+        }
+
+        if (dropdown.parentElement !== field) {
+            field.appendChild(dropdown);
+        }
+
+        return {
+            input: input,
+            field: field,
+            dropdown: dropdown,
+            codeInput: findPartyCodeInput()
+        };
+    }
+
+    function showDropdown(dropdown) {
+        dropdown.style.display = "block";
+    }
+
+    function hideDropdown(dropdown) {
+        dropdown.style.display = "none";
+    }
+
+    function renderOptions(items) {
+        const setup = ensurePartyWrap();
+        if (!setup) return;
+
+        const dropdown = setup.dropdown;
+
+        if (!items.length) {
+            dropdown.innerHTML = `<div class="ai-party-empty-final">No party found</div>`;
+            showDropdown(dropdown);
+            return;
+        }
+
+        dropdown.innerHTML = items.map(function (item, index) {
+            const code = item.party_code || item.PARTYCODE || item.code || "";
+            const name = item.party_name || item.PARTYNAME || item.name || "";
+
+            return `
+                <div class="ai-party-option-final"
+                     data-index="${index}"
+                     data-code="${String(code).replace(/"/g, "&quot;")}"
+                     data-name="${String(name).replace(/"/g, "&quot;")}">
+                    <div class="ai-party-option-name-final">${name}</div>
+                    <div class="ai-party-option-code-final">${code}</div>
+                </div>
+            `;
+        }).join("");
+
+        showDropdown(dropdown);
+    }
+
+    let partySearchTimer = null;
+    let latestRequestId = 0;
+
+    async function searchParty() {
+        const setup = ensurePartyWrap();
+        if (!setup) return;
+
+        const query = String(setup.input.value || "").trim();
+
+        setup.codeInput.value = "";
+
+        if (query.length < 2) {
+            hideDropdown(setup.dropdown);
+            setup.dropdown.innerHTML = "";
+            return;
+        }
+
+        const requestId = ++latestRequestId;
+
+        try {
+            const response = await fetch("/api/cash-voucher-entry/parties?search=" + encodeURIComponent(query), {
+                cache: "no-store",
+                credentials: "same-origin"
+            });
+
+            const data = await response.json();
+
+            if (requestId !== latestRequestId) return;
+
+            if (!response.ok || data.success === false) {
+                setup.dropdown.innerHTML = `<div class="ai-party-empty-final">${data.message || "Party search failed"}</div>`;
+                showDropdown(setup.dropdown);
+                return;
+            }
+
+            const items = data.parties || data.rows || data.results || [];
+            renderOptions(items);
+
+        } catch (error) {
+            setup.dropdown.innerHTML = `<div class="ai-party-empty-final">Party search error</div>`;
+            showDropdown(setup.dropdown);
+        }
+    }
+
+    function installPartyAutocomplete() {
+        const setup = ensurePartyWrap();
+        if (!setup) return;
+
+        const input = setup.input;
+        const dropdown = setup.dropdown;
+        const codeInput = setup.codeInput;
+
+        if (input.dataset.aiPartyAutocompleteFinal === "1") return;
+        input.dataset.aiPartyAutocompleteFinal = "1";
+
+        input.setAttribute("autocomplete", "off");
+
+        input.addEventListener("input", function () {
+            clearTimeout(partySearchTimer);
+            partySearchTimer = setTimeout(searchParty, 250);
+        });
+
+        input.addEventListener("focus", function () {
+            if (String(input.value || "").trim().length >= 2) {
+                searchParty();
+            }
+        });
+
+        dropdown.addEventListener("mousedown", function (event) {
+            event.preventDefault();
+
+            const option = event.target.closest(".ai-party-option-final");
+            if (!option) return;
+
+            input.value = option.dataset.name || "";
+            codeInput.value = option.dataset.code || "";
+
+            input.dispatchEvent(new Event("input", {bubbles: true}));
+            input.dispatchEvent(new Event("change", {bubbles: true}));
+            codeInput.dispatchEvent(new Event("change", {bubbles: true}));
+
+            hideDropdown(dropdown);
+        });
+
+        document.addEventListener("mousedown", function (event) {
+            const setupNow = ensurePartyWrap();
+            if (!setupNow) return;
+
+            if (!setupNow.field.contains(event.target)) {
+                hideDropdown(setupNow.dropdown);
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        installPartyAutocomplete();
+        setTimeout(installPartyAutocomplete, 500);
+        setTimeout(installPartyAutocomplete, 1500);
+    });
+
+    window.installPartyAutocompleteFinal = installPartyAutocomplete;
+})();
+</script>
+
+
+<style>
+/* ACCOUNT HEAD INLINE ROW FINAL */
+.account-head-inline-row-final {
+    display: grid !important;
+    grid-template-columns: 260px minmax(0, 1fr) !important;
+    gap: 14px !important;
+    align-items: end !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 10px 0 16px 0 !important;
+}
+
+.account-head-type-box-final {
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+    padding: 0 16px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 11px !important;
+    background: #f8fafc !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.account-head-type-box-final label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    margin: 0 !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    white-space: nowrap !important;
+}
+
+.account-head-type-box-final input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+}
+
+.account-head-search-box-final {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    position: relative !important;
+}
+
+.account-head-search-box-final input {
+    width: 100% !important;
+    height: 44px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.account-head-inline-row-final + * {
+    margin-top: 0 !important;
+}
+
+@media (max-width: 800px) {
+    .account-head-inline-row-final {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+
+<script>
+/* ACCOUNT HEAD INLINE ROW FINAL */
+(function () {
+    function textOf(el) {
+        return String(el?.innerText || el?.textContent || "").trim().toLowerCase();
+    }
+
+    function findLabelByText(labelText) {
+        const target = labelText.toLowerCase();
+
+        return Array.from(document.querySelectorAll("label, span, div")).find(function (el) {
+            return textOf(el) === target || textOf(el).includes(target);
+        });
+    }
+
+    function findAccountSearchInput() {
+        return (
+            document.getElementById("accountHead") ||
+            document.getElementById("accountName") ||
+            document.getElementById("account_head") ||
+            document.getElementById("account_name") ||
+            document.querySelector('[name="account_head"]') ||
+            document.querySelector('[name="account_name"]') ||
+            Array.from(document.querySelectorAll("input")).find(function (el) {
+                return String(el.placeholder || "").toLowerCase().includes("account head");
+            })
+        );
+    }
+
+    function closestField(el) {
+        if (!el) return null;
+
+        return (
+            el.closest(".form-group") ||
+            el.closest(".field-group") ||
+            el.closest(".form-field") ||
+            el.closest(".input-group-wrap") ||
+            el.closest(".col") ||
+            el.parentElement
+        );
+    }
+
+    function findCheckboxBox() {
+        const others = findLabelByText("Others");
+        const advance = findLabelByText("Advance");
+
+        if (!others || !advance) return null;
+
+        let node = others.parentElement;
+
+        while (node && node !== document.body) {
+            if (node.contains(others) && node.contains(advance)) {
+                const text = textOf(node);
+                if (text.includes("others") && text.includes("advance")) {
+                    return node;
+                }
+            }
+            node = node.parentElement;
+        }
+
+        return others.parentElement;
+    }
+
+    function findInsertParent(accountBox, checkboxBox) {
+        let node = accountBox?.parentElement;
+
+        while (node && node !== document.body) {
+            if (node.contains(accountBox) && node.contains(checkboxBox)) {
+                return node;
+            }
+            node = node.parentElement;
+        }
+
+        return accountBox?.parentElement || checkboxBox?.parentElement;
+    }
+
+    function applyAccountHeadInlineRow() {
+        const accountInput = findAccountSearchInput();
+        const accountBox = closestField(accountInput);
+        const checkboxBox = findCheckboxBox();
+
+        if (!accountInput || !accountBox || !checkboxBox) return;
+
+        if (accountBox.closest(".account-head-inline-row-final")) return;
+
+        const parent = findInsertParent(accountBox, checkboxBox);
+        if (!parent) return;
+
+        const row = document.createElement("div");
+        row.className = "account-head-inline-row-final";
+
+        parent.insertBefore(row, checkboxBox);
+
+        checkboxBox.classList.add("account-head-type-box-final");
+        accountBox.classList.add("account-head-search-box-final");
+
+        row.appendChild(checkboxBox);
+        row.appendChild(accountBox);
+
+        accountInput.style.width = "100%";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        applyAccountHeadInlineRow();
+        setTimeout(applyAccountHeadInlineRow, 300);
+        setTimeout(applyAccountHeadInlineRow, 900);
+        setTimeout(applyAccountHeadInlineRow, 1800);
+    });
+
+    window.applyAccountHeadInlineRowFinal = applyAccountHeadInlineRow;
+})();
+</script>
+
+
+<style>
+/* ACCOUNT HEAD INLINE FORCE FIX */
+.ai-account-head-force-row {
+    display: grid !important;
+    grid-template-columns: 280px minmax(0, 1fr) !important;
+    gap: 14px !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 10px 0 16px 0 !important;
+}
+
+.ai-account-type-force-box {
+    height: 44px !important;
+    min-height: 44px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 18px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 11px !important;
+    background: #f8fafc !important;
+    box-sizing: border-box !important;
+}
+
+.ai-account-type-force-box label,
+.ai-account-type-force-box span,
+.ai-account-type-force-box div {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.ai-account-type-force-box label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    white-space: nowrap !important;
+}
+
+.ai-account-type-force-box input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+}
+
+.ai-account-search-force-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    position: relative !important;
+}
+
+.ai-account-search-force-box input {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 44px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* remove the old vertical gap created by the old checkbox row */
+.ai-account-head-force-row + * {
+    margin-top: 0 !important;
+}
+
+@media (max-width: 850px) {
+    .ai-account-head-force-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+
+<script>
+/* ACCOUNT HEAD INLINE FORCE FIX */
+(function () {
+    function norm(text) {
+        return String(text || "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function findAccountSearchInput() {
+        return Array.from(document.querySelectorAll("input")).find(function (input) {
+            return norm(input.placeholder).includes("search account head");
+        }) ||
+        document.getElementById("accountHead") ||
+        document.getElementById("accountName") ||
+        document.getElementById("account_head") ||
+        document.getElementById("account_name") ||
+        document.querySelector('[name="account_head"]') ||
+        document.querySelector('[name="account_name"]');
+    }
+
+    function usefulBox(el) {
+        if (!el) return null;
+
+        let node = el.parentElement;
+
+        while (node && node !== document.body) {
+            const rect = node.getBoundingClientRect();
+            const text = norm(node.innerText);
+
+            if (
+                rect.width > 300 &&
+                rect.height <= 90 &&
+                (
+                    node.querySelector("input") ||
+                    text.includes("others") ||
+                    text.includes("advance")
+                )
+            ) {
+                return node;
+            }
+
+            node = node.parentElement;
+        }
+
+        return el.parentElement;
+    }
+
+    function containsBothCheckboxLabels(el) {
+        const text = norm(el.innerText || el.textContent);
+        return text.includes("others") && text.includes("advance") && el.querySelectorAll('input[type="checkbox"]').length >= 2;
+    }
+
+    function findCheckboxBoxBefore(accountInput) {
+        const candidates = Array.from(document.querySelectorAll("div, section, fieldset"));
+
+        const good = candidates.filter(function (el) {
+            if (!containsBothCheckboxLabels(el)) return false;
+
+            const rect = el.getBoundingClientRect();
+            const accountRect = accountInput.getBoundingClientRect();
+
+            return rect.top < accountRect.top && Math.abs(rect.left - accountRect.left) < 80;
+        });
+
+        if (!good.length) return null;
+
+        good.sort(function (a, b) {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+
+            // nearest above account input, and smallest usable box
+            return Math.abs(br.top - accountInput.getBoundingClientRect().top) - Math.abs(ar.top - accountInput.getBoundingClientRect().top)
+                || ar.height - br.height;
+        });
+
+        return good[0];
+    }
+
+    function findCommonFormParent(a, b) {
+        let node = a.parentElement;
+
+        while (node && node !== document.body) {
+            if (node.contains(a) && node.contains(b)) {
+                return node;
+            }
+            node = node.parentElement;
+        }
+
+        return a.parentElement || b.parentElement;
+    }
+
+    function forceAccountHeadInline() {
+        const accountInput = findAccountSearchInput();
+        if (!accountInput) return;
+
+        const accountBox = usefulBox(accountInput);
+        const checkboxBox = findCheckboxBoxBefore(accountInput);
+
+        if (!accountBox || !checkboxBox || accountBox === checkboxBox) return;
+
+        let row = document.querySelector(".ai-account-head-force-row");
+
+        if (!row) {
+            row = document.createElement("div");
+            row.className = "ai-account-head-force-row";
+
+            const parent = findCommonFormParent(accountBox, checkboxBox);
+            parent.insertBefore(row, checkboxBox);
+        }
+
+        checkboxBox.classList.add("ai-account-type-force-box");
+        accountBox.classList.add("ai-account-search-force-box");
+
+        if (checkboxBox.parentElement !== row) {
+            row.appendChild(checkboxBox);
+        }
+
+        if (accountBox.parentElement !== row) {
+            row.appendChild(accountBox);
+        }
+
+        accountInput.style.width = "100%";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        forceAccountHeadInline();
+        setTimeout(forceAccountHeadInline, 300);
+        setTimeout(forceAccountHeadInline, 1000);
+        setTimeout(forceAccountHeadInline, 2000);
+
+        const observer = new MutationObserver(function () {
+            forceAccountHeadInline();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    });
+
+    window.forceAccountHeadInline = forceAccountHeadInline;
+})();
+</script>
+
+
+<style>
+/* ACCOUNT HEAD EXACT INLINE FINAL */
+
+#accountHeadExactInlineRow {
+    display: grid !important;
+    grid-template-columns: 280px minmax(0, 1fr) !important;
+    gap: 14px !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 10px 0 16px 0 !important;
+}
+
+#accountHeadExactInlineRow #accountHeadTypeBox {
+    height: 44px !important;
+    min-height: 44px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 18px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 11px !important;
+    background: #f8fafc !important;
+    box-sizing: border-box !important;
+}
+
+#accountHeadExactInlineRow #accountHeadTypeBox label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    margin: 0 !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    white-space: nowrap !important;
+}
+
+#accountHeadExactInlineRow #accountHeadTypeBox input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+}
+
+#accountHeadSearchExactBox {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    position: relative !important;
+}
+
+#accountHeadSearchExactBox #accountHead {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 44px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* prevent old layout styles from keeping the two controls separate */
+#accountHeadTypeBox {
+    margin-bottom: 0 !important;
+}
+
+#accountHead {
+    margin-top: 0 !important;
+}
+
+@media (max-width: 850px) {
+    #accountHeadExactInlineRow {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+
+<script>
+/* ACCOUNT HEAD EXACT INLINE FINAL */
+(function () {
+    function forceExactAccountHeadInline() {
+        const typeBox = document.getElementById("accountHeadTypeBox");
+        const accountHead = document.getElementById("accountHead");
+
+        if (!typeBox || !accountHead) return;
+
+        if (document.getElementById("accountHeadExactInlineRow")) return;
+
+        const originalParent = typeBox.parentElement || accountHead.parentElement;
+        if (!originalParent) return;
+
+        const row = document.createElement("div");
+        row.id = "accountHeadExactInlineRow";
+
+        const searchBox = document.createElement("div");
+        searchBox.id = "accountHeadSearchExactBox";
+
+        originalParent.insertBefore(row, typeBox);
+
+        row.appendChild(typeBox);
+        row.appendChild(searchBox);
+
+        searchBox.appendChild(accountHead);
+
+        const accountCode = document.getElementById("accountHeadCode");
+        const accountList = document.getElementById("accountHeadList");
+
+        if (accountCode) searchBox.appendChild(accountCode);
+        if (accountList) searchBox.appendChild(accountList);
+
+        accountHead.style.width = "100%";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        forceExactAccountHeadInline();
+        setTimeout(forceExactAccountHeadInline, 300);
+        setTimeout(forceExactAccountHeadInline, 800);
+        setTimeout(forceExactAccountHeadInline, 1600);
+        setTimeout(forceExactAccountHeadInline, 2500);
+    });
+
+    window.forceExactAccountHeadInline = forceExactAccountHeadInline;
+})();
+</script>
+
+<style>
+
+
+/* CASH VOUCHER LOCKED GRID FINAL */
+.voucher-card .form-grid.cv-locked-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+        "date amount"
+        "person person"
+        "account account"
+        "purpose purpose"
+        "details details"
+        "optional optional"
+        "words words" !important;
+    gap: 18px !important;
+    align-items: start !important;
+}
+
+.cv-locked-grid > .cv-date {
+    grid-area: date !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-locked-grid > .cv-amount {
+    grid-area: amount !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-locked-grid > .cv-person {
+    grid-area: person !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-locked-grid > .cv-account {
+    grid-area: account !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-locked-grid > .cv-purpose {
+    grid-area: purpose !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-locked-grid > .cv-details {
+    grid-area: details !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-locked-grid > .cv-optional {
+    grid-area: optional !important;
+    order: 0 !important;
+    grid-column: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.cv-locked-grid > .cv-amount-words {
+    grid-area: words !important;
+    order: 0 !important;
+    grid-column: auto !important;
+}
+
+.cv-optional-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) !important;
+    gap: 14px !important;
+    align-items: end !important;
+    width: 100% !important;
+}
+
+.cv-optional-cell {
+    min-width: 0 !important;
+    width: 100% !important;
+    position: relative !important;
+}
+
+.cv-optional-cell label {
+    display: block !important;
+    margin-bottom: 7px !important;
+}
+
+.cv-optional-cell input,
+.cv-optional-cell .form-control {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.cv-locked-grid .details-grand-total-row {
+    margin-top: 0 !important;
+}
+
+@media (max-width: 900px) {
+    .voucher-card .form-grid.cv-locked-grid {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "date"
+            "amount"
+            "person"
+            "account"
+            "purpose"
+            "details"
+            "optional"
+            "words" !important;
+    }
+
+    .cv-optional-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+</style>
+
+<!-- CASH VOUCHER LOCKED GRID WIDTH FIX FINAL -->
+<style>
+/* Force clean two-column layout with full-width lower sections */
+.voucher-card .form-grid.cv-locked-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 18px !important;
+    align-items: start !important;
+}
+
+/* Top row */
+.cv-locked-grid > .cv-date {
+    grid-column: 1 / 2 !important;
+    width: 100% !important;
+}
+
+.cv-locked-grid > .cv-amount {
+    grid-column: 2 / 3 !important;
+    width: 100% !important;
+}
+
+/* Full-width sections */
+.cv-locked-grid > .cv-person,
+.cv-locked-grid > .cv-account,
+.cv-locked-grid > .cv-purpose,
+.cv-locked-grid > .cv-details,
+.cv-locked-grid > .cv-optional,
+.cv-locked-grid > .cv-amount-words {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Make all full-width inputs stretch */
+.cv-locked-grid > .cv-person input,
+.cv-locked-grid > .cv-purpose textarea,
+.cv-locked-grid > .cv-amount-words .amount-words-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Account Head row */
+.cv-account #accountHeadExactInlineRow {
+    width: 100% !important;
+    grid-template-columns: 280px minmax(0, 1fr) !important;
+}
+
+.cv-account #accountHeadSearchExactBox,
+.cv-account #accountHead {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Narration/details full width */
+.cv-details .details-table-wrap,
+.cv-details .details-table,
+.cv-details .detail-add-btn {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Optional row full width */
+.cv-optional .cv-optional-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) !important;
+    gap: 14px !important;
+    width: 100% !important;
+}
+
+.cv-optional .cv-optional-cell,
+.cv-optional .cv-optional-cell input {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Buttons stay right */
+.voucher-card .actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+}
+
+@media (max-width: 900px) {
+    .voucher-card .form-grid.cv-locked-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .cv-locked-grid > .cv-date,
+    .cv-locked-grid > .cv-amount,
+    .cv-locked-grid > .cv-person,
+    .cv-locked-grid > .cv-account,
+    .cv-locked-grid > .cv-purpose,
+    .cv-locked-grid > .cv-details,
+    .cv-locked-grid > .cv-optional,
+    .cv-locked-grid > .cv-amount-words {
+        grid-column: 1 / -1 !important;
+    }
+
+    .cv-optional .cv-optional-grid,
+    .cv-account #accountHeadExactInlineRow {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+<!-- END CASH VOUCHER LOCKED GRID WIDTH FIX FINAL -->
 
 {% endblock %}

@@ -1052,3 +1052,1483 @@ def update_cash_voucher_entry(voucher_id, data):
         if conn:
             conn.close()
 
+
+# USER-SCOPED VOUCHER DRAFT + RELAXED ACCOUNT UPDATE FIX
+# Last definition wins.
+
+def _resolve_account_code_by_name(account_name):
+    conn = None
+    cursor = None
+
+    try:
+        if not account_name:
+            return ""
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT accode
+            FROM accounts
+            WHERE UPPER(TRIM(name)) = UPPER(TRIM(:account_name))
+              AND ROWNUM = 1
+        """, {
+            "account_name": str(account_name).strip()
+        })
+
+        row = cursor.fetchone()
+        return str(row[0]) if row else ""
+
+    except Exception:
+        return ""
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def _account_name_exists(account_name):
+    conn = None
+    cursor = None
+
+    try:
+        if not account_name:
+            return False
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM accounts
+            WHERE UPPER(TRIM(name)) = UPPER(TRIM(:account_name))
+        """, {
+            "account_name": str(account_name).strip()
+        })
+
+        row = cursor.fetchone()
+        return bool(row and int(row[0] or 0) > 0)
+
+    except Exception:
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def list_cash_voucher_entries(limit=100, usercode=None):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        sql = """
+            SELECT *
+            FROM (
+                SELECT e.ID,
+                       TO_CHAR(e.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       e.ACCOUNT_HEAD_CODE,
+                       e.ACCOUNT_NAME,
+                       e.PERSON_NAME,
+                       e.PURPOSE,
+                       e.AMOUNT,
+                       NVL(e.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       e.USERCODE,
+                       e.AUTHUSERCODE,
+                       TO_CHAR(e.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       TO_CHAR(e.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       e.INVOICE_NO,
+                       TO_CHAR(e.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       e.PARTY_CODE,
+                       e.PARTY_NAME,
+                       LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID) AS NARRATION
+                FROM CASHBANKENTRY e
+                LEFT JOIN CASHBANKENTRYDETAILS d
+                  ON d.CASHBANKENTRY_ID = e.ID
+                WHERE (:usercode IS NULL OR e.USERCODE = :usercode)
+                GROUP BY e.ID,
+                         e.VOUCHERDATE,
+                         e.ACCOUNT_HEAD_CODE,
+                         e.ACCOUNT_NAME,
+                         e.PERSON_NAME,
+                         e.PURPOSE,
+                         e.AMOUNT,
+                         e.ENTRY_SOURCE,
+                         e.USERCODE,
+                         e.AUTHUSERCODE,
+                         e.AUTHDATEANDTIME,
+                         e.ENTRYDATEANDTIME,
+                         e.INVOICE_NO,
+                         e.INVOICE_DATE,
+                         e.PARTY_CODE,
+                         e.PARTY_NAME
+                ORDER BY e.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """
+
+        cursor.execute(sql, {
+            "limit": int(limit or 100),
+            "usercode": int(usercode) if usercode else None
+        })
+
+        entries = []
+
+        for row in cursor.fetchall():
+            authenticated = row[9] is not None
+
+            entries.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": str(row[2] or ""),
+                "account_name": str(row[3] or ""),
+                "person_name": str(row[4] or ""),
+                "purpose": str(row[5] or ""),
+                "amount": float(row[6] or 0),
+                "entry_source": str(row[7] or "MANUAL"),
+                "usercode": row[8],
+                "authusercode": row[9],
+                "authenticated": authenticated,
+                "authdateandtime": row[10] or "",
+                "entrydateandtime": row[11] or "",
+                "invoice_no": str(row[12] or ""),
+                "invoice_date": row[13] or "",
+                "party_code": str(row[14] or ""),
+                "party_name": str(row[15] or ""),
+                "narration": str(row[16] or "")
+            })
+
+        return {
+            "success": True,
+            "entries": entries,
+            "rows": entries
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": [],
+            "rows": []
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def update_cash_voucher_entry(voucher_id, data):
+    conn = None
+    cursor = None
+
+    try:
+        voucher_id = int(voucher_id)
+        account_name = str(data.get("account_name") or data.get("account_head") or "").strip().upper()
+        account_head_code = str(data.get("account_head_code") or "").strip()
+
+        if account_name and not account_head_code:
+            account_head_code = _resolve_account_code_by_name(account_name)
+
+        # Important: do not fail if code is missing but account name exists.
+        # Draft edit can pass only the account name.
+        if account_name and not _account_name_exists(account_name):
+            return {
+                "success": False,
+                "message": "Please select a valid Account Head from the list"
+            }
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE CASHBANKENTRY
+            SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
+                ACCOUNT_HEAD_CODE = :account_head_code,
+                ACCOUNT_NAME = :account_name,
+                PERSON_NAME = :person_name,
+                PURPOSE = :purpose,
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE
+                    WHEN :invoice_date IS NULL OR :invoice_date = '' THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
+            WHERE ID = :voucher_id
+        """, {
+            "voucherdate": data.get("voucherdate"),
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": data.get("person_name"),
+            "purpose": data.get("purpose"),
+            "amount": float(data.get("amount") or 0),
+            "invoice_no": data.get("invoice_no") or "",
+            "invoice_date": data.get("invoice_date") or "",
+            "party_code": data.get("party_code") or "",
+            "party_name": data.get("party_name") or "",
+            "voucher_id": voucher_id
+        })
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return {
+                "success": False,
+                "message": "Voucher not found"
+            }
+
+        cursor.execute("""
+            DELETE FROM CASHBANKENTRYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+        """, {
+            "voucher_id": voucher_id
+        })
+
+        details = data.get("details") or []
+
+        for detail in details:
+            narration = str(detail.get("narration") or "").strip()
+            item_count = detail.get("item_count") or detail.get("count") or None
+            sub_price = detail.get("sub_price") or None
+            total_price = detail.get("total_price") or None
+
+            if not narration and not item_count and not sub_price and not total_price:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYDETAILS (
+                    CASHBANKENTRY_ID,
+                    NARRATION,
+                    ITEM_COUNT,
+                    SUB_PRICE,
+                    TOTAL_PRICE
+                )
+                VALUES (
+                    :voucher_id,
+                    :narration,
+                    :item_count,
+                    :sub_price,
+                    :total_price
+                )
+            """, {
+                "voucher_id": voucher_id,
+                "narration": narration,
+                "item_count": item_count,
+                "sub_price": sub_price,
+                "total_price": total_price
+            })
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Voucher updated successfully",
+            "voucher_id": voucher_id,
+            "account_head_code": account_head_code
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+# FINAL USER-SCOPED VOUCHER DRAFT SERVICE OVERRIDE
+# Last definition wins.
+
+def _final_account_code_by_name(account_name):
+    conn = None
+    cursor = None
+
+    try:
+        if not account_name:
+            return ""
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT accode
+            FROM accounts
+            WHERE UPPER(TRIM(name)) = UPPER(TRIM(:account_name))
+              AND ROWNUM = 1
+        """, {"account_name": str(account_name).strip()})
+
+        row = cursor.fetchone()
+        return str(row[0]) if row else ""
+
+    except Exception:
+        return ""
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def _final_account_name_exists(account_name):
+    conn = None
+    cursor = None
+
+    try:
+        if not account_name:
+            return False
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM accounts
+            WHERE UPPER(TRIM(name)) = UPPER(TRIM(:account_name))
+        """, {"account_name": str(account_name).strip()})
+
+        row = cursor.fetchone()
+        return bool(row and int(row[0] or 0) > 0)
+
+    except Exception:
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def list_cash_voucher_entries(limit=100, usercode=None):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT e.ID,
+                       TO_CHAR(e.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       e.ACCOUNT_HEAD_CODE,
+                       e.ACCOUNT_NAME,
+                       e.PERSON_NAME,
+                       e.PURPOSE,
+                       e.AMOUNT,
+                       NVL(e.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       e.USERCODE,
+                       e.AUTHUSERCODE,
+                       TO_CHAR(e.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       TO_CHAR(e.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       e.INVOICE_NO,
+                       TO_CHAR(e.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       e.PARTY_CODE,
+                       e.PARTY_NAME,
+                       LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID) AS NARRATION
+                FROM CASHBANKENTRY e
+                LEFT JOIN CASHBANKENTRYDETAILS d
+                  ON d.CASHBANKENTRY_ID = e.ID
+                WHERE e.USERCODE = :usercode
+                GROUP BY e.ID,
+                         e.VOUCHERDATE,
+                         e.ACCOUNT_HEAD_CODE,
+                         e.ACCOUNT_NAME,
+                         e.PERSON_NAME,
+                         e.PURPOSE,
+                         e.AMOUNT,
+                         e.ENTRY_SOURCE,
+                         e.USERCODE,
+                         e.AUTHUSERCODE,
+                         e.AUTHDATEANDTIME,
+                         e.ENTRYDATEANDTIME,
+                         e.INVOICE_NO,
+                         e.INVOICE_DATE,
+                         e.PARTY_CODE,
+                         e.PARTY_NAME
+                ORDER BY e.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """, {
+            "usercode": int(usercode or 0),
+            "limit": int(limit or 100)
+        })
+
+        entries = []
+
+        for row in cursor.fetchall():
+            authenticated = row[9] is not None
+
+            entries.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": str(row[2] or ""),
+                "account_name": str(row[3] or ""),
+                "person_name": str(row[4] or ""),
+                "purpose": str(row[5] or ""),
+                "amount": float(row[6] or 0),
+                "entry_source": str(row[7] or "MANUAL"),
+                "usercode": row[8],
+                "authusercode": row[9],
+                "authenticated": authenticated,
+                "authdateandtime": row[10] or "",
+                "entrydateandtime": row[11] or "",
+                "invoice_no": str(row[12] or ""),
+                "invoice_date": row[13] or "",
+                "party_code": str(row[14] or ""),
+                "party_name": str(row[15] or ""),
+                "narration": str(row[16] or "")
+            })
+
+        return {
+            "success": True,
+            "entries": entries,
+            "rows": entries,
+            "count": len(entries)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": [],
+            "rows": []
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def update_cash_voucher_entry(voucher_id, data, usercode=None):
+    conn = None
+    cursor = None
+
+    try:
+        voucher_id = int(voucher_id)
+        usercode = int(usercode or 0)
+
+        account_name = str(data.get("account_name") or data.get("account_head") or "").strip().upper()
+        account_head_code = str(data.get("account_head_code") or "").strip()
+
+        if account_name and not account_head_code:
+            account_head_code = _final_account_code_by_name(account_name)
+
+        # Do not wrongly fail when account name exists but hidden code was missing.
+        if account_name and not _final_account_name_exists(account_name):
+            return {
+                "success": False,
+                "message": "Please select a valid Account Head from the list"
+            }
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE CASHBANKENTRY
+            SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
+                ACCOUNT_HEAD_CODE = :account_head_code,
+                ACCOUNT_NAME = :account_name,
+                PERSON_NAME = :person_name,
+                PURPOSE = :purpose,
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE
+                    WHEN :invoice_date IS NULL OR :invoice_date = '' THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
+            WHERE ID = :voucher_id
+              AND USERCODE = :usercode
+        """, {
+            "voucherdate": data.get("voucherdate"),
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": data.get("person_name"),
+            "purpose": data.get("purpose"),
+            "amount": float(data.get("amount") or 0),
+            "invoice_no": data.get("invoice_no") or "",
+            "invoice_date": data.get("invoice_date") or "",
+            "party_code": data.get("party_code") or "",
+            "party_name": data.get("party_name") or "",
+            "voucher_id": voucher_id,
+            "usercode": usercode
+        })
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return {
+                "success": False,
+                "message": "Voucher not found for current user"
+            }
+
+        cursor.execute("""
+            DELETE FROM CASHBANKENTRYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+        """, {"voucher_id": voucher_id})
+
+        details = data.get("details") or []
+
+        for detail in details:
+            narration = str(detail.get("narration") or "").strip()
+            item_count = detail.get("item_count") or detail.get("count") or None
+            sub_price = detail.get("sub_price") or None
+            total_price = detail.get("total_price") or None
+
+            if not narration and not item_count and not sub_price and not total_price:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYDETAILS (
+                    CASHBANKENTRY_ID,
+                    NARRATION,
+                    ITEM_COUNT,
+                    SUB_PRICE,
+                    TOTAL_PRICE
+                )
+                VALUES (
+                    :voucher_id,
+                    :narration,
+                    :item_count,
+                    :sub_price,
+                    :total_price
+                )
+            """, {
+                "voucher_id": voucher_id,
+                "narration": narration,
+                "item_count": item_count,
+                "sub_price": sub_price,
+                "total_price": total_price
+            })
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Voucher updated successfully",
+            "voucher_id": voucher_id,
+            "account_head_code": account_head_code
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# FINAL USER FILTER WITH USERNAME FALLBACK
+# Last definition wins.
+
+def list_cash_voucher_entries(limit=100, usercode=None, username=None):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT e.ID,
+                       TO_CHAR(e.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       e.ACCOUNT_HEAD_CODE,
+                       e.ACCOUNT_NAME,
+                       e.PERSON_NAME,
+                       e.PURPOSE,
+                       e.AMOUNT,
+                       NVL(e.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       e.USERCODE,
+                       e.AUTHUSERCODE,
+                       TO_CHAR(e.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       TO_CHAR(e.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       e.INVOICE_NO,
+                       TO_CHAR(e.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       e.PARTY_CODE,
+                       e.PARTY_NAME,
+                       LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID) AS NARRATION
+                FROM CASHBANKENTRY e
+                LEFT JOIN CASHBANKENTRYDETAILS d
+                  ON d.CASHBANKENTRY_ID = e.ID
+                WHERE (
+                    e.USERCODE = :usercode
+                    OR (
+                        e.USERCODE IS NULL
+                        AND UPPER(TRIM(e.PERSON_NAME)) = UPPER(TRIM(:username))
+                    )
+                )
+                GROUP BY e.ID,
+                         e.VOUCHERDATE,
+                         e.ACCOUNT_HEAD_CODE,
+                         e.ACCOUNT_NAME,
+                         e.PERSON_NAME,
+                         e.PURPOSE,
+                         e.AMOUNT,
+                         e.ENTRY_SOURCE,
+                         e.USERCODE,
+                         e.AUTHUSERCODE,
+                         e.AUTHDATEANDTIME,
+                         e.ENTRYDATEANDTIME,
+                         e.INVOICE_NO,
+                         e.INVOICE_DATE,
+                         e.PARTY_CODE,
+                         e.PARTY_NAME
+                ORDER BY e.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """, {
+            "usercode": int(usercode or 0),
+            "username": str(username or "").strip(),
+            "limit": int(limit or 100)
+        })
+
+        rows = []
+
+        for row in cursor.fetchall():
+            rows.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": str(row[2] or ""),
+                "account_name": str(row[3] or ""),
+                "person_name": str(row[4] or ""),
+                "purpose": str(row[5] or ""),
+                "amount": float(row[6] or 0),
+                "entry_source": str(row[7] or "MANUAL"),
+                "usercode": row[8],
+                "authusercode": row[9],
+                "authenticated": row[9] is not None,
+                "authdateandtime": row[10] or "",
+                "entrydateandtime": row[11] or "",
+                "invoice_no": str(row[12] or ""),
+                "invoice_date": row[13] or "",
+                "party_code": str(row[14] or ""),
+                "party_name": str(row[15] or ""),
+                "narration": str(row[16] or "")
+            })
+
+        return {
+            "success": True,
+            "entries": rows,
+            "rows": rows,
+            "count": len(rows)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": [],
+            "rows": []
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def update_cash_voucher_entry(voucher_id, data, usercode=None, username=None):
+    conn = None
+    cursor = None
+
+    try:
+        voucher_id = int(voucher_id)
+        usercode = int(usercode or 0)
+        username = str(username or "").strip()
+
+        account_name = str(data.get("account_name") or data.get("account_head") or "").strip().upper()
+        account_head_code = str(data.get("account_head_code") or "").strip()
+
+        if account_name and not account_head_code:
+            account_head_code = _final_account_code_by_name(account_name)
+
+        if account_name and not _final_account_name_exists(account_name):
+            return {
+                "success": False,
+                "message": "Please select a valid Account Head from the list"
+            }
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE CASHBANKENTRY
+            SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
+                ACCOUNT_HEAD_CODE = :account_head_code,
+                ACCOUNT_NAME = :account_name,
+                PERSON_NAME = :person_name,
+                PURPOSE = :purpose,
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE
+                    WHEN :invoice_date IS NULL OR :invoice_date = '' THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
+            WHERE ID = :voucher_id
+              AND (
+                    USERCODE = :usercode
+                    OR (
+                        USERCODE IS NULL
+                        AND UPPER(TRIM(PERSON_NAME)) = UPPER(TRIM(:username))
+                    )
+                  )
+        """, {
+            "voucherdate": data.get("voucherdate"),
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": data.get("person_name"),
+            "purpose": data.get("purpose"),
+            "amount": float(data.get("amount") or 0),
+            "invoice_no": data.get("invoice_no") or "",
+            "invoice_date": data.get("invoice_date") or "",
+            "party_code": data.get("party_code") or "",
+            "party_name": data.get("party_name") or "",
+            "voucher_id": voucher_id,
+            "usercode": usercode,
+            "username": username
+        })
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return {
+                "success": False,
+                "message": "Voucher not found for current user"
+            }
+
+        cursor.execute("""
+            DELETE FROM CASHBANKENTRYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+        """, {"voucher_id": voucher_id})
+
+        details = data.get("details") or []
+
+        for detail in details:
+            narration = str(detail.get("narration") or "").strip()
+            item_count = detail.get("item_count") or detail.get("count") or None
+            sub_price = detail.get("sub_price") or None
+            total_price = detail.get("total_price") or None
+
+            if not narration and not item_count and not sub_price and not total_price:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYDETAILS (
+                    CASHBANKENTRY_ID,
+                    NARRATION,
+                    ITEM_COUNT,
+                    SUB_PRICE,
+                    TOTAL_PRICE
+                )
+                VALUES (
+                    :voucher_id,
+                    :narration,
+                    :item_count,
+                    :sub_price,
+                    :total_price
+                )
+            """, {
+                "voucher_id": voucher_id,
+                "narration": narration,
+                "item_count": item_count,
+                "sub_price": sub_price,
+                "total_price": total_price
+            })
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Voucher updated successfully",
+            "voucher_id": voucher_id,
+            "account_head_code": account_head_code
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# FINAL USER OR PERSON SCOPED VOUCHER DRAFT FILTER
+# Last definition wins.
+
+def _account_code_by_exact_name_final(account_name):
+    conn = None
+    cursor = None
+
+    try:
+        if not account_name:
+            return ""
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT accode
+            FROM accounts
+            WHERE UPPER(TRIM(name)) = UPPER(TRIM(:account_name))
+              AND ROWNUM = 1
+        """, {"account_name": str(account_name).strip()})
+
+        row = cursor.fetchone()
+        return str(row[0]) if row else ""
+
+    except Exception:
+        return ""
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def _account_exists_by_name_final(account_name):
+    conn = None
+    cursor = None
+
+    try:
+        if not account_name:
+            return False
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM accounts
+            WHERE UPPER(TRIM(name)) = UPPER(TRIM(:account_name))
+        """, {"account_name": str(account_name).strip()})
+
+        row = cursor.fetchone()
+        return bool(row and int(row[0] or 0) > 0)
+
+    except Exception:
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def list_cash_voucher_entries(limit=100, usercode=None, username=None):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT e.ID,
+                       TO_CHAR(e.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       e.ACCOUNT_HEAD_CODE,
+                       e.ACCOUNT_NAME,
+                       e.PERSON_NAME,
+                       e.PURPOSE,
+                       e.AMOUNT,
+                       NVL(e.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       e.USERCODE,
+                       e.AUTHUSERCODE,
+                       TO_CHAR(e.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       TO_CHAR(e.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       e.INVOICE_NO,
+                       TO_CHAR(e.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       e.PARTY_CODE,
+                       e.PARTY_NAME,
+                       LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID) AS NARRATION
+                FROM CASHBANKENTRY e
+                LEFT JOIN CASHBANKENTRYDETAILS d
+                  ON d.CASHBANKENTRY_ID = e.ID
+                WHERE (
+                    (:usercode > 0 AND e.USERCODE = :usercode)
+                    OR (
+                        TRIM(:username) IS NOT NULL
+                        AND UPPER(TRIM(e.PERSON_NAME)) = UPPER(TRIM(:username))
+                    )
+                )
+                GROUP BY e.ID,
+                         e.VOUCHERDATE,
+                         e.ACCOUNT_HEAD_CODE,
+                         e.ACCOUNT_NAME,
+                         e.PERSON_NAME,
+                         e.PURPOSE,
+                         e.AMOUNT,
+                         e.ENTRY_SOURCE,
+                         e.USERCODE,
+                         e.AUTHUSERCODE,
+                         e.AUTHDATEANDTIME,
+                         e.ENTRYDATEANDTIME,
+                         e.INVOICE_NO,
+                         e.INVOICE_DATE,
+                         e.PARTY_CODE,
+                         e.PARTY_NAME
+                ORDER BY e.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """, {
+            "usercode": int(usercode or 0),
+            "username": str(username or "").strip(),
+            "limit": int(limit or 100)
+        })
+
+        rows = []
+
+        for row in cursor.fetchall():
+            rows.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": str(row[2] or ""),
+                "account_name": str(row[3] or ""),
+                "person_name": str(row[4] or ""),
+                "purpose": str(row[5] or ""),
+                "amount": float(row[6] or 0),
+                "entry_source": str(row[7] or "MANUAL"),
+                "usercode": row[8],
+                "authusercode": row[9],
+                "authenticated": row[9] is not None,
+                "authdateandtime": row[10] or "",
+                "entrydateandtime": row[11] or "",
+                "invoice_no": str(row[12] or ""),
+                "invoice_date": row[13] or "",
+                "party_code": str(row[14] or ""),
+                "party_name": str(row[15] or ""),
+                "narration": str(row[16] or "")
+            })
+
+        return {
+            "success": True,
+            "entries": rows,
+            "rows": rows,
+            "count": len(rows)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": [],
+            "rows": [],
+            "count": 0
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def update_cash_voucher_entry(voucher_id, data, usercode=None, username=None):
+    conn = None
+    cursor = None
+
+    try:
+        voucher_id = int(voucher_id)
+        usercode = int(usercode or 0)
+        username = str(username or "").strip()
+
+        account_name = str(data.get("account_name") or data.get("account_head") or "").strip().upper()
+        account_head_code = str(data.get("account_head_code") or "").strip()
+
+        if account_name and not account_head_code:
+            account_head_code = _account_code_by_exact_name_final(account_name)
+
+        if account_name and not _account_exists_by_name_final(account_name):
+            return {
+                "success": False,
+                "message": "Please select a valid Account Head from the list"
+            }
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE CASHBANKENTRY
+            SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
+                ACCOUNT_HEAD_CODE = :account_head_code,
+                ACCOUNT_NAME = :account_name,
+                PERSON_NAME = :person_name,
+                PURPOSE = :purpose,
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE
+                    WHEN :invoice_date IS NULL OR :invoice_date = '' THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
+            WHERE ID = :voucher_id
+              AND (
+                    (:usercode > 0 AND USERCODE = :usercode)
+                    OR (
+                        TRIM(:username) IS NOT NULL
+                        AND UPPER(TRIM(PERSON_NAME)) = UPPER(TRIM(:username))
+                    )
+                  )
+        """, {
+            "voucherdate": data.get("voucherdate"),
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": data.get("person_name"),
+            "purpose": data.get("purpose"),
+            "amount": float(data.get("amount") or 0),
+            "invoice_no": data.get("invoice_no") or "",
+            "invoice_date": data.get("invoice_date") or "",
+            "party_code": data.get("party_code") or "",
+            "party_name": data.get("party_name") or "",
+            "voucher_id": voucher_id,
+            "usercode": usercode,
+            "username": username
+        })
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return {
+                "success": False,
+                "message": "Voucher not found for current user"
+            }
+
+        cursor.execute("""
+            DELETE FROM CASHBANKENTRYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+        """, {"voucher_id": voucher_id})
+
+        details = data.get("details") or []
+
+        for detail in details:
+            narration = str(detail.get("narration") or "").strip()
+            item_count = detail.get("item_count") or detail.get("count") or None
+            sub_price = detail.get("sub_price") or None
+            total_price = detail.get("total_price") or None
+
+            if not narration and not item_count and not sub_price and not total_price:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYDETAILS (
+                    CASHBANKENTRY_ID,
+                    NARRATION,
+                    ITEM_COUNT,
+                    SUB_PRICE,
+                    TOTAL_PRICE
+                )
+                VALUES (
+                    :voucher_id,
+                    :narration,
+                    :item_count,
+                    :sub_price,
+                    :total_price
+                )
+            """, {
+                "voucher_id": voucher_id,
+                "narration": narration,
+                "item_count": item_count,
+                "sub_price": sub_price,
+                "total_price": total_price
+            })
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Voucher updated successfully",
+            "voucher_id": voucher_id,
+            "account_head_code": account_head_code
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# STRICT USERCODE-ONLY VOUCHER DRAFT FILTER
+# Last definition wins. Do not use PERSON_NAME as login-user filter.
+
+def list_cash_voucher_entries(limit=100, usercode=None):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT e.ID,
+                       TO_CHAR(e.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       e.ACCOUNT_HEAD_CODE,
+                       e.ACCOUNT_NAME,
+                       e.PERSON_NAME,
+                       e.PURPOSE,
+                       e.AMOUNT,
+                       NVL(e.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       e.USERCODE,
+                       e.AUTHUSERCODE,
+                       TO_CHAR(e.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       TO_CHAR(e.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       e.INVOICE_NO,
+                       TO_CHAR(e.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       e.PARTY_CODE,
+                       e.PARTY_NAME,
+                       LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID) AS NARRATION
+                FROM CASHBANKENTRY e
+                LEFT JOIN CASHBANKENTRYDETAILS d
+                  ON d.CASHBANKENTRY_ID = e.ID
+                WHERE e.USERCODE = :usercode
+                GROUP BY e.ID,
+                         e.VOUCHERDATE,
+                         e.ACCOUNT_HEAD_CODE,
+                         e.ACCOUNT_NAME,
+                         e.PERSON_NAME,
+                         e.PURPOSE,
+                         e.AMOUNT,
+                         e.ENTRY_SOURCE,
+                         e.USERCODE,
+                         e.AUTHUSERCODE,
+                         e.AUTHDATEANDTIME,
+                         e.ENTRYDATEANDTIME,
+                         e.INVOICE_NO,
+                         e.INVOICE_DATE,
+                         e.PARTY_CODE,
+                         e.PARTY_NAME
+                ORDER BY e.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """, {
+            "usercode": int(usercode or 0),
+            "limit": int(limit or 100)
+        })
+
+        rows = []
+
+        for row in cursor.fetchall():
+            rows.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": str(row[2] or ""),
+                "account_name": str(row[3] or ""),
+                "person_name": str(row[4] or ""),
+                "purpose": str(row[5] or ""),
+                "amount": float(row[6] or 0),
+                "entry_source": str(row[7] or "MANUAL"),
+                "usercode": row[8],
+                "authusercode": row[9],
+                "authenticated": row[9] is not None,
+                "authdateandtime": row[10] or "",
+                "entrydateandtime": row[11] or "",
+                "invoice_no": str(row[12] or ""),
+                "invoice_date": row[13] or "",
+                "party_code": str(row[14] or ""),
+                "party_name": str(row[15] or ""),
+                "narration": str(row[16] or "")
+            })
+
+        return {
+            "success": True,
+            "entries": rows,
+            "rows": rows,
+            "count": len(rows)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": [],
+            "rows": [],
+            "count": 0
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def update_cash_voucher_entry(voucher_id, data, usercode=None):
+    conn = None
+    cursor = None
+
+    try:
+        voucher_id = int(voucher_id)
+        usercode = int(usercode or 0)
+
+        account_name = str(data.get("account_name") or data.get("account_head") or "").strip().upper()
+        account_head_code = str(data.get("account_head_code") or "").strip()
+
+        if account_name and not account_head_code:
+            account_head_code = _account_code_by_exact_name_final(account_name)
+
+        if account_name and not _account_exists_by_name_final(account_name):
+            return {
+                "success": False,
+                "message": "Please select a valid Account Head from the list"
+            }
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE CASHBANKENTRY
+            SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
+                ACCOUNT_HEAD_CODE = :account_head_code,
+                ACCOUNT_NAME = :account_name,
+                PERSON_NAME = :person_name,
+                PURPOSE = :purpose,
+                AMOUNT = :amount,
+                INVOICE_NO = :invoice_no,
+                INVOICE_DATE = CASE
+                    WHEN :invoice_date IS NULL OR :invoice_date = '' THEN NULL
+                    ELSE TO_DATE(:invoice_date, 'YYYY-MM-DD')
+                END,
+                PARTY_CODE = :party_code,
+                PARTY_NAME = :party_name
+            WHERE ID = :voucher_id
+              AND USERCODE = :usercode
+        """, {
+            "voucherdate": data.get("voucherdate"),
+            "account_head_code": account_head_code,
+            "account_name": account_name,
+            "person_name": data.get("person_name"),
+            "purpose": data.get("purpose"),
+            "amount": float(data.get("amount") or 0),
+            "invoice_no": data.get("invoice_no") or "",
+            "invoice_date": data.get("invoice_date") or "",
+            "party_code": data.get("party_code") or "",
+            "party_name": data.get("party_name") or "",
+            "voucher_id": voucher_id,
+            "usercode": usercode
+        })
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return {
+                "success": False,
+                "message": "Voucher not found for current login user"
+            }
+
+        cursor.execute("""
+            DELETE FROM CASHBANKENTRYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+        """, {
+            "voucher_id": voucher_id
+        })
+
+        details = data.get("details") or []
+
+        for detail in details:
+            narration = str(detail.get("narration") or "").strip()
+            item_count = detail.get("item_count") or detail.get("count") or None
+            sub_price = detail.get("sub_price") or None
+            total_price = detail.get("total_price") or None
+
+            if not narration and not item_count and not sub_price and not total_price:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYDETAILS (
+                    CASHBANKENTRY_ID,
+                    NARRATION,
+                    ITEM_COUNT,
+                    SUB_PRICE,
+                    TOTAL_PRICE
+                )
+                VALUES (
+                    :voucher_id,
+                    :narration,
+                    :item_count,
+                    :sub_price,
+                    :total_price
+                )
+            """, {
+                "voucher_id": voucher_id,
+                "narration": narration,
+                "item_count": item_count,
+                "sub_price": sub_price,
+                "total_price": total_price
+            })
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Voucher updated successfully",
+            "voucher_id": voucher_id,
+            "account_head_code": account_head_code
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+# FINAL OVERRIDE: show all voucher drafts regardless of usercode
+def list_cash_voucher_entries(limit=100, usercode=None, username=None):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM (
+                SELECT e.ID,
+                       TO_CHAR(e.VOUCHERDATE, 'YYYY-MM-DD') AS VOUCHERDATE,
+                       e.ACCOUNT_HEAD_CODE,
+                       e.ACCOUNT_NAME,
+                       e.PERSON_NAME,
+                       e.PURPOSE,
+                       e.AMOUNT,
+                       NVL(e.ENTRY_SOURCE, 'MANUAL') AS ENTRY_SOURCE,
+                       e.USERCODE,
+                       e.AUTHUSERCODE,
+                       TO_CHAR(e.AUTHDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS AUTHDATEANDTIME,
+                       TO_CHAR(e.ENTRYDATEANDTIME, 'YYYY-MM-DD HH24:MI:SS') AS ENTRYDATEANDTIME,
+                       e.INVOICE_NO,
+                       TO_CHAR(e.INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
+                       e.PARTY_CODE,
+                       e.PARTY_NAME,
+                       LISTAGG(d.NARRATION, CHR(10)) WITHIN GROUP (ORDER BY d.ID) AS NARRATION
+                FROM CASHBANKENTRY e
+                LEFT JOIN CASHBANKENTRYDETAILS d
+                  ON d.CASHBANKENTRY_ID = e.ID
+                GROUP BY e.ID,
+                         e.VOUCHERDATE,
+                         e.ACCOUNT_HEAD_CODE,
+                         e.ACCOUNT_NAME,
+                         e.PERSON_NAME,
+                         e.PURPOSE,
+                         e.AMOUNT,
+                         e.ENTRY_SOURCE,
+                         e.USERCODE,
+                         e.AUTHUSERCODE,
+                         e.AUTHDATEANDTIME,
+                         e.ENTRYDATEANDTIME,
+                         e.INVOICE_NO,
+                         e.INVOICE_DATE,
+                         e.PARTY_CODE,
+                         e.PARTY_NAME
+                ORDER BY e.ID DESC
+            )
+            WHERE ROWNUM <= :limit
+        """, {
+            "limit": int(limit or 100)
+        })
+
+        rows = []
+
+        for row in cursor.fetchall():
+            rows.append({
+                "id": row[0],
+                "voucherdate": row[1],
+                "account_head_code": str(row[2] or ""),
+                "account_name": str(row[3] or ""),
+                "person_name": str(row[4] or ""),
+                "purpose": str(row[5] or ""),
+                "amount": float(row[6] or 0),
+                "entry_source": str(row[7] or "MANUAL"),
+                "usercode": row[8],
+                "authusercode": row[9],
+                "authenticated": row[9] is not None,
+                "authdateandtime": row[10] or "",
+                "entrydateandtime": row[11] or "",
+                "invoice_no": str(row[12] or ""),
+                "invoice_date": row[13] or "",
+                "party_code": str(row[14] or ""),
+                "party_name": str(row[15] or ""),
+                "narration": str(row[16] or "")
+            })
+
+        return {
+            "success": True,
+            "entries": rows,
+            "rows": rows,
+            "count": len(rows)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "entries": [],
+            "rows": [],
+            "count": 0
+        }
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

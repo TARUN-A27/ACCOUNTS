@@ -1,609 +1,534 @@
 {% extends "base.html" %}
 
-{% block title %}Voucher Draft
-<style>
-/* FINAL OVERRIDE: voucher signature labels near bottom line */
-.print-signatures {
-    align-items: stretch !important;
-}
-
-.print-sign-cell {
-    display: flex !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    text-align: center !important;
-    vertical-align: bottom !important;
-    padding: 34px 6px 6px 6px !important;
-    line-height: 1.05 !important;
-    min-height: 58px !important;
-    box-sizing: border-box !important;
-}
-</style>
-
-{% endblock %}
-
 {% block content %}
 <style>
-    .draft-page {
-        max-width: 1250px;
-        margin: 0 auto;
-    }
+/* VOUCHER DRAFT CLEAN REBUILD FINAL */
 
-    .page-title {
-        font-size: 24px;
-        font-weight: 800;
-        color: #111827;
-        margin-bottom: 4px;
-    }
-
-    .page-subtitle {
-        font-size: 14px;
-        color: #64748b;
-        margin-bottom: 18px;
-    }
-
-    .draft-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        overflow: hidden;
-    }
-
-    .draft-toolbar {
-        padding: 16px;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .filter-grid {
-        display: grid;
-        grid-template-columns: 1.2fr 1.4fr 1fr 1fr 0.8fr auto auto auto;
-        gap: 10px;
-        align-items: end;
-    }
-
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-
-    .filter-label {
-        font-size: 12px;
-        font-weight: 700;
-        color: #475569;
-    }
-
-    .filter-control {
-        height: 38px;
-        border: 1px solid #cbd5e1;
-        border-radius: 9px;
-        padding: 7px 10px;
-        font-size: 13px;
-        background: #ffffff;
-    }
-
-    @media (max-width: 1100px) {
-        .filter-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-    }
-
-    .btn {
-        border: none;
-        border-radius: 9px;
-        padding: 8px 12px;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-    }
-
-    .btn-primary {
-        background: #020617;
-        color: #ffffff;
-    }
-
-    .btn-secondary {
-        background: #f1f5f9;
-        color: #020617;
-    }
-
-    .btn-success {
-        background: #16a34a;
-        color: #ffffff;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th {
-        text-align: left;
-        font-size: 12px;
-        color: #64748b;
-        text-transform: uppercase;
-        padding: 12px 14px;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    td {
-        padding: 13px 14px;
-        border-bottom: 1px solid #eef2f7;
-        font-size: 14px;
-        vertical-align: top;
-    }
-
-    .modal-backdrop-custom {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.55);
-        z-index: 9999;
-        padding: 30px;
-        overflow-y: auto;
-    }
-
-    .modal-box {
-        background: white;
-        max-width: 850px;
-        margin: 0 auto;
-        border-radius: 14px;
-        padding: 22px;
-    }
-
-    .modal-title {
-        font-size: 20px;
-        font-weight: 800;
-        margin-bottom: 16px;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .form-label {
-        font-size: 13px;
-        font-weight: 700;
-    }
-
-    .form-control {
-        height: 40px;
-        border: 1px solid #cbd5e1;
-        border-radius: 9px;
-        padding: 8px 10px;
-    }
-
-    textarea.form-control {
-        height: 90px;
-    }
-
-    .full-width {
-        grid-column: 1 / -1;
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 18px;
-    }
-
-    .preview-box {
-        border: 2px solid #1d4ed8;
-        color: #1d4ed8;
-        padding: 22px;
-        font-family: Arial, sans-serif;
-    }
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    .print-sign-cell:last-child {
-        border-right: none;
-    }
-
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-
-        #previewModal,
-        #previewModal * {
-            visibility: visible;
-        }
-
-        #previewModal {
-            display: block !important;
-            position: absolute;
-            inset: 0;
-            background: white;
-            padding: 0;
-        }
-
-        .modal-box {
-            max-width: none;
-            box-shadow: none;
-            border-radius: 0;
-        }
-
-        .modal-actions,
-        .modal-title {
-            display: none;
-        }
-    }
-
-    .status-ok {
-        display: inline-block;
-        color: #166534;
-        background: #dcfce7;
-        border: 1px solid #86efac;
-        padding: 5px 8px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.2;
-    }
-
-    .status-pending {
-        display: inline-block;
-        color: #92400e;
-        background: #fef3c7;
-        border: 1px solid #fcd34d;
-        padding: 5px 8px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 700;
-    }
-
-
-.print-box {
-    width: 900px;
-    min-height: 520px;
+.draft-page {
+    width: min(1180px, calc(100vw - 36px));
     margin: 0 auto;
+}
+
+.draft-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.draft-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.04em;
+}
+
+.draft-subtitle {
+    color: #52637a;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.draft-card {
     background: #ffffff;
-    border: 2px solid #1d4ed8;
-    color: #1d4ed8;
-    padding: 18px 22px 0 22px;
-    font-family: Arial, sans-serif;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    margin-bottom: 18px;
+}
+
+.draft-card-body {
+    padding: 16px;
+}
+
+.draft-filters {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.5fr) minmax(180px, 1fr) 150px 135px 135px 110px 90px;
+    gap: 12px;
+    align-items: end;
+}
+
+.draft-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.draft-input,
+.draft-select {
+    width: 100%;
+    height: 40px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 700;
     box-sizing: border-box;
 }
 
-.print-company {
-    text-align: center;
-    font-size: 24px;
-    font-weight: 800;
-    line-height: 1.1;
-    margin-bottom: 2px;
-}
-
-.print-address {
-    text-align: center;
+.draft-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
     font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    line-height: 1.2;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
-.print-title {
-    text-align: center;
-    display: block;
-    width: fit-content;
-    margin: 0 auto 12px auto;
-    border: 2px solid #1d4ed8;
-    padding: 4px 12px;
-    font-size: 17px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
+.draft-btn-dark {
+    background: #020617;
+    color: #ffffff;
 }
 
-.print-top-row {
-    display: grid;
-    grid-template-columns: 1fr 240px;
-    gap: 12px;
-    margin-bottom: 0;
-    font-size: 15px;
-    border-top: 1.5px solid #1d4ed8;
-    border-bottom: 1.5px solid #1d4ed8;
+.draft-btn-blue {
+    background: #2563eb;
+    color: #ffffff;
 }
 
-.print-line {
-    border-bottom: 1.5px solid #1d4ed8;
-    min-height: 40px;
-    padding: 0;
-    font-size: 15px;
-    display: grid;
-    grid-template-columns: 190px 1fr;
-    gap: 0;
+.draft-btn-green {
+    background: #16a34a;
+    color: #ffffff;
 }
 
-.print-label {
-    font-weight: 800;
-    border-right: 1.5px solid #1d4ed8;
-    padding: 10px 10px;
-    display: flex;
-    align-items: center;
+.draft-btn-light {
+    background: #f1f5f9;
+    color: #0f172a;
 }
 
-.print-value {
-    padding: 10px 12px;
-    display: flex;
-    align-items: center;
-    white-space: pre-wrap;
-}
-
-.print-purpose {
-    min-height: 120px;
-}
-
-.print-amount-row {
-    display: grid;
-    grid-template-columns: 1fr 170px;
-    border-bottom: 1.5px solid #1d4ed8;
-    min-height: 58px;
-}
-
-.print-amount-words {
-    padding: 10px 10px;
-    border-right: 1.5px solid #1d4ed8;
-    font-size: 15px;
-}
-
-.print-amount-value {
-    padding: 10px 10px;
-    font-size: 15px;
-    font-weight: 800;
-}
-
-.print-signatures {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    min-height: 84px;
-    border-bottom: 1.5px solid #1d4ed8;
-}
-
-.print-sign-cell {
-    border-right: 1.5px solid #1d4ed8;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 0 6px 10px;
-    font-size: 12px;
-    font-weight: 800;
-    text-align: center;
-}
-
-.print-sign-cell:last-child {
-    border-right: none;
-}
-
-
-/* Edit narration details */
-.details-table-wrap {
+.draft-table-wrap {
     width: 100%;
-    overflow-x: auto;
-    border: 1px solid #dbe3ef;
-    border-radius: 14px;
+    overflow-x: hidden;
+}
+
+.draft-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.draft-table th,
+.draft-table td {
+    padding: 11px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+    font-size: 12px;
+    line-height: 1.25;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+.draft-table th {
+    color: #334155;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    background: #f8fafc;
+}
+
+.draft-table th:nth-child(1),
+.draft-table td:nth-child(1) { width: 80px; }
+
+.draft-table th:nth-child(2),
+.draft-table td:nth-child(2) { width: 145px; }
+
+.draft-table th:nth-child(3),
+.draft-table td:nth-child(3) { width: 105px; }
+
+.draft-table th:nth-child(4),
+.draft-table td:nth-child(4) { width: 190px; }
+
+.draft-table th:nth-child(5),
+.draft-table td:nth-child(5) { width: 170px; }
+
+.draft-table th:nth-child(6),
+.draft-table td:nth-child(6) { width: 80px; text-align: right; font-weight: 900; }
+
+.draft-table th:nth-child(7),
+.draft-table td:nth-child(7) { width: 115px; }
+
+.draft-table th:nth-child(8),
+.draft-table td:nth-child(8) { width: 105px; }
+
+.draft-table th:nth-child(9),
+.draft-table td:nth-child(9) { width: 120px; }
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-auth {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.action-stack {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.empty-row {
+    padding: 28px !important;
+    text-align: center;
+    color: #64748b !important;
+    font-weight: 800;
+}
+
+.modal-backdrop-final {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow-y: auto;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.edit-modal-final {
+    width: min(900px, calc(100vw - 36px));
     background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+}
+
+.edit-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 18px;
+}
+
+.edit-grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.edit-field {
+    margin-bottom: 14px;
+}
+
+.edit-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    color: #334155;
+    margin-bottom: 7px;
+}
+
+.edit-field input,
+.edit-field textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    box-sizing: border-box;
+}
+
+.edit-field textarea {
+    height: 90px;
+    resize: vertical;
+}
+
+.edit-account-line {
+    display: grid;
+    grid-template-columns: minmax(420px, 1fr) 150px 150px;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 14px;
+}
+
+.edit-account-check {
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.edit-account-check input {
+    width: 15px;
+    height: 15px;
+}
+
+.details-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    overflow: hidden;
     margin-top: 8px;
 }
 
 .details-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.details-table th,
+.details-table td {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px;
+    font-size: 12px;
 }
 
 .details-table th {
     background: #f8fafc;
     color: #334155;
-    font-size: 12px;
-    font-weight: 800;
-    text-align: left;
-    padding: 10px;
-    border-bottom: 1px solid #e2e8f0;
+    font-weight: 900;
+    text-transform: uppercase;
 }
 
-.details-table td {
-    padding: 8px;
-    border-bottom: 1px solid #eef2f7;
-}
-
-.detail-input {
+.details-table input {
     width: 100%;
+    height: 36px;
     border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 9px 10px;
-    font-size: 13px;
-    outline: none;
+    border-radius: 9px;
+    padding: 0 10px;
     box-sizing: border-box;
+    font-size: 13px;
+    font-weight: 700;
 }
 
-.detail-remove-btn {
+.details-remove {
+    width: 34px;
+    height: 34px;
     border: none;
+    border-radius: 9px;
     background: #fee2e2;
     color: #991b1b;
-    border-radius: 10px;
-    padding: 8px 10px;
+    font-weight: 900;
     cursor: pointer;
-    font-weight: 800;
 }
 
-.detail-add-btn {
-    margin-top: 10px;
-}
-
-
-/* Voucher draft table alignment fix */
-.draft-table {
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-}
-
-.draft-table th,
-.draft-table td {
-    padding: 12px 10px;
-    border-bottom: 1px solid #e5e7eb;
-    vertical-align: top;
-    text-align: left;
-    font-size: 13px;
-    line-height: 1.35;
-    word-break: break-word;
-}
-
-.draft-table th {
-    color: #526987;
-    font-size: 12px;
-    font-weight: 800;
-    background: #ffffff;
-}
-
-.draft-action-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.draft-action-cell .btn {
-    width: fit-content;
-    min-width: 70px;
-    padding: 7px 10px;
-    font-size: 12px;
-}
-
-.narration-lines {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-
-/* Clean voucher preview narration layout */
-.preview-box .print-line {
+.details-total-row {
     display: grid;
-    grid-template-columns: 170px 1fr;
-    border-bottom: 1.5px solid #1d4ed8;
-    min-height: 50px;
-}
-
-.preview-box .print-label {
-    border-right: 1.5px solid #1d4ed8;
-    padding: 10px;
-    font-weight: 800;
-    color: #1d4ed8;
-    display: flex;
-    align-items: center;
-}
-
-.preview-box .print-line > div:last-child {
-    padding: 10px;
-    color: #1d4ed8;
-    white-space: pre-wrap;
-}
-
-.preview-box .print-purpose {
-    min-height: 95px;
-}
-
-.preview-box .preview-narration-line {
-    min-height: 70px;
-}
-
-.preview-box .preview-narration-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.preview-box .preview-narration-item {
-    line-height: 1.35;
-}
-
-
-/* Edit details overall total */
-.edit-details-grand-total-row {
-    display: grid;
-    grid-template-columns: 42% 14% 18% 18% 8%;
-    gap: 0;
-    border: 1px solid #dbe3ef;
-    border-top: none;
-    border-radius: 0 0 14px 14px;
-    overflow: hidden;
+    grid-template-columns: 1fr 160px 160px 58px;
+    border-top: 1px solid #e5e7eb;
     background: #f8fafc;
 }
 
-.edit-details-grand-total-label {
-    grid-column: 1 / 4;
-    padding: 11px 12px;
+.details-total-row div {
+    padding: 12px;
     font-size: 13px;
     font-weight: 900;
-    text-align: right;
-    color: #0f172a;
 }
 
-.edit-details-grand-total-value {
-    padding: 11px 12px;
-    font-size: 13px;
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.preview-card-final {
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.preview-title-final {
+    text-align: center;
+    font-size: 17px;
     font-weight: 900;
-    color: #0f172a;
-    border-left: 1px solid #dbe3ef;
+    margin-bottom: 14px;
 }
 
-.edit-details-grand-total-empty {
-    border-left: 1px solid #dbe3ef;
-}
-
-
-/* Voucher preview details table */
-.preview-details-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: #1d4ed8;
+.preview-row-final {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f1f5f9;
     font-size: 13px;
 }
 
-.preview-details-table th,
-.preview-details-table td {
-    border: 1px solid #1d4ed8;
-    padding: 5px 6px;
-    text-align: left;
-    vertical-align: top;
+.preview-row-final strong {
+    color: #334155;
 }
 
-.preview-details-table th {
-    font-weight: 800;
+@media (max-width: 950px) {
+    .draft-filters,
+    .edit-grid-two,
+    .edit-account-line {
+        grid-template-columns: 1fr;
+    }
+
+    .draft-table th,
+    .draft-table td {
+        font-size: 11px;
+        padding: 8px 6px;
+    }
 }
 
+
+/* CASH VOUCHER ENTRY PREVIEW FORMAT COPIED TO DRAFT */
+.preview-card {
+        margin-top: 22px;
+        display: none;
+    }
+
+.print-box {
+        width: 900px;
+        min-height: 520px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 2px solid #1d4ed8;
+        color: #1d4ed8;
+        padding: 18px 22px 0 22px;
+        font-family: Arial, sans-serif;
+        box-sizing: border-box;
+    }
+
+.print-company {
+        text-align: center;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 2px;
+    }
+
+.print-address {
+        text-align: center;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+
+.print-title {
+        text-align: center;
+        display: block;
+        width: fit-content;
+        margin: 0 auto 12px auto;
+        border: 2px solid #1d4ed8;
+        padding: 4px 12px;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+.print-top-row {
+        display: grid;
+        grid-template-columns: 1fr 240px;
+        gap: 12px;
+        margin-bottom: 0;
+        font-size: 15px;
+        border-top: 1.5px solid #1d4ed8;
+        border-bottom: 1.5px solid #1d4ed8;
+    }
+
+.print-line {
+        border-bottom: 1.5px solid #1d4ed8;
+        min-height: 40px;
+        padding: 0;
+        font-size: 15px;
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 0;
+    }
+
+.print-label {
+        font-weight: 800;
+        border-right: 1.5px solid #1d4ed8;
+        padding: 10px 10px;
+        display: flex;
+        align-items: center;
+    }
+
+.print-value {
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        white-space: pre-wrap;
+    }
+
+.print-purpose {
+        min-height: 120px;
+    }
+
+.print-amount-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 210px;
+        border-bottom: 1.5px solid #1d4ed8;
+    }
+
+.print-amount-words {
+        min-height: 44px;
+        padding: 8px;
+        border-right: 1.5px solid #1d4ed8;
+    }
+
+.print-amount-value {
+        min-height: 44px;
+        padding: 8px;
+    }
+
+.print-signatures {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        border-top: 1.5px solid #1d4ed8;
+        margin-top: 28px;
+    }
+
+.print-sign-cell {
+        min-height: 82px;
+        border-right: 1.5px solid #1d4ed8;
+        padding: 8px;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+.print-sign-cell:last-child {
+        border-right: none;
+    }
+
+.print-box {
+        width: 900px;
+        min-height: 520px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 2px solid #1d4ed8;
+        color: #1d4ed8;
+        padding: 18px 22px 0 22px;
+        font-family: Arial, sans-serif;
+        box-sizing: border-box;
+    }
 
 /* Final cash voucher preview details table format */
 .preview-details-table {
@@ -629,8 +554,6 @@
     min-height: 75px;
 }
 
-
-
 /* FINAL VOUCHER GAP FIX */
 #printPreview.preview-card {
     padding: 42px 72px 56px 72px !important;
@@ -647,12 +570,6 @@
     box-sizing: border-box !important;
 }
 
-#previewModal .modal-box {
-    max-width: 940px !important;
-    padding: 42px !important;
-    box-sizing: border-box !important;
-}
-
 #previewModal .preview-box,
 .preview-box {
     width: 760px !important;
@@ -662,39 +579,7 @@
     box-sizing: border-box !important;
 }
 
-@media print {
-    @page {
-        size: A4 portrait;
-        margin: 16mm 14mm !important;
-    }
-
-    body {
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-    }
-
-    #printPreview {
-        display: block !important;
-        position: static !important;
-        left: auto !important;
-        top: auto !important;
-        width: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-        box-sizing: border-box !important;
-    }
-
-    #previewModal {
-        position: static !important;
-        inset: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-    }
-
-    #printPreview .print-box,
+#printPreview .print-box,
     #previewModal .preview-box,
     .preview-box {
         width: 170mm !important;
@@ -703,15 +588,6 @@
         padding: 7mm 7mm 3mm 7mm !important;
         box-sizing: border-box !important;
     }
-
-    .modal-box {
-        max-width: none !important;
-        padding: 0 !important;
-        margin: 0 auto !important;
-        box-shadow: none !important;
-    }
-}
-
 
 /* FINAL FIX: fill inner voucher line gaps */
 .print-box,
@@ -747,8 +623,7 @@
     margin-bottom: 0 !important;
 }
 
-@media print {
-    .print-top-row,
+.print-top-row,
     .print-line,
     .print-amount-row,
     .print-signatures {
@@ -757,247 +632,1143 @@
         width: calc(100% + 14mm) !important;
     }
 
-    .print-top-row > div:first-child,
+.print-top-row > div:first-child,
     .print-line > .print-label,
     .print-amount-words,
     .print-sign-cell:first-child {
         padding-left: 7mm !important;
     }
 
-    .print-top-row > div:last-child,
+.print-top-row > div:last-child,
     .print-line > .print-value,
     .print-amount-value,
     .print-sign-cell:last-child {
         padding-right: 7mm !important;
     }
+
+#previewContentFinal.preview-card-final {
+    border: none !important;
+    padding: 0 !important;
+}
+
+#previewContentFinal .print-box {
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+#previewContentFinal .preview-details-table {
+    width: 100% !important;
 }
 
 
 
-/* VOUCHER DRAFT DETAILS TABLE KEEP FIX */
-.draft-final-details-row .print-value,
-.draft-final-details-row > div:last-child {
+/* VOUCHER DRAFT PREVIEW ALIGNMENT FIX FINAL */
+#previewModalFinal {
+    padding: 22px 12px !important;
     align-items: flex-start !important;
 }
 
-.draft-final-details-row .preview-details-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: #1d4ed8;
-    font-size: 13px;
+#previewModalFinal .edit-modal-final {
+    width: min(980px, calc(100vw - 36px)) !important;
+    max-width: 980px !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
 }
 
-.draft-final-details-row .preview-details-table th,
-.draft-final-details-row .preview-details-table td {
-    border: 1px solid #1d4ed8;
-    padding: 5px 6px;
-    text-align: left;
-    vertical-align: top;
+#previewContentFinal {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
 }
 
-.draft-final-details-row .preview-details-table th {
-    font-weight: 800;
+#previewContentFinal .print-box {
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+#previewContentFinal .print-top-row,
+#previewContentFinal .print-line,
+#previewContentFinal .print-amount-row,
+#previewContentFinal .print-signatures {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .print-value,
+#previewContentFinal .print-label,
+#previewContentFinal .print-amount-words,
+#previewContentFinal .print-amount-value,
+#previewContentFinal .print-sign-cell {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+}
+
+#previewContentFinal .print-value {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+#previewContentFinal .preview-details-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .preview-details-table th,
+#previewContentFinal .preview-details-table td {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .preview-details-table th:nth-child(1),
+#previewContentFinal .preview-details-table td:nth-child(1) {
+    width: 42% !important;
+}
+
+#previewContentFinal .preview-details-table th:nth-child(2),
+#previewContentFinal .preview-details-table td:nth-child(2) {
+    width: 14% !important;
+}
+
+#previewContentFinal .preview-details-table th:nth-child(3),
+#previewContentFinal .preview-details-table td:nth-child(3) {
+    width: 22% !important;
+}
+
+#previewContentFinal .preview-details-table th:nth-child(4),
+#previewContentFinal .preview-details-table td:nth-child(4) {
+    width: 22% !important;
+}
+
+#previewModalFinal .modal-actions {
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 18px auto 0 auto !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 760px) {
+    #previewModalFinal .edit-modal-final {
+        width: calc(100vw - 20px) !important;
+        padding: 14px !important;
+    }
+
+    #previewContentFinal .print-box {
+        font-size: 11px !important;
+    }
+
+    #previewContentFinal .print-signatures {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
 }
 
 
-/* Final voucher signature alignment */
-.print-sign-cell {
-    align-items: flex-end !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding-top: 36px !important;
-    padding-bottom: 7px !important;
+
+/* VOUCHER DRAFT PREVIEW COMPACT SPACING FINAL */
+#previewContentFinal .print-box {
+    padding: 16px !important;
+}
+
+#previewContentFinal .print-company {
+    font-size: 22px !important;
+    margin-bottom: 2px !important;
     line-height: 1.1 !important;
-    vertical-align: bottom !important;
+}
+
+#previewContentFinal .print-address {
+    font-size: 12px !important;
+    margin-bottom: 7px !important;
+    line-height: 1.1 !important;
+}
+
+#previewContentFinal .print-title {
+    font-size: 17px !important;
+    margin: 6px auto 10px auto !important;
+    padding: 4px 12px !important;
+    line-height: 1.1 !important;
+}
+
+#previewContentFinal .print-top-row,
+#previewContentFinal .print-line,
+#previewContentFinal .print-amount-row {
+    min-height: 0 !important;
+}
+
+#previewContentFinal .print-top-row > div,
+#previewContentFinal .print-label,
+#previewContentFinal .print-value,
+#previewContentFinal .print-amount-words,
+#previewContentFinal .print-amount-value {
+    padding: 7px 10px !important;
+    min-height: 0 !important;
+    line-height: 1.15 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+#previewContentFinal .print-purpose .print-label,
+#previewContentFinal .print-purpose .print-value {
+    min-height: 48px !important;
+    height: auto !important;
+}
+
+#previewContentFinal .preview-details-row .print-label,
+#previewContentFinal .preview-details-row .print-value {
+    min-height: 0 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+#previewContentFinal .preview-details-table th,
+#previewContentFinal .preview-details-table td {
+    padding: 4px 7px !important;
+    line-height: 1.15 !important;
+    height: auto !important;
+}
+
+#previewContentFinal .print-amount-row {
+    grid-template-columns: 1fr 160px !important;
+}
+
+#previewContentFinal .print-signatures {
+    margin-top: 20px !important;
+}
+
+#previewContentFinal .print-sign-cell {
+    min-height: 64px !important;
+    padding: 44px 5px 7px 5px !important;
+    line-height: 1.1 !important;
+}
+
+
+
+/* VOUCHER DRAFT PREVIEW STRETCH LINES FINAL */
+#previewModalFinal .edit-modal-final {
+    width: min(1100px, calc(100vw - 28px)) !important;
+    max-width: 1100px !important;
+    padding: 24px !important;
+    overflow: hidden !important;
+}
+
+#previewContentFinal {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+#previewContentFinal .print-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .print-company,
+#previewContentFinal .print-address,
+#previewContentFinal .print-title {
+    width: fit-content !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+#previewContentFinal .print-top-row,
+#previewContentFinal .print-line,
+#previewContentFinal .print-amount-row,
+#previewContentFinal .print-signatures {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .print-line {
+    grid-template-columns: 210px minmax(0, 1fr) !important;
+}
+
+#previewContentFinal .preview-details-row {
+    grid-template-columns: 210px minmax(0, 1fr) !important;
+}
+
+#previewContentFinal .print-amount-row {
+    grid-template-columns: minmax(0, 1fr) 210px !important;
+}
+
+#previewContentFinal .print-label,
+#previewContentFinal .print-value,
+#previewContentFinal .print-amount-words,
+#previewContentFinal .print-amount-value {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+}
+
+#previewContentFinal .print-value {
+    width: 100% !important;
+    overflow-wrap: anywhere !important;
+}
+
+#previewContentFinal .preview-details-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+}
+
+#previewContentFinal .print-signatures {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+
+#previewModalFinal .modal-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+
+
+/* VOUCHER DRAFT TRUE LINE GAP FILL FINAL */
+/* Fill internal voucher lines to the print-box border, not just content padding */
+#previewContentFinal .print-box {
+    width: 900px !important;
+    max-width: 100% !important;
+    padding: 16px 16px 0 16px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .print-top-row,
+#previewContentFinal .print-line,
+#previewContentFinal .print-amount-row,
+#previewContentFinal .print-signatures {
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    width: calc(100% + 32px) !important;
+    max-width: calc(100% + 32px) !important;
+    box-sizing: border-box !important;
+}
+
+#previewContentFinal .print-top-row > div:first-child,
+#previewContentFinal .print-line > .print-label,
+#previewContentFinal .print-amount-words,
+#previewContentFinal .print-sign-cell:first-child {
+    padding-left: 16px !important;
+}
+
+#previewContentFinal .print-top-row > div:last-child,
+#previewContentFinal .print-line > .print-value,
+#previewContentFinal .print-amount-value,
+#previewContentFinal .print-sign-cell:last-child {
+    padding-right: 16px !important;
+}
+
+#previewContentFinal .print-purpose {
+    min-height: 48px !important;
+}
+
+#previewContentFinal .preview-details-row {
+    min-height: 0 !important;
+}
+
+#previewContentFinal .preview-details-row .print-value {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+#previewContentFinal .print-signatures {
+    margin-top: 18px !important;
+    margin-bottom: 0 !important;
+}
+
+#previewContentFinal .print-sign-cell {
+    min-height: 66px !important;
+    padding-top: 44px !important;
 }
 
 </style>
 
 <div class="draft-page">
-    <div class="page-title">Voucher Draft</div>
-    <div class="page-subtitle">Saved cash voucher draft entries. You can edit or preview voucher format.</div>
+    <div class="draft-header">
+        <div>
+            <div class="draft-title">Voucher Draft</div>
+            <div class="draft-subtitle">Review, edit, and preview your cash voucher draft entries.</div>
+        </div>
+        <button class="draft-btn draft-btn-light" onclick="loadDrafts()">Refresh</button>
+    </div>
 
     <div class="draft-card">
-        <div class="draft-toolbar">
-            <div class="filter-grid">
-                <div class="filter-group">
-                    <label class="filter-label">Search</label>
-                    <input id="draftSearch" class="filter-control" placeholder="Voucher no, person, purpose" oninput="applyDraftFilters()">
+        <div class="draft-card-body">
+            <div class="draft-filters">
+                <div>
+                    <label class="draft-label">Search</label>
+                    <input id="draftSearch" class="draft-input" placeholder="Search person, purpose, amount..." oninput="applyDraftFilters()">
                 </div>
 
-                <div class="filter-group">
-                    <label class="filter-label">Account Head</label>
-                    <input id="accountFilter" class="filter-control" list="accountFilterList" placeholder="Search account head" oninput="applyDraftFilters()">
-                    <datalist id="accountFilterList"></datalist>
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label">From Date</label>
-                    <input id="fromDateFilter" type="date" class="filter-control" onchange="applyDraftFilters()">
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label">To Date</label>
-                    <input id="toDateFilter" type="date" class="filter-control" onchange="applyDraftFilters()">
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label">Rows</label>
-                    <select id="rowLimitFilter" class="filter-control" onchange="applyDraftFilters()">
-                        <option value="10" selected>10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                        <option value="all">All</option>
+                <div>
+                    <label class="draft-label">Account Head</label>
+                    <select id="draftAccountFilter" class="draft-select" onchange="applyDraftFilters()">
+                        <option value="all">All Accounts</option>
                     </select>
                 </div>
 
-                <a class="btn btn-primary" href="/cash-voucher-entry">New</a>
-                <button class="btn btn-secondary" onclick="clearDraftFilters()">Clear</button>
-                <button class="btn btn-secondary" onclick="loadVouchers()">Refresh</button>
+                <div>
+                    <label class="draft-label">Auth Status</label>
+                    <select id="draftStatusFilter" class="draft-select" onchange="applyDraftFilters()">
+                        <option value="all">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="authenticated">Authenticated</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="draft-label">From Date</label>
+                    <input type="date" id="draftFromDate" class="draft-input" onchange="applyDraftFilters()">
+                </div>
+
+                <div>
+                    <label class="draft-label">To Date</label>
+                    <input type="date" id="draftToDate" class="draft-input" onchange="applyDraftFilters()">
+                </div>
+
+                <div>
+                    <label class="draft-label">Rows</label>
+                    <select id="draftLimit" class="draft-select" onchange="loadDrafts()">
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+
+                <div>
+                    <button class="draft-btn draft-btn-light" onclick="clearDraftFilters()">Clear</button>
+                </div>
             </div>
         </div>
+    </div>
 
-        
-<table class="draft-table">
-    <colgroup>
-        <col style="width: 9%;">
-        <col style="width: 16%;">
-        <col style="width: 14%;">
-        <col style="width: 17%;">
-        <col style="width: 17%;">
-        <col style="width: 8%;">
-        <col style="width: 11%;">
-        <col style="width: 9%;">
-        <col style="width: 9%;">
-    </colgroup>
-
-    <thead>
-        <tr>
-            <th>DATE</th>
-            <th>ACCOUNT HEAD</th>
-            <th>PERSON NAME</th>
-            <th>PURPOSE</th>
-            <th>NARRATION</th>
-            <th>AMOUNT</th>
-            <th>ENTRY TIME</th>
-            <th>AUTH STATUS</th>
-            <th>ACTION</th>
-        </tr>
-    </thead>
-
-    <tbody id="voucherDraftBody">
-        <tr>
-            <td colspan="9">Loading...</td>
-        </tr>
-    </tbody>
-</table>
-
+    <div class="draft-card">
+        <div class="draft-table-wrap">
+            <table class="draft-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Account Head</th>
+                        <th>Person</th>
+                        <th>Purpose</th>
+                        <th>Narration</th>
+                        <th>Amount</th>
+                        <th>Entry Time</th>
+                        <th>Auth Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="draftRows">
+                    <tr>
+                        <td colspan="9" class="empty-row">Loading voucher drafts...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<div id="editModal" class="modal-backdrop-custom">
-    <div class="modal-box">
-        <div class="modal-title">Edit Voucher</div>
+<div id="editModalFinal" class="modal-backdrop-final hidden">
+    <div class="edit-modal-final">
+        <div class="edit-title">Edit Voucher</div>
 
-        <input type="hidden" id="editId">
+        <input type="hidden" id="editVoucherId">
+        <input type="hidden" id="editAccountHeadCode">
+        <input type="hidden" id="editInvoiceNo">
+        <input type="hidden" id="editInvoiceDate">
+        <input type="hidden" id="editPartyCode">
+        <input type="hidden" id="editPartyName">
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label class="form-label">Date</label>
-                <input type="date" id="editDate" class="form-control" required>
+        <div class="edit-grid-two">
+            <div class="edit-field">
+                <label>Date</label>
+                <input type="date" id="editVoucherDate">
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Amount</label>
-                <input type="number" id="editAmount" class="form-control" required>
+            <div class="edit-field">
+                <label>Amount</label>
+                <input type="number" step="0.01" id="editAmount">
             </div>
+        </div>
 
-            <div class="form-group full-width">
-                <label class="form-label">Account Head</label>
-                <input type="text" id="editAccountName" class="form-control" required list="editAccountHeadList" oninput="handleEditAccountHeadInput()">
-                <input type="hidden" id="editAccountCode">
-                <datalist id="editAccountHeadList"></datalist>
-            </div>
-
-            <div class="form-group full-width">
-                <label class="form-label">Name of the Person</label>
-                <input type="text" id="editPersonName" class="form-control" required>
-            </div>
-
-            <div class="form-group full-width">
-                <label class="form-label">Purpose</label>
-                <textarea id="editPurpose" class="form-control" required></textarea>
-
-            <div class="form-group full-width">
-                <label class="form-label">Narration Details <span class="optional-label">(Optional)</span></label>
-
-                <div class="details-table-wrap">
-                    <table class="details-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 42%;">Narration</th>
-                                <th style="width: 14%;">Count</th>
-                                <th style="width: 18%;">Sub Price</th>
-                                <th style="width: 18%;">Total Price</th>
-                                <th style="width: 8%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="editDetailsBody"></tbody>
-                    </table>
+        <div class="edit-field">
+            <label>Account Head</label>
+            <div class="edit-account-line">
+                <div>
+                    <input type="text" id="editAccountHead" list="editAccountHeadList" placeholder="Search account head">
+                    <datalist id="editAccountHeadList"></datalist>
                 </div>
 
-                <button type="button" class="btn btn-secondary detail-add-btn" onclick="addEditDetailRow()">
-                    + Add Narration
-                </button>
+                <label class="edit-account-check">
+                    <input type="checkbox" id="editAccountOthers">
+                    Others
+                </label>
+
+                <label class="edit-account-check">
+                    <input type="checkbox" id="editAccountAdvance" checked>
+                    Advance
+                </label>
+            </div>
+        </div>
+
+        <div class="edit-field">
+            <label>Name of the Person</label>
+            <input type="text" id="editPersonName">
+        </div>
+
+        <div class="edit-field">
+            <label>Purpose</label>
+            <textarea id="editPurpose"></textarea>
+        </div>
+
+        <div class="edit-field">
+            <label>Narration Details (Optional)</label>
+
+            <div class="details-box">
+                <table class="details-table">
+                    <thead>
+                        <tr>
+                            <th>Narration</th>
+                            <th style="width:120px;">Count</th>
+                            <th style="width:150px;">Sub Price</th>
+                            <th style="width:150px;">Total Price</th>
+                            <th style="width:58px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="editDetailsBody"></tbody>
+                </table>
+
+                <div class="details-total-row">
+                    <div></div>
+                    <div>Overall Total</div>
+                    <div id="editOverallTotal">Rs. 0.00</div>
+                    <div></div>
+                </div>
             </div>
 
-            </div>
+            <button class="draft-btn draft-btn-light" style="width:100%; margin-top:10px;" onclick="addEditDetailRow()">+ Add Narration</button>
         </div>
 
         <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-            <button class="btn btn-success" onclick="saveEdit()">Update</button>
+            <button class="draft-btn draft-btn-light" onclick="closeEditModal()">Cancel</button>
+            <button class="draft-btn draft-btn-green" onclick="updateVoucher()">Update</button>
         </div>
     </div>
 </div>
 
-<div id="previewModal" class="modal-backdrop-custom">
-    <div class="modal-box">
-        <div class="modal-title">Voucher Preview</div>
+<div id="previewModalFinal" class="modal-backdrop-final hidden">
+    <div class="edit-modal-final">
+        <div class="edit-title">Voucher Preview</div>
+        <div id="previewContentFinal" class="preview-card-final"></div>
 
-        <div class="preview-box">
+        <div class="modal-actions">
+            <button class="draft-btn draft-btn-light" onclick="closePreviewModal()">Close</button>
+            <button class="draft-btn draft-btn-dark" onclick="printDraftVoucherOnly()">Print</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* VOUCHER DRAFT CLEAN REBUILD FINAL */
+const CURRENT_USERCODE = {{ (session.get("usercode") or "")|tojson }};
+const CURRENT_USERNAME = {{ (session.get("username") or "")|tojson }};
+
+let draftRows = [];
+let filteredDraftRows = [];
+let accountHeads = [];
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function money(value) {
+    const n = Number(value || 0);
+    return n.toFixed(2);
+}
+
+function rowMatchesCurrentUser(row) {
+    const currentUsercode = String(CURRENT_USERCODE || "").trim();
+    const rowUsercode = String(row.usercode || "").trim();
+
+    return Boolean(currentUsercode && rowUsercode === currentUsercode);
+}
+
+function statusText(row) {
+    return row.authenticated ? "Authenticated" : "Pending";
+}
+
+
+function populateDraftAccountFilter() {
+    const select = document.getElementById("draftAccountFilter");
+    if (!select) return;
+
+    const currentValue = select.value || "all";
+
+    const accounts = Array.from(new Set(
+        draftRows
+            .map(row => String(row.account_name || "").trim())
+            .filter(Boolean)
+    )).sort();
+
+    select.innerHTML = `<option value="all">All Accounts</option>` +
+        accounts.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+
+    if (accounts.includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+async function loadDrafts() {
+    const tbody = document.getElementById("draftRows");
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-row">Loading voucher drafts...</td></tr>`;
+
+    try {
+        const limit = document.getElementById("draftLimit").value || "100";
+
+        const response = await fetch("/api/cash-voucher-entry/list?limit=" + encodeURIComponent(limit), {
+            cache: "no-store",
+            credentials: "same-origin"
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            tbody.innerHTML = `<tr><td colspan="9" class="empty-row">${escapeHtml(data.message || "Failed to load drafts")}</td></tr>`;
+            return;
+        }
+
+        const rows = data.rows || data.entries || [];
+
+        // frontend safety filter, even if backend returns extra rows
+        draftRows = rows;
+
+        populateDraftAccountFilter();
+        applyDraftFilters();
+
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-row">Error: ${escapeHtml(error.message)}</td></tr>`;
+    }
+}
+
+function applyDraftFilters() {
+    const q = String(document.getElementById("draftSearch").value || "").trim().toLowerCase();
+    const account = String(document.getElementById("draftAccountFilter")?.value || "all").trim();
+    const status = document.getElementById("draftStatusFilter").value || "all";
+    const fromDate = String(document.getElementById("draftFromDate")?.value || "").trim();
+    const toDate = String(document.getElementById("draftToDate")?.value || "").trim();
+
+    filteredDraftRows = draftRows.filter(row => {
+        const haystack = [
+            row.id,
+            row.account_name,
+            row.person_name,
+            row.purpose,
+            row.narration,
+            row.amount,
+            row.entrydateandtime
+        ].join(" ").toLowerCase();
+
+        const statusOk =
+            status === "all" ||
+            (status === "pending" && !row.authenticated) ||
+            (status === "authenticated" && row.authenticated);
+
+        const accountOk =
+            account === "all" ||
+            String(row.account_name || "").trim() === account;
+
+        const rowDate = String(row.voucherdate || "").trim();
+
+        const fromOk = !fromDate || rowDate >= fromDate;
+        const toOk = !toDate || rowDate <= toDate;
+
+        return statusOk && accountOk && fromOk && toOk && (!q || haystack.includes(q));
+    });
+
+    renderDraftRows(filteredDraftRows);
+}
+
+function clearDraftFilters() {
+    document.getElementById("draftSearch").value = "";
+    document.getElementById("draftAccountFilter").value = "all";
+    document.getElementById("draftStatusFilter").value = "all";
+    document.getElementById("draftFromDate").value = "";
+    document.getElementById("draftToDate").value = "";
+    applyDraftFilters();
+}
+
+function renderDraftRows(rows) {
+    const tbody = document.getElementById("draftRows");
+
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-row">No voucher drafts found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = rows.map(row => {
+        const auth = !!row.authenticated;
+
+        return `
+            <tr>
+                <td>${escapeHtml(row.voucherdate || "-")}</td>
+                <td>${escapeHtml(row.account_name || "-")}</td>
+                <td>${escapeHtml(row.person_name || "-")}</td>
+                <td>${escapeHtml(row.purpose || "-")}</td>
+                <td>${escapeHtml(row.narration || "-")}</td>
+                <td>${money(row.amount)}</td>
+                <td>${escapeHtml(row.entrydateandtime || "-")}</td>
+                <td>
+                    <span class="status-pill ${auth ? "status-auth" : "status-pending"}">
+                        ${auth ? "Authenticated" : "Pending"}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-stack">
+                        ${!auth ? `<button class="draft-btn draft-btn-light" onclick="openEdit(${Number(row.id)})">Edit</button>` : ``}
+                        <button class="draft-btn draft-btn-dark" onclick="openPreview(${Number(row.id)})">Preview</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+function normalizeVoucher(data, fallbackRow = null) {
+    const row = data.entry || data.row || data.voucher || data.data || data;
+
+    if (fallbackRow) {
+        Object.keys(fallbackRow).forEach(key => {
+            if (row[key] === undefined || row[key] === null || row[key] === "") {
+                row[key] = fallbackRow[key];
+            }
+        });
+    }
+
+    if (!Array.isArray(row.details)) {
+        row.details = data.details || [];
+    }
+
+    return row;
+}
+
+async function fetchVoucher(id) {
+    const fallback = draftRows.find(row => Number(row.id) === Number(id)) || null;
+
+    try {
+        const response = await fetch("/api/cash-voucher-entry/get/" + encodeURIComponent(id), {
+            cache: "no-store",
+            credentials: "same-origin"
+        });
+
+        const data = await response.json();
+
+        if (data.success === false) {
+            return fallback;
+        }
+
+        return normalizeVoucher(data, fallback);
+
+    } catch {
+        return fallback;
+    }
+}
+
+async function loadAccountHeads(type = "advance") {
+    try {
+        const urls = [
+            `/api/cash-voucher-entry/accounts?account_type=${encodeURIComponent(type)}`,
+            `/api/cash-voucher-entry/accounts?type=${encodeURIComponent(type)}`,
+            `/api/cash-voucher-entry/accounts`
+        ];
+
+        for (const url of urls) {
+            const response = await fetch(url, {cache: "no-store", credentials: "same-origin"});
+            const data = await response.json();
+
+            const rows = data.rows || data.accounts || data.results || [];
+
+            if (Array.isArray(rows) && rows.length) {
+                accountHeads = rows.map(row => ({
+                    name: row.name || row.account_name || row.NAME || "",
+                    accode: row.accode || row.account_head_code || row.ACCODE || ""
+                }));
+
+                const list = document.getElementById("editAccountHeadList");
+                list.innerHTML = accountHeads.map(account => `<option value="${escapeHtml(account.name)}"></option>`).join("");
+                return;
+            }
+        }
+    } catch {}
+}
+
+function updateEditAccountCode() {
+    const input = document.getElementById("editAccountHead");
+    const code = document.getElementById("editAccountHeadCode");
+
+    const value = String(input.value || "").trim().toUpperCase();
+
+    const matched = accountHeads.find(account => String(account.name || "").trim().toUpperCase() === value);
+
+    code.value = matched ? matched.accode : "";
+}
+
+function setEditAccountType(type) {
+    document.getElementById("editAccountOthers").checked = type === "others";
+    document.getElementById("editAccountAdvance").checked = type === "advance";
+    loadAccountHeads(type);
+}
+
+document.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "editAccountHead") {
+        updateEditAccountCode();
+    }
+
+    if (event.target && event.target.id === "editAccountOthers" && event.target.checked) {
+        setEditAccountType("others");
+    }
+
+    if (event.target && event.target.id === "editAccountAdvance" && event.target.checked) {
+        setEditAccountType("advance");
+    }
+});
+
+document.addEventListener("input", function (event) {
+    if (event.target && event.target.id === "editAccountHead") {
+        updateEditAccountCode();
+    }
+});
+
+async function openEdit(id) {
+    const row = await fetchVoucher(id);
+
+    if (!row) {
+        alert("Voucher not found");
+        return;
+    }
+
+    document.getElementById("editVoucherId").value = row.id || "";
+    document.getElementById("editVoucherDate").value = row.voucherdate || "";
+    document.getElementById("editAmount").value = row.amount || "";
+    document.getElementById("editAccountHead").value = row.account_name || "";
+    document.getElementById("editAccountHeadCode").value = row.account_head_code || "";
+    document.getElementById("editPersonName").value = row.person_name || "";
+    document.getElementById("editPurpose").value = row.purpose || "";
+
+    document.getElementById("editInvoiceNo").value = row.invoice_no || "";
+    document.getElementById("editInvoiceDate").value = row.invoice_date || "";
+    document.getElementById("editPartyCode").value = row.party_code || "";
+    document.getElementById("editPartyName").value = row.party_name || "";
+
+    setEditDetails(row.details || []);
+    setEditAccountType("advance");
+
+    document.getElementById("editModalFinal").classList.remove("hidden");
+}
+
+function closeEditModal() {
+    document.getElementById("editModalFinal").classList.add("hidden");
+}
+
+function setEditDetails(details) {
+    const body = document.getElementById("editDetailsBody");
+    body.innerHTML = "";
+
+    if (!Array.isArray(details) || !details.length) {
+        addEditDetailRow();
+        calculateEditTotal();
+        return;
+    }
+
+    details.forEach(detail => {
+        addEditDetailRow(
+            detail.narration || "",
+            detail.item_count || detail.count || "",
+            detail.sub_price || "",
+            detail.total_price || ""
+        );
+    });
+
+    calculateEditTotal();
+}
+
+function addEditDetailRow(narration = "", count = "", subPrice = "", totalPrice = "") {
+    const body = document.getElementById("editDetailsBody");
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+        <td><input class="detail-narration" value="${escapeHtml(narration)}"></td>
+        <td><input class="detail-count" type="number" step="0.01" value="${escapeHtml(count)}" oninput="recalculateDetailRow(this)"></td>
+        <td><input class="detail-sub-price" type="number" step="0.01" value="${escapeHtml(subPrice)}" oninput="recalculateDetailRow(this)"></td>
+        <td><input class="detail-total-price" type="number" step="0.01" value="${escapeHtml(totalPrice)}" oninput="calculateEditTotal()"></td>
+        <td><button class="details-remove" onclick="removeDetailRow(this)">×</button></td>
+    `;
+
+    body.appendChild(tr);
+    calculateEditTotal();
+}
+
+function recalculateDetailRow(input) {
+    const tr = input.closest("tr");
+    const count = Number(tr.querySelector(".detail-count").value || 0);
+    const sub = Number(tr.querySelector(".detail-sub-price").value || 0);
+    const total = count * sub;
+
+    tr.querySelector(".detail-total-price").value = total ? total.toFixed(2) : "";
+    calculateEditTotal();
+}
+
+function removeDetailRow(button) {
+    button.closest("tr").remove();
+
+    if (!document.querySelectorAll("#editDetailsBody tr").length) {
+        addEditDetailRow();
+    }
+
+    calculateEditTotal();
+}
+
+function calculateEditTotal() {
+    let total = 0;
+
+    document.querySelectorAll("#editDetailsBody .detail-total-price").forEach(input => {
+        total += Number(input.value || 0);
+    });
+
+    document.getElementById("editOverallTotal").innerText = "Rs. " + total.toFixed(2);
+
+    if (total > 0) {
+        document.getElementById("editAmount").value = total.toFixed(2);
+    }
+}
+
+function getEditDetails() {
+    return Array.from(document.querySelectorAll("#editDetailsBody tr")).map(tr => {
+        return {
+            narration: tr.querySelector(".detail-narration").value.trim(),
+            item_count: tr.querySelector(".detail-count").value,
+            sub_price: tr.querySelector(".detail-sub-price").value,
+            total_price: tr.querySelector(".detail-total-price").value
+        };
+    }).filter(row => row.narration || row.item_count || row.sub_price || row.total_price);
+}
+
+async function updateVoucher() {
+    const id = document.getElementById("editVoucherId").value;
+
+    const payload = {
+        voucherdate: document.getElementById("editVoucherDate").value,
+        amount: document.getElementById("editAmount").value,
+        account_name: document.getElementById("editAccountHead").value,
+        account_head_code: document.getElementById("editAccountHeadCode").value,
+        person_name: document.getElementById("editPersonName").value,
+        purpose: document.getElementById("editPurpose").value,
+        invoice_no: document.getElementById("editInvoiceNo").value,
+        invoice_date: document.getElementById("editInvoiceDate").value,
+        party_code: document.getElementById("editPartyCode").value,
+        party_name: document.getElementById("editPartyName").value,
+        details: getEditDetails()
+    };
+
+    try {
+        let response = await fetch("/api/cash-voucher-entry/update/" + encodeURIComponent(id), {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            body: JSON.stringify(payload)
+        });
+
+        if (response.status === 405) {
+            response = await fetch("/api/cash-voucher-entry/update/" + encodeURIComponent(id), {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                credentials: "same-origin",
+                body: JSON.stringify(payload)
+            });
+        }
+
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+            alert(data.message || "Update failed");
+            return;
+        }
+
+        closeEditModal();
+        await loadDrafts();
+
+    } catch (error) {
+        alert("Update error: " + error.message);
+    }
+}
+
+function numberToWordsDraftVoucher(num) {
+    num = parseInt(num || 0);
+
+    if (num === 0) {
+        return "Zero Rupees Only";
+    }
+
+    const ones = [
+        "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+        "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen",
+        "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+    ];
+
+    const tens = [
+        "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+    ];
+
+    function belowHundred(n) {
+        if (n < 20) return ones[n];
+        return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+    }
+
+    function belowThousand(n) {
+        let word = "";
+
+        if (n >= 100) {
+            word += ones[Math.floor(n / 100)] + " Hundred";
+            n %= 100;
+            if (n) word += " ";
+        }
+
+        if (n) word += belowHundred(n);
+        return word;
+    }
+
+    let word = "";
+
+    if (num >= 10000000) {
+        word += belowThousand(Math.floor(num / 10000000)) + " Crore ";
+        num %= 10000000;
+    }
+
+    if (num >= 100000) {
+        word += belowThousand(Math.floor(num / 100000)) + " Lakh ";
+        num %= 100000;
+    }
+
+    if (num >= 1000) {
+        word += belowThousand(Math.floor(num / 1000)) + " Thousand ";
+        num %= 1000;
+    }
+
+    if (num > 0) {
+        word += belowThousand(num);
+    }
+
+    return word.trim() + " Rupees Only";
+}
+
+function formatDraftVoucherDate(value) {
+    value = String(value || "").trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const parts = value.split("-");
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    return value;
+}
+
+function buildDraftPreviewDetails(details) {
+    if (!Array.isArray(details) || !details.length) {
+        return "";
+    }
+
+    return `
+        <div class="print-line preview-details-row preview-narration-line">
+            <div class="print-label">DETAILS</div>
+            <div class="print-value">
+                <table class="preview-details-table">
+                    <thead>
+                        <tr>
+                            <th>Narration</th>
+                            <th>Count</th>
+                            <th>Sub Price</th>
+                            <th>Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${details.map(d => `
+                            <tr>
+                                <td>${escapeHtml(d.narration || "")}</td>
+                                <td>${escapeHtml(d.item_count || d.count || "")}</td>
+                                <td>${money(d.sub_price || 0)}</td>
+                                <td>${money(d.total_price || 0)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function openPreview(id) {
+    const row = await fetchVoucher(id);
+
+    if (!row) {
+        alert("Voucher not found");
+        return;
+    }
+
+    const details = Array.isArray(row.details) ? row.details : [];
+    const amount = money(row.amount);
+    const amountWords = numberToWordsDraftVoucher(row.amount);
+
+    document.getElementById("previewContentFinal").innerHTML = `
+        <div class="print-box">
+            <span id="printVoucherNo" style="display:none;"></span>
+
             <div class="print-company">Amarjothi Spinning Mills Limited</div>
             <div class="print-address">PUDUSURIPALAYAM - NAMBIYUR - 638 458</div>
             <div class="print-title">CASH PAYMENT VOUCHER</div>
 
             <div class="print-top-row">
                 <div style="padding: 8px 10px;"><b>VOUCHER NO :-</b></div>
-                
-                <div style="text-align:right;"><b>DATE:</b> <span id="pvDate"></span></div>
+                <div style="padding: 8px 10px; border-left: 1.5px solid #1d4ed8;">
+                    <b>DATE:</b> ${escapeHtml(formatDraftVoucherDate(row.voucherdate))}
+                </div>
             </div>
 
             <div class="print-line">
                 <div class="print-label">ACCOUNT HEAD</div>
-                <div id="pvAccountHead"></div>
+                <div class="print-value">${escapeHtml(row.account_name || "")}</div>
             </div>
 
             <div class="print-line">
                 <div class="print-label">NAME OF THE PERSON</div>
-                <div id="pvPersonName"></div>
+                <div class="print-value">${escapeHtml(row.person_name || "")}</div>
             </div>
 
             <div class="print-line print-purpose">
                 <div class="print-label">NARRATION</div>
-                <div id="pvPurpose"></div>
+                <div class="print-value">${escapeHtml(row.purpose || "")}</div>
             </div>
+
+            ${buildDraftPreviewDetails(details)}
 
             <div class="print-amount-row">
                 <div class="print-amount-words">
-                    <b>AMOUNT IN WORDS :</b> Rs. <span id="pvAmountWords"></span>
+                    <b>AMOUNT IN WORDS :</b> Rs. ${escapeHtml(amountWords)}
                 </div>
                 <div class="print-amount-value">
-                    <b>AMOUNT</b><br>Rs. <span id="pvAmount"></span>
+                    <b>AMOUNT</b><br>Rs. ${escapeHtml(amount)}
                 </div>
             </div>
 
@@ -1010,2211 +1781,316 @@
                 <div class="print-sign-cell">RECEIVED BY</div>
             </div>
         </div>
-
-        <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closePreviewModal()">Close</button>
-            <button class="btn btn-primary" onclick="printVoucherPreviewOnly()">Print</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    let draftRows = [];
-    let draftAccountHeadAccounts = [];
-
-    function numberToWords(num) {
-        num = parseInt(num || 0);
-
-        if (num === 0) return "Zero Rupees Only";
-
-        const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-            "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-
-        const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-        function belowHundred(n) {
-            if (n < 20) return ones[n];
-            return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
-        }
-
-        function belowThousand(n) {
-            let word = "";
-            if (n >= 100) {
-                word += ones[Math.floor(n / 100)] + " Hundred";
-                n %= 100;
-                if (n) word += " ";
-            }
-            if (n) word += belowHundred(n);
-            return word;
-        }
-
-        let word = "";
-
-        if (num >= 10000000) {
-            word += belowThousand(Math.floor(num / 10000000)) + " Crore ";
-            num %= 10000000;
-        }
-
-        if (num >= 100000) {
-            word += belowThousand(Math.floor(num / 100000)) + " Lakh ";
-            num %= 100000;
-        }
-
-        if (num >= 1000) {
-            word += belowThousand(Math.floor(num / 1000)) + " Thousand ";
-            num %= 1000;
-        }
-
-        if (num > 0) word += belowThousand(num);
-
-        return word.trim() + " Rupees Only";
-    }
-
-    function formatDateForDisplay(value) {
-        if (!value) return "";
-
-        if (value.includes("-")) {
-            const parts = value.split("-");
-            return `${parts[2]}.${parts[1]}.${parts[0]}`;
-        }
-
-        return value;
-    }
-
-    async function loadDraftAccountHeads() {
-        try {
-            const response = await fetch("/api/cash-voucher-entry/accounts");
-            const result = await response.json();
-
-            draftAccountHeadAccounts = result.rows || [];
-
-            const list = document.getElementById("editAccountHeadList");
-            const filterList = document.getElementById("accountFilterList");
-
-            list.innerHTML = "";
-            filterList.innerHTML = "";
-
-            draftAccountHeadAccounts.forEach(account => {
-                const option = document.createElement("option");
-                option.value = account.name;
-                list.appendChild(option);
-
-                const filterOption = document.createElement("option");
-                filterOption.value = account.name;
-                filterList.appendChild(filterOption);
-            });
-
-        } catch (error) {
-            console.error("Draft account load error:", error);
-            draftAccountHeadAccounts = [];
-        }
-    }
-
-    function handleEditAccountHeadInput() {
-        const value = document.getElementById("editAccountName").value.trim().toUpperCase();
-        const matched = draftAccountHeadAccounts.find(account => account.name.toUpperCase() === value);
-
-        document.getElementById("editAccountCode").value = matched ? matched.accode : "";
-    }
-
-
-    function normalizeText(value) {
-        return (value || "").toString().trim().toUpperCase();
-    }
-
-    function parseDisplayDateToISO(value) {
-        if (!value) return "";
-
-        if (value.includes("-")) {
-            return value;
-        }
-
-        const parts = value.split(".");
-        if (parts.length !== 3) return "";
-
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-
-    function renderDraftRows(rows) {
-        const body = document.getElementById("draftBody");
-
-        if (!rows.length) {
-            body.innerHTML = `<tr><td colspan="9">No voucher drafts found.</td></tr>`;
-            return;
-        }
-
-        body.innerHTML = "";
-
-        rows.forEach(row => {
-            body.innerHTML += `
-                <tr>
-                    <td>${row.id || ""}</td>
-                    <td>${row.voucherdate || ""}</td>
-                    <td>${row.account_name || ""}</td>
-                    <td>${row.person_name || ""}</td>
-                    <td>${row.purpose || ""}</td>
-                        <td>${formatNarrationText(row.narration || "")}</td>
-                    <td>${row.amount || ""}</td>
-                    <td>${row.entrydateandtime || ""}</td>
-                    <td>
-                        ${row.authenticated ? `<span class="status-ok">Authenticated<br><small>${row.authdateandtime || ""}</small></span>` : `<span class="status-pending">Pending IA Auth</span>`}
-                    </td>
-                    <td>
-                        ${!row.authenticated ? `<button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>` : ``}
-                        <button class="btn btn-primary" onclick="openPreview(${row.id})">Preview</button>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-
-    function applyDraftFilters() {
-        const searchText = normalizeText(document.getElementById("draftSearch").value);
-        const accountText = normalizeText(document.getElementById("accountFilter").value);
-        const fromDate = document.getElementById("fromDateFilter").value;
-        const toDate = document.getElementById("toDateFilter").value;
-        const rowLimit = document.getElementById("rowLimitFilter").value;
-
-        let filtered = draftRows.filter(row => {
-            const rowSearch = normalizeText(
-                `${row.id} ${row.person_name || ""} ${row.purpose || ""} ${row.amount || ""}`
-            );
-
-            const rowAccount = normalizeText(row.account_name || "");
-            const rowDate = parseDisplayDateToISO(row.voucherdate || "");
-
-            if (searchText && !rowSearch.includes(searchText)) {
-                return false;
-            }
-
-            if (accountText && !rowAccount.includes(accountText)) {
-                return false;
-            }
-
-            if (fromDate && rowDate && rowDate < fromDate) {
-                return false;
-            }
-
-            if (toDate && rowDate && rowDate > toDate) {
-                return false;
-            }
-
-            return true;
-        });
-
-        if (rowLimit !== "all") {
-            filtered = filtered.slice(0, Number(rowLimit));
-        }
-
-        renderDraftRows(filtered);
-    }
-
-    function clearDraftFilters() {
-        document.getElementById("draftSearch").value = "";
-        document.getElementById("accountFilter").value = "";
-        document.getElementById("fromDateFilter").value = "";
-        document.getElementById("toDateFilter").value = "";
-        document.getElementById("rowLimitFilter").value = "10";
-        applyDraftFilters();
-    }
-
-
-    async function loadDrafts() {
-        const body = document.getElementById("draftBody");
-        body.innerHTML = `<tr><td colspan="9">Loading...</td></tr>`;
-
-        const response = await fetch("/api/cash-voucher-entry/list");
-        const result = await response.json();
-
-        if (!result.success) {
-            body.innerHTML = `<tr><td colspan="9">${result.message || "Failed to load drafts"}</td></tr>`;
-            return;
-        }
-
-        draftRows = result.rows || [];
-
-        applyDraftFilters();
-    }
-
-    async function openEdit(id) {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Failed to load voucher");
-            return;
-        }
-
-        const row = result.row;
-
-        document.getElementById("editId").value = row.id;
-        document.getElementById("editDate").value = row.voucherdate;
-        document.getElementById("editAccountName").value = row.account_name || "";
-        document.getElementById("editAccountCode").value = row.account_head_code || "";
-        document.getElementById("editPersonName").value = row.person_name || "";
-        document.getElementById("editPurpose").value = row.purpose || "";
-        document.getElementById("editAmount").value = row.amount || "";
-
-        if (typeof setEditDetailsData === "function") {
-            setEditDetailsData(row.details || []);
-        }
-
-        document.getElementById("editModal").style.display = "block";
-    }
-
-    function closeEditModal() {
-        document.getElementById("editModal").style.display = "none";
-    }
-
-
-    function validateEditForm() {
-        handleEditAccountHeadInput();
-
-        const voucherDate = document.getElementById("editDate").value.trim();
-        const accountName = document.getElementById("editAccountName").value.trim();
-        const accountCode = document.getElementById("editAccountCode").value.trim();
-        const personName = document.getElementById("editPersonName").value.trim();
-        const purpose = document.getElementById("editPurpose").value.trim();
-        const amount = document.getElementById("editAmount").value.trim();
-
-        if (!voucherDate) {
-            alert("Date is required");
-            document.getElementById("editDate").focus();
-            return false;
-        }
-
-        if (!accountName) {
-            alert("Account Head is required");
-            document.getElementById("editAccountName").focus();
-            return false;
-        }
-
-        if (!accountCode) {
-            alert("Please select a valid Account Head from the list");
-            document.getElementById("editAccountName").focus();
-            return false;
-        }
-
-        if (!personName) {
-            alert("Name of the Person is required");
-            document.getElementById("editPersonName").focus();
-            return false;
-        }
-
-        if (!purpose) {
-            alert("Purpose is required");
-            document.getElementById("editPurpose").focus();
-            return false;
-        }
-
-        if (!amount || Number(amount) <= 0) {
-            alert("Amount must be greater than zero");
-            document.getElementById("editAmount").focus();
-            return false;
-        }
-
-        return true;
-    }
-
-    async function saveEdit() {
-        if (!validateEditForm()) {
-            return;
-        }
-
-        const id = document.getElementById("editId").value;
-
-        const data = {
-            voucherdate: document.getElementById("editDate").value,
-            account_head_code: document.getElementById("editAccountCode").value,
-            account_name: document.getElementById("editAccountName").value,
-            person_name: document.getElementById("editPersonName").value,
-            purpose: document.getElementById("editPurpose").value,
-            amount: document.getElementById("editAmount").value,
-            details: getEditDetailsData()
-        };
-
-        const response = await fetch(`/api/cash-voucher-entry/update/${id}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Update failed");
-            return;
-        }
-
-        closeEditModal();
-        loadDraftAccountHeads();
-    loadDrafts();
-    }
-
-    async function openPreview(id) {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Failed to load voucher");
-            return;
-        }
-
-        const row = result.row;
-
-        
-        const pvVoucherNo = document.getElementById("pvVoucherNo");
-        if (pvVoucherNo) {
-            pvVoucherNo.innerText = row.id || "";
-        }
-
-        document.getElementById("pvDate").innerText = formatDateForDisplay(row.voucherdate);
-        if (document.getElementById("pvAccountHead")) if (document.getElementById("pvAccountHead")) document.getElementById("pvAccountHead").innerText = row.account_name || "";
-        if (document.getElementById("pvPersonName")) if (document.getElementById("pvPersonName")) document.getElementById("pvPersonName").innerText = row.person_name || "";
-        if (document.getElementById("pvPurpose")) if (document.getElementById("pvPurpose")) document.getElementById("pvPurpose").innerText = row.purpose || "";
-        if (document.getElementById("pvAmount")) if (document.getElementById("pvAmount")) document.getElementById("pvAmount").innerText = row.amount || "";
-
-        if (typeof applyFinalCashVoucherPreviewFormat === "function") {
-            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
-        }
-
-        if (typeof applyFinalCashVoucherPreviewFormat === "function") {
-            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
-        }
-
-        if (typeof applyPreviewLabelChanges === "function") {
-            applyPreviewLabelChanges((typeof row !== 'undefined' && row) ? row : {});
-        }
-        document.getElementById("pvAmountWords").innerText = numberToWords(row.amount).replace(" Rupees Only", "");
-
-        document.getElementById("previewModal").style.display = "block";
-    }
-
-    function closePreviewModal() {
-        document.getElementById("previewModal").style.display = "none";
-    }
-
-    loadDraftAccountHeads();
-    loadDrafts();
-
-function formatNarrationText(narration) {
-    if (!narration) return "-";
-
-    return String(narration)
-        .split(/\n|,/)
-        .map(function (line) { return line.trim(); })
-        .filter(Boolean)
-        .map(function (line) { return "• " + line; })
-        .join("<br>");
-}
-
-
-function renderVoucherNarration(narration) {
-    if (!narration) return "";
-
-    const lines = String(narration)
-        .split(/\n|,/)
-        .map(function (line) { return line.trim(); })
-        .filter(Boolean);
-
-    if (lines.length === 0) return "";
-
-    return `
-        <div class="print-row">
-            <div class="print-label">Narration</div>
-            <div class="print-value">
-                ${lines.map(function (line) { return `<div>${line}</div>`; }).join("")}
-            </div>
-        </div>
-    `;
-}
-
-
-function escapeHtmlSafe(value) {
-    return String(value || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function formatDraftDateSafe(value) {
-    if (!value) return "";
-    const parts = String(value).split("-");
-    if (parts.length === 3) {
-        return parts[2] + "." + parts[1] + "." + parts[0];
-    }
-    return value;
-}
-
-function formatNarrationSafe(value) {
-    if (!value) return "-";
-
-    return String(value)
-        .split(/\n/)
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => "• " + escapeHtmlSafe(line))
-        .join("<br>");
-}
-
-
-
-async function loadVouchers() {
-    try {
-        const rowsSelect = document.getElementById("rowsLimit");
-        const limit = rowsSelect ? rowsSelect.value : 100;
-
-        const response = await fetch("/api/cash-voucher-entry/list?limit=" + encodeURIComponent(limit));
-        const data = await response.json();
-
-        if (!data.success) {
-            renderVoucherDraftTable([]);
-            return;
-        }
-
-        let entries = data.entries || data.data || [];
-
-        const searchInput = document.getElementById("searchInput");
-        const accountInput = document.getElementById("accountHeadFilter");
-        const fromDateInput = document.getElementById("fromDate");
-        const toDateInput = document.getElementById("toDate");
-
-        const search = searchInput ? searchInput.value.trim().toUpperCase() : "";
-        const account = accountInput ? accountInput.value.trim().toUpperCase() : "";
-        const fromDate = fromDateInput ? fromDateInput.value : "";
-        const toDate = toDateInput ? toDateInput.value : "";
-
-        entries = entries.filter(row => {
-            const text = [
-                row.id,
-                row.person_name,
-                row.purpose,
-                row.narration,
-                row.account_name,
-                row.invoice_no,
-                row.party_name
-            ].join(" ").toUpperCase();
-
-            if (search && !text.includes(search)) return false;
-            if (account && !String(row.account_name || "").toUpperCase().includes(account)) return false;
-            if (fromDate && String(row.voucherdate || "") < fromDate) return false;
-            if (toDate && String(row.voucherdate || "") > toDate) return false;
-
-            return true;
-        });
-
-        renderVoucherDraftTable(entries);
-
-    } catch (error) {
-        console.error(error);
-        renderVoucherDraftTable([]);
-    }
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    loadVouchers();
-});
-
-/* ===== FINAL VOUCHER DRAFT BUTTON FIX ===== */
-
-function getVoucherRowFromResult(result) {
-    return result.row || result.voucher || result.entry || result.data || null;
-}
-
-async function loadDrafts() {
-    return loadVouchers();
-}
-
-async function refreshList() {
-    return loadVouchers();
-}
-
-async function openEdit(id) {
-    try {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Failed to load voucher");
-            return;
-        }
-
-        const row = getVoucherRowFromResult(result);
-
-        if (!row) {
-            alert("Voucher data not found");
-            return;
-        }
-
-        document.getElementById("editId").value = row.id || "";
-        document.getElementById("editDate").value = row.voucherdate || "";
-        document.getElementById("editAccountName").value = row.account_name || "";
-        document.getElementById("editAccountCode").value = row.account_head_code || "";
-        document.getElementById("editPersonName").value = row.person_name || "";
-        document.getElementById("editPurpose").value = row.purpose || "";
-        document.getElementById("editAmount").value = row.amount || "";
-
-        document.getElementById("editModal").style.display = "block";
-
-    } catch (error) {
-        alert("Edit failed: " + error.message);
-    }
-}
-
-async function openPreview(id) {
-    try {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Failed to load voucher");
-            return;
-        }
-
-        const row = getVoucherRowFromResult(result);
-
-        if (!row) {
-            alert("Voucher data not found");
-            return;
-        }
-
-        document.getElementById("pvDate").innerText = formatDateForDisplay(row.voucherdate || "");
-
-        if (document.getElementById("pvAccountHead")) {
-            document.getElementById("pvAccountHead").innerText = row.account_name || "";
-        }
-
-        if (document.getElementById("pvPersonName")) {
-            document.getElementById("pvPersonName").innerText = row.person_name || "";
-        }
-
-        if (document.getElementById("pvPurpose")) {
-            document.getElementById("pvPurpose").innerText = row.purpose || "";
-        }
-
-        if (document.getElementById("pvAmount")) {
-            document.getElementById("pvAmount").innerText = row.amount || "";
-        }
-
-        if (document.getElementById("pvAmountWords")) {
-            document.getElementById("pvAmountWords").innerText =
-                numberToWords(row.amount || 0).replace(" Rupees Only", "");
-        }
-
-        const previewBox = document.querySelector("#previewModal .preview-box");
-
-        if (previewBox) {
-            previewBox.querySelectorAll(".preview-narration-line").forEach(el => el.remove());
-
-            const narration = row.narration || "";
-            const lines = String(narration)
-                .split(/\n/)
-                .map(line => line.trim())
-                .filter(Boolean);
-
-            if (lines.length > 0) {
-                const purposeRow = document.getElementById("pvPurpose")?.closest(".print-line");
-
-                const narrationRow = document.createElement("div");
-                narrationRow.className = "print-line preview-narration-line";
-                narrationRow.innerHTML = `
-                    <div class="print-label">NARRATION</div>
-                    <div>
-                        ${lines.map((line, index) => `<div>${index + 1}. ${line}</div>`).join("")}
-                    </div>
-                `;
-
-                if (purposeRow && purposeRow.parentNode) {
-                    purposeRow.parentNode.insertBefore(narrationRow, purposeRow.nextSibling);
-                }
-            }
-        }
-
-        document.getElementById("previewModal").style.display = "block";
-
-    } catch (error) {
-        alert("Preview failed: " + error.message);
-    }
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(function () {
-        loadVouchers();
-    }, 100);
-});
-
-
-function addEditDetailRow(narration = "", count = "", subPrice = "", totalPrice = "") {
-    const body = document.getElementById("editDetailsBody");
-    if (!body) return;
-
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-        <td>
-            <input type="text" class="detail-input edit-detail-narration" placeholder="Enter narration" value="${String(narration || "").replaceAll('"', '&quot;')}">
-        </td>
-        <td>
-            <input type="number" class="detail-input edit-detail-count" min="0" placeholder="0" value="${count || ""}">
-        </td>
-        <td>
-            <input type="number" class="detail-input edit-detail-sub-price" min="0" step="0.01" placeholder="0.00" value="${subPrice || ""}">
-        </td>
-        <td>
-            <input type="number" class="detail-input edit-detail-total-price" min="0" step="0.01" placeholder="0.00" value="${totalPrice || ""}">
-        </td>
-        <td>
-            <button type="button" class="detail-remove-btn" onclick="removeEditDetailRow(this)">×</button>
-        </td>
     `;
 
-    body.appendChild(row);
-
-    const countInput = row.querySelector(".edit-detail-count");
-    const subPriceInput = row.querySelector(".edit-detail-sub-price");
-    const totalInput = row.querySelector(".edit-detail-total-price");
-
-    function calculateTotal() {
-        const c = parseFloat(countInput.value || "0");
-        const p = parseFloat(subPriceInput.value || "0");
-
-        if (c > 0 && p > 0) {
-            totalInput.value = (c * p).toFixed(2);
-        }
-    }
-
-    countInput.addEventListener("input", calculateTotal);
-    subPriceInput.addEventListener("input", calculateTotal);
+    document.getElementById("previewModalFinal").classList.remove("hidden");
 }
 
-function removeEditDetailRow(button) {
-    const row = button.closest("tr");
-    if (row) row.remove();
-}
 
-function setEditDetailsData(details) {
-    const body = document.getElementById("editDetailsBody");
-    if (!body) return;
+function printDraftVoucherOnly() {
+    const box = document.querySelector("#previewContentFinal .print-box");
 
-    body.innerHTML = "";
-
-    if (!details || details.length === 0) {
-        addEditDetailRow();
+    if (!box) {
+        window.print();
         return;
     }
 
-    details.forEach(function (item) {
-        addEditDetailRow(
-            item.narration || "",
-            item.count || "",
-            item.sub_price || "",
-            item.total_price || ""
-        );
-    });
-}
-
-function getEditDetailsData() {
-    const rows = document.querySelectorAll("#editDetailsBody tr");
-    const details = [];
-
-    rows.forEach(function (row) {
-        const narration = row.querySelector(".edit-detail-narration")?.value.trim() || "";
-        const count = row.querySelector(".edit-detail-count")?.value.trim() || "";
-        const subPrice = row.querySelector(".edit-detail-sub-price")?.value.trim() || "";
-        const totalPrice = row.querySelector(".edit-detail-total-price")?.value.trim() || "";
-
-        if (narration || count || subPrice || totalPrice) {
-            details.push({
-                narration: narration,
-                count: count,
-                sub_price: subPrice,
-                total_price: totalPrice
-            });
-        }
-    });
-
-    return details;
-}
-
-
-function escapeHtmlSafe(value) {
-    return String(value || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function formatDraftDateSafe(value) {
-    if (!value) return "";
-    const parts = String(value).split("-");
-    if (parts.length === 3) {
-        return parts[2] + "." + parts[1] + "." + parts[0];
-    }
-    return value;
-}
-
-function formatNarrationSafe(value) {
-    if (!value) return "-";
-
-    const lines = String(value)
-        .split(/\n/)
-        .map(line => line.trim())
-        .filter(Boolean);
-
-    if (!lines.length) return "-";
-
-    return `<div class="narration-lines">${
-        lines.map(line => `<div>• ${escapeHtmlSafe(line)}</div>`).join("")
-    }</div>`;
-}
-
-function renderVoucherDraftTable(entries) {
-    const tbody = document.getElementById("voucherDraftBody");
-
-    if (!tbody) return;
-
-    if (!entries || entries.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9">No voucher drafts found.</td>
-            </tr>
-        `;
-        return;
-    }
-
-    tbody.innerHTML = entries.map(row => {
-        const editButton = !row.authenticated
-            ? `<button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>`
-            : "";
-
-        return `
-            <tr>
-                <td>${formatDraftDateSafe(row.voucherdate || row.date || "")}</td>
-                <td>${escapeHtmlSafe(row.account_name || "")}</td>
-                <td>${escapeHtmlSafe(row.person_name || "")}</td>
-                <td>${escapeHtmlSafe(row.purpose || "")}</td>
-                <td>${formatNarrationSafe(row.narration || "")}</td>
-                <td>${escapeHtmlSafe(row.amount || "")}</td>
-                <td>${escapeHtmlSafe(row.entrydateandtime || row.entry_time || "")}</td>
-                <td>${row.authenticated ? "Authenticated" : "Pending"}</td>
-                <td>
-                    <div class="draft-action-cell">
-                        ${editButton}
-                        <button class="btn btn-dark" onclick="openPreview(${row.id})">Preview</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join("");
-}
-
-
-/* ===== FINAL EDIT NARRATION LOAD + UPDATE FIX ===== */
-
-function getVoucherRowFromResultFinal(result) {
-    return result.row || result.voucher || result.entry || result.data || null;
-}
-
-async function openEdit(id) {
-    try {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Failed to load voucher");
-            return;
-        }
-
-        const row = getVoucherRowFromResultFinal(result);
-
-        if (!row) {
-            alert("Voucher data not found");
-            return;
-        }
-
-        document.getElementById("editId").value = row.id || "";
-        document.getElementById("editDate").value = row.voucherdate || "";
-        document.getElementById("editAccountName").value = row.account_name || "";
-        document.getElementById("editAccountCode").value = row.account_head_code || "";
-        document.getElementById("editPersonName").value = row.person_name || "";
-        document.getElementById("editPurpose").value = row.purpose || "";
-        document.getElementById("editAmount").value = row.amount || "";
-
-        if (typeof setEditDetailsData === "function") {
-            setEditDetailsData(row.details || []);
-        }
-
-        document.getElementById("editModal").style.display = "block";
-
-    } catch (error) {
-        alert("Edit failed: " + error.message);
-    }
-}
-
-async function saveEdit() {
-    if (!validateEditForm()) {
-        return;
-    }
-
-    const id = document.getElementById("editId").value;
-
-    const data = {
-        voucherdate: document.getElementById("editDate").value,
-        account_head_code: document.getElementById("editAccountCode").value,
-        account_name: document.getElementById("editAccountName").value,
-        person_name: document.getElementById("editPersonName").value,
-        purpose: document.getElementById("editPurpose").value,
-        amount: document.getElementById("editAmount").value,
-        details: typeof getEditDetailsData === "function" ? getEditDetailsData() : []
-    };
-
-    const response = await fetch(`/api/cash-voucher-entry/update/${id}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-    });
-
-    const result = await response.json();
-
-    if (!result.success) {
-        alert(result.message || "Update failed");
-        return;
-    }
-
-    closeEditModal();
-
-    if (typeof loadVouchers === "function") {
-        loadVouchers();
-    } else if (typeof loadDrafts === "function") {
-        loadDrafts();
-    }
-}
-
-
-/* ===== CLEAN VOUCHER PREVIEW WITH NARRATION ===== */
-
-function getVoucherRowFromResultPreviewFinal(result) {
-    return result.row || result.voucher || result.entry || result.data || null;
-}
-
-async function openPreview(id) {
-    try {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`);
-        const result = await response.json();
-
-        if (!result.success) {
-            alert(result.message || "Failed to load voucher");
-            return;
-        }
-
-        const row = getVoucherRowFromResultPreviewFinal(result);
-
-        if (!row) {
-            alert("Voucher data not found");
-            return;
-        }
-
-        const setText = function (id, value) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = value || "";
-        };
-
-        setText("pvDate", formatDateForDisplay(row.voucherdate || ""));
-        setText("pvAccountHead", row.account_name || "");
-        setText("pvPersonName", row.person_name || "");
-        setText("pvPurpose", row.purpose || "");
-        setText("pvAmount", row.amount || "");
-
-        if (typeof applyFinalCashVoucherPreviewFormat === "function") {
-            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
-        }
-
-        if (typeof applyPreviewLabelChanges === "function") {
-            applyPreviewLabelChanges((typeof row !== 'undefined' && row) ? row : {});
-        }
-
-        const amountWordsEl = document.getElementById("pvAmountWords");
-        if (amountWordsEl) {
-            amountWordsEl.innerText = numberToWords(row.amount || 0).replace(" Rupees Only", "");
-        }
-
-        const previewBox = document.querySelector("#previewModal .preview-box");
-
-        if (previewBox) {
-            previewBox.querySelectorAll(".preview-narration-line").forEach(function (el) {
-                el.remove();
-            });
-
-            let narrationLines = [];
-
-            if (row.details && Array.isArray(row.details) && row.details.length > 0) {
-                narrationLines = row.details
-                    .filter(function (item) {
-                        return item.narration || item.count || item.sub_price || item.total_price;
-                    })
-                    .map(function (item, index) {
-                        const parts = [];
-
-                        if (item.narration) {
-                            parts.push(item.narration);
-                        }
-
-                        if (item.count) {
-                            parts.push("Count: " + item.count);
-                        }
-
-                        if (item.sub_price) {
-                            parts.push("Sub Price: Rs. " + item.sub_price);
-                        }
-
-                        if (item.total_price) {
-                            parts.push("Total: Rs. " + item.total_price);
-                        }
-
-                        return (index + 1) + ". " + parts.join(" | ");
-                    });
-            } else if (row.narration) {
-                narrationLines = String(row.narration)
-                    .split(/\n/)
-                    .map(function (line) { return line.trim(); })
-                    .filter(Boolean)
-                    .map(function (line, index) {
-                        return (index + 1) + ". " + line;
-                    });
-            }
-
-            if (narrationLines.length > 0) {
-                const purposeRow = document.getElementById("pvPurpose")?.closest(".print-line");
-
-                const narrationRow = document.createElement("div");
-                narrationRow.className = "print-line preview-narration-line";
-
-                narrationRow.innerHTML = `
-                    <div class="print-label">DETAILS</div>
-                    <div>
-                        <div class="preview-narration-list">
-                            ${narrationLines.map(function (line) {
-                                return `<div class="preview-narration-item">${line}</div>`;
-                            }).join("")}
-                        </div>
-                    </div>
-                `;
-
-                if (purposeRow && purposeRow.parentNode) {
-                    purposeRow.parentNode.insertBefore(narrationRow, purposeRow.nextSibling);
-                }
-            }
-        }
-
-        document.getElementById("previewModal").style.display = "block";
-
-    } catch (error) {
-        alert("Preview failed: " + error.message);
-    }
-}
-
-
-/* ===== EDIT DETAILS TOTAL + AMOUNT SYNC ===== */
-
-function ensureEditDetailsGrandTotalBox() {
-    const body = document.getElementById("editDetailsBody");
-    if (!body) return;
-
-    const tableWrap = body.closest(".details-table-wrap");
-    if (!tableWrap) return;
-
-    if (document.getElementById("editDetailsGrandTotalBox")) return;
-
-    const box = document.createElement("div");
-    box.id = "editDetailsGrandTotalBox";
-    box.className = "edit-details-grand-total-row";
-    box.innerHTML = `
-        <div class="edit-details-grand-total-label">Overall Total</div>
-        <div class="edit-details-grand-total-value">Rs. <span id="editDetailsGrandTotal">0.00</span></div>
-        <div class="edit-details-grand-total-empty"></div>
-    `;
-
-    tableWrap.insertAdjacentElement("afterend", box);
-}
-
-function toNumberSafeEdit(value) {
-    const num = parseFloat(String(value || "").replace(/,/g, "").trim());
-    return Number.isFinite(num) ? num : 0;
-}
-
-function calculateEditDetailsGrandTotal() {
-    ensureEditDetailsGrandTotalBox();
-
-    const rows = document.querySelectorAll("#editDetailsBody tr");
-    let grandTotal = 0;
-
-    rows.forEach(function (row) {
-        const countInput = row.querySelector(".edit-detail-count");
-        const subPriceInput = row.querySelector(".edit-detail-sub-price");
-        const totalInput = row.querySelector(".edit-detail-total-price");
-
-        if (!totalInput) return;
-
-        const count = toNumberSafeEdit(countInput ? countInput.value : 0);
-        const subPrice = toNumberSafeEdit(subPriceInput ? subPriceInput.value : 0);
-
-        if (count > 0 && subPrice > 0) {
-            totalInput.value = (count * subPrice).toFixed(2);
-        }
-
-        grandTotal += toNumberSafeEdit(totalInput.value);
-    });
-
-    const totalSpan = document.getElementById("editDetailsGrandTotal");
-    if (totalSpan) {
-        totalSpan.innerText = grandTotal.toFixed(2);
-    }
-
-    const amountInput = document.getElementById("editAmount");
-    if (amountInput && grandTotal > 0) {
-        amountInput.value = grandTotal.toFixed(2);
-    }
-
-    return grandTotal;
-}
-
-document.addEventListener("input", function (event) {
-    if (
-        event.target.classList.contains("edit-detail-count") ||
-        event.target.classList.contains("edit-detail-sub-price") ||
-        event.target.classList.contains("edit-detail-total-price") ||
-        event.target.classList.contains("edit-detail-narration")
-    ) {
-        calculateEditDetailsGrandTotal();
-    }
-});
-
-document.addEventListener("click", function (event) {
-    if (
-        event.target.innerText &&
-        event.target.innerText.includes("Add Narration")
-    ) {
-        setTimeout(calculateEditDetailsGrandTotal, 100);
-    }
-});
-
-document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(calculateEditDetailsGrandTotal, 300);
-    setTimeout(calculateEditDetailsGrandTotal, 800);
-});
-
-
-/* ===== FINAL VOUCHER PREVIEW LABEL + DETAILS TABLE FIX ===== */
-
-function buildPreviewDetailsTable(row) {
-    let details = [];
-
-    if (row.details && Array.isArray(row.details) && row.details.length > 0) {
-        details = row.details;
-    } else if (row.narration) {
-        details = String(row.narration)
-            .split(/\n/)
-            .map(line => line.trim())
-            .filter(Boolean)
-            .map(line => ({
-                narration: line,
-                count: "",
-                sub_price: "",
-                total_price: ""
-            }));
-    }
-
-    if (!details.length) {
-        return "-";
-    }
-
-    return `
-        <table class="preview-details-table">
-            <thead>
-                <tr>
-                    <th>Narration</th>
-                    <th>Count</th>
-                    <th>Sub Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${details.map(item => `
-                    <tr>
-                        <td>${item.narration || ""}</td>
-                        <td>${item.count || item.item_count || ""}</td>
-                        <td>${item.sub_price ? "Rs. " + item.sub_price : ""}</td>
-                        <td>${item.total_price ? "Rs. " + item.total_price : ""}</td>
-                    </tr>
-                `).join("")}
-            </tbody>
-        </table>
-    `;
-}
-
-function applyPreviewLabelChanges(row) {
-    const purposeLabel = document.getElementById("pvPurpose")?.closest(".print-line")?.querySelector(".print-label");
-    if (purposeLabel) {
-        purposeLabel.innerText = "NARRATION";
-    }
-
-    const previewBox = document.querySelector("#previewModal .preview-box");
-    if (!previewBox) return;
-
-    previewBox.querySelectorAll(".preview-narration-line").forEach(el => el.remove());
-
-    const purposeRow = document.getElementById("pvPurpose")?.closest(".print-line");
-
-    const detailsRow = document.createElement("div");
-    detailsRow.className = "print-line preview-narration-line";
-    detailsRow.innerHTML = `
-        <div class="print-label">DETAILS</div>
-        <div>${buildPreviewDetailsTable(row)}</div>
-    `;
-
-    if (purposeRow && purposeRow.parentNode) {
-        purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
-    }
-}
-
-
-/* ===== FINAL CASH VOUCHER PREVIEW FORMAT ALL PAGES ===== */
-
-function buildCashVoucherDetailsTableFinal(row) {
-    let details = [];
-
-    if (row && row.details && Array.isArray(row.details) && row.details.length > 0) {
-        details = row.details;
-    } else if (row && row.narration) {
-        details = String(row.narration)
-            .split(/\n/)
-            .map(function (line) { return line.trim(); })
-            .filter(Boolean)
-            .map(function (line) {
-                return {
-                    narration: line,
-                    count: "",
-                    sub_price: "",
-                    total_price: ""
-                };
-            });
-    } else if (typeof getDetailsData === "function") {
-        details = getDetailsData();
-    } else if (typeof getEditDetailsData === "function") {
-        details = getEditDetailsData();
-    }
-
-    if (!details || details.length === 0) {
-        return "-";
-    }
-
-    return `
-        <table class="preview-details-table">
-            <thead>
-                <tr>
-                    <th>Narration</th>
-                    <th>Count</th>
-                    <th>Sub Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${details.map(function (item) {
-                    const narration = item.narration || "";
-                    const count = item.count || item.item_count || "";
-                    const subPrice = item.sub_price || "";
-                    const totalPrice = item.total_price || "";
-
-                    return `
-                        <tr>
-                            <td>${narration}</td>
-                            <td>${count}</td>
-                            <td>${subPrice ? "Rs. " + subPrice : ""}</td>
-                            <td>${totalPrice ? "Rs. " + totalPrice : ""}</td>
-                        </tr>
-                    `;
-                }).join("")}
-            </tbody>
-        </table>
-    `;
-}
-
-function applyFinalCashVoucherPreviewFormat(row = null) {
-    const purposeEl = document.getElementById("pvPurpose") || document.getElementById("printPurpose");
-    const previewBox =
-        document.querySelector("#previewModal .preview-box") ||
-        document.querySelector("#printPreview") ||
-        document.querySelector(".preview-box");
-
-    if (!purposeEl || !previewBox) {
-        return;
-    }
-
-    const purposeRow = purposeEl.closest(".print-line") || purposeEl.closest(".print-row");
-
-    if (!purposeRow) {
-        return;
-    }
-
-    const purposeLabel = purposeRow.querySelector(".print-label");
-
-    if (purposeLabel) {
-        purposeLabel.innerText = "NARRATION";
-    }
-
-    previewBox.querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row").forEach(function (el) {
-        el.remove();
-    });
-
-    const detailsRow = document.createElement("div");
-    detailsRow.className = "print-line preview-details-row preview-narration-line";
-
-    detailsRow.innerHTML = `
-        <div class="print-label">DETAILS</div>
-        <div>${buildCashVoucherDetailsTableFinal((typeof row !== 'undefined' && row) ? row : {})}</div>
-    `;
-
-    purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
-}
-
-</script>
-
-<script>
-/* FINAL IFRAME VOUCHER PRINT FIX */
-(function () {
-    window.printVoucherPreviewOnly = function () {
-        const source =
-            document.querySelector("#previewModal .preview-box") ||
-            document.querySelector("#printPreview .print-box") ||
-            document.querySelector(".preview-box") ||
-            document.querySelector(".print-box");
-
-        if (!source) {
-            alert("Voucher preview not found. Open preview first.");
-            return;
-        }
-
-        const oldFrame = document.getElementById("voucherPrintFrame");
-        if (oldFrame) oldFrame.remove();
-
-        const frame = document.createElement("iframe");
-        frame.id = "voucherPrintFrame";
-        frame.style.position = "fixed";
-        frame.style.left = "-10000px";
-        frame.style.top = "0";
-        frame.style.width = "1px";
-        frame.style.height = "1px";
-        frame.style.border = "0";
-        frame.style.visibility = "visible";
-        document.body.appendChild(frame);
-
-        const clone = source.cloneNode(true);
-
-        const printCss = `
-            @page {
-                size: A4 portrait;
-                margin: 10mm;
-            }
-
-            html, body {
+    const frame = document.createElement("iframe");
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+
+    document.body.appendChild(frame);
+
+    const css = `
+        <style>
+            body {
                 margin: 0;
-                padding: 0;
-                background: white;
-                color: #0047ff;
-                font-family: Arial, sans-serif;
+                padding: 12px;
+                font-family: Arial, Helvetica, sans-serif;
+                background: #ffffff;
             }
 
-            .print-box,
-            .preview-box {
-                width: 180mm;
-                max-width: 180mm;
+            .print-box {
+                width: 100%;
+                max-width: 100%;
                 margin: 0 auto;
-                border: 1.5px solid #0047ff;
-                color: #0047ff;
-                padding: 7mm 7mm 3mm 7mm;
+                border: 1.5px solid #1d4ed8;
+                border-radius: 6px;
+                padding: 16px;
                 box-sizing: border-box;
-                overflow: hidden;
-                page-break-inside: avoid;
-                break-inside: avoid;
             }
 
             .print-company {
                 text-align: center;
                 font-size: 18px;
-                font-weight: 800;
-                line-height: 1.1;
-                margin-bottom: 1px;
+                font-weight: 900;
+                margin-bottom: 2px;
             }
 
             .print-address {
                 text-align: center;
-                font-size: 10px;
-                font-weight: 700;
-                margin-bottom: 6px;
-                line-height: 1.2;
+                font-size: 12px;
+                font-weight: 800;
+                margin-bottom: 7px;
             }
 
             .print-title {
                 text-align: center;
-                display: block;
-                width: fit-content;
-                margin: 0 auto 9px auto;
-                border: 1.5px solid #0047ff;
-                padding: 3px 10px;
-                font-size: 13px;
-                font-weight: 800;
-                letter-spacing: 0.4px;
+                font-size: 16px;
+                font-weight: 900;
+                margin-bottom: 14px;
             }
 
-            .print-top-row {
+            .print-top-row,
+            .print-line,
+            .print-amount-row {
                 display: grid;
-                grid-template-columns: 1fr 170px;
-                border-top: 1.2px solid #0047ff;
-                border-bottom: 1.2px solid #0047ff;
-                font-size: 11px;
-                margin-left: -7mm;
-                margin-right: -7mm;
-                width: calc(100% + 14mm);
-                box-sizing: border-box;
-            }
-
-            .print-top-row > div {
-                padding: 5px 7mm;
-                box-sizing: border-box;
-            }
-
-            .print-top-row > div:last-child {
-                border-left: 1.2px solid #0047ff;
-                text-align: right;
+                grid-template-columns: 1fr 1fr;
+                border: 1.5px solid #1d4ed8;
+                border-bottom: none;
+                font-size: 13px;
             }
 
             .print-line {
-                display: grid;
-                grid-template-columns: 42mm 1fr;
-                min-height: 10mm;
-                border-bottom: 1.2px solid #0047ff;
-                font-size: 11px;
-                margin-left: -7mm;
-                margin-right: -7mm;
-                width: calc(100% + 14mm);
-                box-sizing: border-box;
-                page-break-inside: avoid;
-                break-inside: avoid;
+                grid-template-columns: 210px minmax(0, 1fr);
+            }
+
+            .print-label,
+            .print-value,
+            .print-amount-words,
+            .print-amount-value {
+                padding: 6px 9px;
+                border-left: 1.5px solid #1d4ed8;
+                min-height: 0;
+                line-height: 1.15;
             }
 
             .print-label {
-                font-weight: 800;
-                border-right: 1.2px solid #0047ff;
-                padding: 5px 5mm 5px 7mm;
-                display: flex;
-                align-items: center;
-                box-sizing: border-box;
+                border-left: none;
+                font-weight: 900;
             }
 
-            .print-value,
-            .print-line > div:last-child {
-                padding: 5px 7mm 5px 5mm;
-                display: flex;
-                align-items: center;
+            .print-value {
                 white-space: pre-wrap;
-                box-sizing: border-box;
-            }
-
-            .print-purpose {
-                min-height: 24mm;
-            }
-
-            .preview-narration-line,
-            .preview-details-row {
-                min-height: 20mm;
             }
 
             .print-amount-row {
-                display: grid;
-                grid-template-columns: 1fr 38mm;
-                border-bottom: 1.2px solid #0047ff;
-                margin-left: -7mm;
-                margin-right: -7mm;
-                width: calc(100% + 14mm);
-                box-sizing: border-box;
-                font-size: 11px;
-                page-break-inside: avoid;
-                break-inside: avoid;
+                grid-template-columns: minmax(0, 1fr) 210px;
+                border-bottom: 1.5px solid #1d4ed8;
             }
 
             .print-amount-words {
-                min-height: 11mm;
-                padding: 5px 5mm 5px 7mm;
-                border-right: 1.2px solid #0047ff;
-                box-sizing: border-box;
-            }
-
-            .print-amount-value {
-                min-height: 11mm;
-                padding: 5px 7mm 5px 5mm;
-                box-sizing: border-box;
-                font-weight: 800;
+                border-left: none;
             }
 
             .print-signatures {
                 display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                border-top: 1.2px solid #0047ff;
-                margin-top: 8mm;
-                margin-left: -7mm;
-                margin-right: -7mm;
-                width: calc(100% + 14mm);
-                box-sizing: border-box;
-                page-break-inside: avoid;
-                break-inside: avoid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                border: 1.5px solid #1d4ed8;
+                border-top: none;
+                margin-top: 18px;
+                font-size: 11px;
+                font-weight: 900;
+                text-align: center;
             }
 
             .print-sign-cell {
-                min-height: 18mm;
-                border-right: 1.2px solid #0047ff;
-                padding: 4px;
-                display: flex;
-                align-items: end;
-                justify-content: center;
-                text-align: center;
-                font-size: 9px;
-                font-weight: 800;
-                box-sizing: border-box;
+                min-height: 62px;
+                padding: 42px 5px 7px;
+                border-left: 1.5px solid #1d4ed8;
             }
 
-            .print-sign-cell:last-child {
-                border-right: none;
+            .print-sign-cell:first-child {
+                border-left: none;
             }
 
             .preview-details-table {
                 width: 100%;
                 border-collapse: collapse;
-                color: #0047ff;
-                font-size: 9px;
+                font-size: 12px;
             }
 
             .preview-details-table th,
             .preview-details-table td {
-                border: 1px solid #0047ff;
-                padding: 3px 4px;
-                text-align: left;
-                vertical-align: top;
+                border: 1px solid #1d4ed8;
+                padding: 4px 6px;
             }
 
-            .modal-title,
-            .modal-actions,
-            button {
-                display: none !important;
+            .preview-details-table th {
+                font-weight: 900;
             }
-        `;
+        
 
-        const doc = frame.contentWindow.document;
-        doc.open();
-        doc.write(`
-            <!doctype html>
-            <html>
-            <head>
-                <title>Voucher Print</title>
-                <style>${printCss}</style>
-            </head>
-            <body></body>
-            </html>
-        `);
-        doc.close();
+            /* TRUE PRINT LINE GAP FILL */
+            .print-box {
+                padding: 16px 16px 0 16px !important;
+                overflow: hidden !important;
+            }
 
-        doc.body.appendChild(clone);
+            .print-top-row,
+            .print-line,
+            .print-amount-row,
+            .print-signatures {
+                margin-left: -16px !important;
+                margin-right: -16px !important;
+                width: calc(100% + 32px) !important;
+                max-width: calc(100% + 32px) !important;
+                box-sizing: border-box !important;
+            }
 
-        setTimeout(function () {
-            frame.contentWindow.focus();
-            frame.contentWindow.print();
+            .print-top-row > div:first-child,
+            .print-line > .print-label,
+            .print-amount-words,
+            .print-sign-cell:first-child {
+                padding-left: 16px !important;
+            }
 
-            setTimeout(function () {
-                frame.remove();
-            }, 1200);
-        }, 250);
-    };
-})();
+            .print-top-row > div:last-child,
+            .print-line > .print-value,
+            .print-amount-value,
+            .print-sign-cell:last-child {
+                padding-right: 16px !important;
+            }
+
+            .print-purpose {
+                min-height: 48px !important;
+            }
+
+            .preview-details-row {
+                min-height: 0 !important;
+            }
+
+            .preview-details-row .print-value {
+                padding-top: 8px !important;
+                padding-bottom: 8px !important;
+            }
+
+            .print-signatures {
+                margin-top: 18px !important;
+                margin-bottom: 0 !important;
+            }
+
+
+            /* PRINT ONLY SIGNATURE GAP REMOVE FINAL */
+            .print-amount-row {
+                margin-bottom: 0 !important;
+                border-bottom: 1.5px solid #1d4ed8 !important;
+            }
+
+            .print-signatures {
+                margin-top: 0 !important;
+                border-top: none !important;
+            }
+
+            .print-sign-cell {
+                margin-top: 0 !important;
+            }
+</style>
+    `;
+
+    frame.contentDocument.open();
+    frame.contentDocument.write(`<!DOCTYPE html><html><head><title>Voucher</title>${css}</head><body>${box.outerHTML}</body></html>`);
+    frame.contentDocument.close();
+
+    setTimeout(() => {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+        setTimeout(() => frame.remove(), 500);
+    }, 250);
+}
+
+function closePreviewModal() {
+    document.getElementById("previewModalFinal").classList.add("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    loadAccountHeads("advance");
+    loadDrafts();
+});
 </script>
 
 
-<script>
-/* VOUCHER DRAFT DETAILS TABLE KEEP FIX */
-(function () {
-    let lastDraftPreviewRow = null;
-    let lastGoodDetailsHTML = "";
 
-    function escapeHtml(value) {
-        return String(value ?? "").replace(/[<>&"]/g, function (s) {
-            return {
-                "<": "&lt;",
-                ">": "&gt;",
-                "&": "&amp;",
-                '"': "&quot;"
-            }[s];
-        });
+<!-- FINAL_PRINT_SIGNATURE_FIX_START -->
+<style>
+@media screen, print {
+    .print-signatures {
+        height: 92px !important;
+        min-height: 92px !important;
+        align-items: stretch !important;
     }
 
-    function getRowFromApi(result) {
-        return result.entry || result.voucher || result.row || result.data || result;
+    .print-sign-cell {
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        text-align: center !important;
+        vertical-align: bottom !important;
+        height: 92px !important;
+        min-height: 92px !important;
+        padding: 0 6px 9px 6px !important;
+        line-height: 1.05 !important;
+        box-sizing: border-box !important;
     }
-
-    function getPreviewBox() {
-        return document.querySelector("#previewModal .preview-box");
-    }
-
-    function getPurposeRow() {
-        const purpose = document.getElementById("pvPurpose");
-        return purpose ? purpose.closest(".print-line") : null;
-    }
-
-    function detailsFromRow(row) {
-        if (row && Array.isArray(row.details) && row.details.length > 0) {
-            return row.details.filter(function (item) {
-                return String(item.narration || "").trim() ||
-                       String(item.count || item.item_count || "").trim() ||
-                       String(item.sub_price || "").trim() ||
-                       String(item.total_price || "").trim();
-            });
-        }
-
-        const narration = String(row && row.narration ? row.narration : "").trim();
-
-        if (!narration) {
-            return [];
-        }
-
-        return narration
-            .split(/\n|,/)
-            .map(function (line) { return line.trim(); })
-            .filter(Boolean)
-            .map(function (line) {
-                return {
-                    narration: line,
-                    count: "",
-                    sub_price: "",
-                    total_price: ""
-                };
-            });
-    }
-
-    function buildDetailsTable(row) {
-        const details = detailsFromRow(row);
-
-        if (!details.length) {
-            return "-";
-        }
-
-        return `
-            <table class="preview-details-table">
-                <thead>
-                    <tr>
-                        <th>Narration</th>
-                        <th>Count</th>
-                        <th>Sub Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${details.map(function (item) {
-                        const count = item.count || item.item_count || "";
-                        const subPrice = item.sub_price || "";
-                        const totalPrice = item.total_price || "";
-
-                        return `
-                            <tr>
-                                <td>${escapeHtml(item.narration || "")}</td>
-                                <td>${escapeHtml(count)}</td>
-                                <td>${subPrice !== "" ? "Rs. " + escapeHtml(subPrice) : ""}</td>
-                                <td>${totalPrice !== "" ? "Rs. " + escapeHtml(totalPrice) : ""}</td>
-                            </tr>
-                        `;
-                    }).join("")}
-                </tbody>
-            </table>
-        `;
-    }
-
-    function renderDraftDetailsTable(row) {
-        const previewBox = getPreviewBox();
-        const purposeRow = getPurposeRow();
-
-        if (!previewBox || !purposeRow || !row) {
-            return;
-        }
-
-        lastDraftPreviewRow = row;
-        window.lastDraftPreviewRow = row;
-
-        const purposeLabel = purposeRow.querySelector(".print-label");
-        if (purposeLabel) {
-            purposeLabel.innerText = "NARRATION";
-        }
-
-        previewBox
-            .querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row, .draft-final-details-row")
-            .forEach(function (el) {
-                el.remove();
-            });
-
-        const detailsRow = document.createElement("div");
-        detailsRow.className = "print-line preview-details-row draft-final-details-row";
-
-        detailsRow.innerHTML = `
-            <div class="print-label">DETAILS</div>
-            <div class="print-value">${buildDetailsTable(row)}</div>
-        `;
-
-        purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
-
-        const valueCell = detailsRow.children && detailsRow.children[1] ? detailsRow.children[1] : null;
-        if (valueCell) {
-            const html = String(valueCell.innerHTML || "").trim();
-            if (html && html !== "-") {
-                lastGoodDetailsHTML = html;
-            }
-        }
-    }
-
-    async function fetchVoucherRow(id) {
-        const response = await fetch(`/api/cash-voucher-entry/get/${id}`, {
-            cache: "no-store"
-        });
-
-        const result = await response.json();
-
-        if (!result.success) {
-            return null;
-        }
-
-        return getRowFromApi(result);
-    }
-
-    function restoreDetailsIfMissing() {
-        const previewBox = getPreviewBox();
-        const purposeRow = getPurposeRow();
-
-        if (!previewBox || !purposeRow) {
-            return;
-        }
-
-        let detailsRow =
-            previewBox.querySelector(".draft-final-details-row") ||
-            previewBox.querySelector(".preview-details-row") ||
-            previewBox.querySelector(".preview-narration-line");
-
-        if (!detailsRow) {
-            detailsRow = document.createElement("div");
-            detailsRow.className = "print-line preview-details-row draft-final-details-row";
-            detailsRow.innerHTML = `
-                <div class="print-label">DETAILS</div>
-                <div class="print-value">-</div>
-            `;
-            purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
-        }
-
-        const label = detailsRow.querySelector(".print-label");
-        if (label) {
-            label.innerText = "DETAILS";
-        }
-
-        const purposeLabel = purposeRow.querySelector(".print-label");
-        if (purposeLabel) {
-            purposeLabel.innerText = "NARRATION";
-        }
-
-        const valueCell = detailsRow.children && detailsRow.children[1] ? detailsRow.children[1] : null;
-        if (!valueCell) {
-            return;
-        }
-
-        const now = String(valueCell.innerText || valueCell.innerHTML || "").trim();
-
-        if ((!now || now === "-") && lastGoodDetailsHTML) {
-            valueCell.innerHTML = lastGoodDetailsHTML;
-        }
-    }
-
-    const oldOpenPreview = window.openPreview;
-    window.openPreview = async function (id) {
-        let result;
-
-        if (typeof oldOpenPreview === "function") {
-            result = await oldOpenPreview.apply(this, arguments);
-        }
-
-        try {
-            const row = await fetchVoucherRow(id);
-            if (row) {
-                renderDraftDetailsTable(row);
-                setTimeout(function () { renderDraftDetailsTable(row); }, 250);
-                setTimeout(function () { renderDraftDetailsTable(row); }, 800);
-            }
-        } catch (error) {
-            console.warn("Draft details table load failed:", error);
-        }
-
-        return result;
-    };
-
-    const oldPrintVoucherPreviewOnly = window.printVoucherPreviewOnly;
-    window.printVoucherPreviewOnly = function () {
-        if (lastDraftPreviewRow) {
-            renderDraftDetailsTable(lastDraftPreviewRow);
-        }
-
-        restoreDetailsIfMissing();
-
-        const result = typeof oldPrintVoucherPreviewOnly === "function"
-            ? oldPrintVoucherPreviewOnly.apply(this, arguments)
-            : window.print();
-
-        setTimeout(restoreDetailsIfMissing, 300);
-        setTimeout(restoreDetailsIfMissing, 1000);
-        setTimeout(restoreDetailsIfMissing, 1800);
-
-        return result;
-    };
-
-    window.addEventListener("afterprint", function () {
-        setTimeout(function () {
-            if (lastDraftPreviewRow) {
-                renderDraftDetailsTable(lastDraftPreviewRow);
-            }
-            restoreDetailsIfMissing();
-        }, 300);
-    });
-
-    document.addEventListener("click", function (event) {
-        const text = String(event.target && event.target.innerText ? event.target.innerText : "").toUpperCase();
-
-        if (text.includes("PREVIEW")) {
-            setTimeout(restoreDetailsIfMissing, 500);
-        }
-
-        if (text.includes("PRINT")) {
-            if (lastDraftPreviewRow) {
-                renderDraftDetailsTable(lastDraftPreviewRow);
-            }
-            restoreDetailsIfMissing();
-            setTimeout(restoreDetailsIfMissing, 300);
-            setTimeout(restoreDetailsIfMissing, 1000);
-        }
-    }, true);
-})();
-</script>
+}
+</style>
 
 <script>
-/* FILTER ONLY FIX - KEEP EXISTING PREVIEW UI */
 (function () {
-    const isIAAuthPage =
-        window.location.pathname.includes("ia-authentication") ||
-        !!document.querySelector(".ia-auth-table");
+    function fixVoucherSignatureCellsFinal() {
+        document.querySelectorAll(".print-sign-cell").forEach(function (cell) {
+            const text = String(cell.textContent || "").trim();
 
-    function getEl(id) {
-        return document.getElementById(id);
-    }
-
-    function normalize(value) {
-        return String(value ?? "").trim().toUpperCase();
-    }
-
-    function toISODate(value) {
-        value = String(value || "").trim();
-
-        if (!value) return "";
-
-        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-
-        if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
-            const p = value.split(".");
-            return `${p[2]}-${p[1]}-${p[0]}`;
-        }
-
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-            const p = value.split("/");
-            return `${p[2]}-${p[1]}-${p[0]}`;
-        }
-
-        return value.slice(0, 10);
-    }
-
-    function getRows() {
-        if (Array.isArray(window.draftRows)) return window.draftRows;
-
-        try {
-            if (Array.isArray(draftRows)) return draftRows;
-        } catch (e) {}
-
-        return [];
-    }
-
-    function setRows(rows) {
-        window.draftRows = rows;
-
-        try {
-            draftRows = rows;
-        } catch (e) {}
-    }
-
-    function getLimit() {
-        const value = getEl("rowLimitFilter")?.value || "10";
-        return value;
-    }
-
-    window.applyDraftFilters = function () {
-        const searchText = normalize(getEl("draftSearch")?.value || "");
-        const accountText = normalize(getEl("accountFilter")?.value || "");
-        const fromDate = toISODate(getEl("fromDateFilter")?.value || "");
-        const toDate = toISODate(getEl("toDateFilter")?.value || "");
-        const rowLimit = getLimit();
-
-        let filtered = getRows().filter(function (row) {
-            const rowDate = toISODate(row.voucherdate || row.date || "");
-
-            const rowSearch = normalize([
-                row.id,
-                row.voucherdate,
-                row.account_name,
-                row.person_name,
-                row.purpose,
-                row.narration,
-                row.amount,
-                row.entrydateandtime,
-                row.entry_time,
-                row.authdateandtime,
-                row.authdatetime
-            ].join(" "));
-
-            const rowAccount = normalize(row.account_name || "");
-
-            if (isIAAuthPage) {
-                const source = normalize(row.entry_source || "MANUAL");
-                if (row.authenticated || source !== "MANUAL") {
-                    return false;
-                }
+            if (/J\.?\s*O\.?\s*\(?\s*Accounts\s*\)?/i.test(text)) {
+                cell.textContent = "Accounts";
             }
 
-            if (searchText && !rowSearch.includes(searchText)) return false;
-            if (accountText && !rowAccount.includes(accountText)) return false;
-            if (fromDate && rowDate && rowDate < fromDate) return false;
-            if (toDate && rowDate && rowDate > toDate) return false;
-
-            return true;
+            cell.style.setProperty("display", "flex", "important");
+            cell.style.setProperty("align-items", "flex-end", "important");
+            cell.style.setProperty("justify-content", "center", "important");
+            cell.style.setProperty("text-align", "center", "important");
+            cell.style.setProperty("vertical-align", "bottom", "important");
+            cell.style.setProperty("height", "92px", "important");
+            cell.style.setProperty("min-height", "92px", "important");
+            cell.style.setProperty("padding", "0 6px 9px 6px", "important");
+            cell.style.setProperty("line-height", "1.05", "important");
+            cell.style.setProperty("box-sizing", "border-box", "important");
         });
-
-        if (rowLimit !== "all") {
-            filtered = filtered.slice(0, parseInt(rowLimit || "10", 10));
-        }
-
-        if (typeof window.renderDraftRows === "function") {
-            window.renderDraftRows(filtered);
-        } else if (typeof renderDraftRows === "function") {
-            renderDraftRows(filtered);
-        }
-    };
-
-    window.clearDraftFilters = function () {
-        if (getEl("draftSearch")) getEl("draftSearch").value = "";
-        if (getEl("accountFilter")) getEl("accountFilter").value = "";
-        if (getEl("fromDateFilter")) getEl("fromDateFilter").value = "";
-        if (getEl("toDateFilter")) getEl("toDateFilter").value = "";
-        if (getEl("rowLimitFilter")) getEl("rowLimitFilter").value = "10";
-
-        window.applyDraftFilters();
-    };
-
-    window.loadDrafts = async function () {
-        const body = getEl("draftBody") || getEl("voucherDraftBody");
-        const colCount = isIAAuthPage ? 8 : 10;
-
-        if (body) {
-            body.innerHTML = `<tr><td colspan="${colCount}">Loading...</td></tr>`;
-        }
-
-        try {
-            const response = await fetch("/api/cash-voucher-entry/list", {
-                cache: "no-store"
-            });
-
-            const result = await response.json();
-
-            if (!result.success) {
-                if (body) {
-                    body.innerHTML = `<tr><td colspan="${colCount}">${result.message || "Failed to load drafts"}</td></tr>`;
-                }
-                return;
-            }
-
-            const rows = result.rows || result.entries || [];
-            setRows(rows);
-
-            window.applyDraftFilters();
-
-        } catch (error) {
-            console.error("Load drafts failed:", error);
-
-            if (body) {
-                body.innerHTML = `<tr><td colspan="${colCount}">Failed to load drafts</td></tr>`;
-            }
-        }
-    };
-
-    function bindFilters() {
-        ["draftSearch", "accountFilter"].forEach(function (id) {
-            const el = getEl(id);
-            if (el && !el.dataset.filterOnlyBound) {
-                el.dataset.filterOnlyBound = "1";
-                el.addEventListener("input", window.applyDraftFilters);
-            }
-        });
-
-        ["fromDateFilter", "toDateFilter", "rowLimitFilter"].forEach(function (id) {
-            const el = getEl(id);
-            if (el && !el.dataset.filterOnlyBound) {
-                el.dataset.filterOnlyBound = "1";
-                el.addEventListener("change", window.applyDraftFilters);
-            }
-        });
-
-        if (getEl("rowLimitFilter") && !getEl("rowLimitFilter").value) {
-            getEl("rowLimitFilter").value = "10";
-        }
     }
+
+    window.fixVoucherSignatureCellsFinal = fixVoucherSignatureCellsFinal;
 
     document.addEventListener("DOMContentLoaded", function () {
-        bindFilters();
-        setTimeout(bindFilters, 300);
-        setTimeout(window.loadDrafts, 150);
+        fixVoucherSignatureCellsFinal();
+
+        setTimeout(fixVoucherSignatureCellsFinal, 300);
+        setTimeout(fixVoucherSignatureCellsFinal, 800);
+    });
+
+    window.addEventListener("beforeprint", fixVoucherSignatureCellsFinal);
+
+    const originalPrint = window.print;
+    window.print = function () {
+        fixVoucherSignatureCellsFinal();
+        setTimeout(fixVoucherSignatureCellsFinal, 50);
+        return originalPrint.call(window);
+    };
+
+    const observer = new MutationObserver(function () {
+        fixVoucherSignatureCellsFinal();
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true
     });
 })();
 </script>
-
-
-<script>
-/* FINAL VOUCHER DRAFT DISPLAY FILTER FIX */
-(function () {
-    let finalDraftRows = [];
-
-    function getEl(id) {
-        return document.getElementById(id);
-    }
-
-    function safeText(value) {
-        if (value === null || value === undefined) return "";
-        return String(value);
-    }
-
-    function formatAmount(value) {
-        const n = Number(value || 0);
-        return n.toFixed(2);
-    }
-
-    function normalizeDate(value) {
-        if (!value) return "";
-
-        const text = String(value).trim();
-
-        // Already YYYY-MM-DD
-        if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-            return text;
-        }
-
-        // DD.MM.YYYY or DD/MM/YYYY
-        let m = text.match(/^(\d{2})[./-](\d{2})[./-](\d{4})/);
-        if (m) {
-            return `${m[3]}-${m[2]}-${m[1]}`;
-        }
-
-        return text.substring(0, 10);
-    }
-
-    function getRowsFromApiResult(result) {
-        if (!result) return [];
-        if (Array.isArray(result.entries)) return result.entries;
-        if (Array.isArray(result.rows)) return result.rows;
-        if (Array.isArray(result.data)) return result.data;
-        if (result.vouchers && Array.isArray(result.vouchers)) return result.vouchers;
-        return [];
-    }
-
-    window.renderDraftRows = function (rows) {
-        const body = getEl("draftTableBody") || document.querySelector("#draftTable tbody") || document.querySelector("tbody");
-        if (!body) return;
-
-        if (!rows || rows.length === 0) {
-            body.innerHTML = `<tr><td colspan="9">No voucher drafts found</td></tr>`;
-            return;
-        }
-
-        body.innerHTML = rows.map(function (row) {
-            const isAuth = !!row.authenticated || !!row.authusercode;
-            const authText = isAuth ? "Authenticated" : "Pending";
-
-            return `
-                <tr>
-                    <td>${safeText(row.voucherdate)}</td>
-                    <td>${safeText(row.account_name)}</td>
-                    <td>${safeText(row.person_name)}</td>
-                    <td>${safeText(row.purpose)}</td>
-                    <td style="white-space: pre-line;">${safeText(row.narration)}</td>
-                    <td>${formatAmount(row.amount)}</td>
-                    <td>${safeText(row.entrydateandtime)}</td>
-                    <td>${authText}</td>
-                    <td>
-                        ${!isAuth ? `<button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>` : ``}
-                        <button class="btn btn-primary" onclick="openPreview(${row.id})">Preview</button>
-                    </td>
-                </tr>
-            `;
-        }).join("");
-    };
-
-    window.applyDraftFilters = function () {
-        const search = safeText(getEl("draftSearch")?.value).trim().toLowerCase();
-        const account = safeText(getEl("accountFilter")?.value).trim().toLowerCase();
-        const fromDate = safeText(getEl("fromDateFilter")?.value).trim();
-        const toDate = safeText(getEl("toDateFilter")?.value).trim();
-        const rowLimit = safeText(getEl("rowLimitFilter")?.value || "10");
-
-        let filtered = finalDraftRows.slice();
-
-        if (search) {
-            filtered = filtered.filter(function (row) {
-                const combined = [
-                    row.id,
-                    row.voucherdate,
-                    row.account_name,
-                    row.person_name,
-                    row.purpose,
-                    row.narration,
-                    row.amount,
-                    row.entrydateandtime,
-                    row.entry_source
-                ].map(safeText).join(" ").toLowerCase();
-
-                return combined.includes(search);
-            });
-        }
-
-        if (account) {
-            filtered = filtered.filter(function (row) {
-                return safeText(row.account_name).toLowerCase().includes(account);
-            });
-        }
-
-        if (fromDate) {
-            filtered = filtered.filter(function (row) {
-                const d = normalizeDate(row.voucherdate);
-                return d >= fromDate;
-            });
-        }
-
-        if (toDate) {
-            filtered = filtered.filter(function (row) {
-                const d = normalizeDate(row.voucherdate);
-                return d <= toDate;
-            });
-        }
-
-        if (rowLimit !== "all") {
-            filtered = filtered.slice(0, Number(rowLimit || 10));
-        }
-
-        window.renderDraftRows(filtered);
-    };
-
-    window.clearDraftFilters = function () {
-        if (getEl("draftSearch")) getEl("draftSearch").value = "";
-        if (getEl("accountFilter")) getEl("accountFilter").value = "";
-        if (getEl("fromDateFilter")) getEl("fromDateFilter").value = "";
-        if (getEl("toDateFilter")) getEl("toDateFilter").value = "";
-        if (getEl("rowLimitFilter")) getEl("rowLimitFilter").value = "10";
-
-        window.applyDraftFilters();
-    };
-
-    window.loadDrafts = async function () {
-        const body = getEl("draftTableBody") || document.querySelector("#draftTable tbody") || document.querySelector("tbody");
-
-        if (body) {
-            body.innerHTML = `<tr><td colspan="9">Loading drafts...</td></tr>`;
-        }
-
-        try {
-            const limitValue = getEl("rowLimitFilter")?.value || "100";
-            const apiLimit = limitValue === "all" ? "500" : "500";
-
-            const response = await fetch("/api/cash-voucher-entry/list?limit=" + encodeURIComponent(apiLimit), {
-                cache: "no-store",
-                credentials: "same-origin"
-            });
-
-            const contentType = response.headers.get("content-type") || "";
-
-            if (!contentType.includes("application/json")) {
-                throw new Error("Login expired or API returned HTML. Please login again.");
-            }
-
-            const result = await response.json();
-
-            if (result.success === false) {
-                throw new Error(result.message || "Failed to load drafts");
-            }
-
-            finalDraftRows = getRowsFromApiResult(result);
-
-            window.allDraftRows = finalDraftRows;
-            window.draftRows = finalDraftRows;
-
-            const accountList = getEl("accountFilterList");
-            if (accountList) {
-                const names = [...new Set(finalDraftRows.map(function (r) {
-                    return safeText(r.account_name);
-                }).filter(Boolean))].sort();
-
-                accountList.innerHTML = names.map(function (name) {
-                    return `<option value="${name}"></option>`;
-                }).join("");
-            }
-
-            window.applyDraftFilters();
-
-        } catch (error) {
-            console.error("Voucher draft load error:", error);
-
-            if (body) {
-                body.innerHTML = `<tr><td colspan="9">${error.message || "Failed to load drafts"}</td></tr>`;
-            }
-        }
-    };
-
-    document.addEventListener("DOMContentLoaded", function () {
-        ["draftSearch", "accountFilter"].forEach(function (id) {
-            const el = getEl(id);
-            if (el) {
-                el.oninput = window.applyDraftFilters;
-            }
-        });
-
-        ["fromDateFilter", "toDateFilter", "rowLimitFilter"].forEach(function (id) {
-            const el = getEl(id);
-            if (el) {
-                el.onchange = window.applyDraftFilters;
-            }
-        });
-
-        setTimeout(window.loadDrafts, 100);
-        setTimeout(window.loadDrafts, 500);
-    });
-})();
-</script>
+<!-- FINAL_PRINT_SIGNATURE_FIX_END -->
 
 {% endblock %}

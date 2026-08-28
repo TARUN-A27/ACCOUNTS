@@ -724,18 +724,6 @@
 }
 
 
-
-/* Final voucher signature alignment */
-.print-sign-cell {
-    align-items: flex-end !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding-top: 36px !important;
-    padding-bottom: 7px !important;
-    line-height: 1.1 !important;
-    vertical-align: bottom !important;
-}
-
 </style>
 </head>
 <body>
@@ -2933,22 +2921,84 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
 </html>
 
 
-<style>
-/* FINAL OVERRIDE: voucher signature labels near bottom line */
-.print-signatures {
-    align-items: stretch !important;
-}
 
-.print-sign-cell {
-    display: flex !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    text-align: center !important;
-    vertical-align: bottom !important;
-    padding: 34px 6px 6px 6px !important;
-    line-height: 1.05 !important;
-    min-height: 58px !important;
-    box-sizing: border-box !important;
+
+
+<!-- FINAL_PRINT_SIGNATURE_FIX_START -->
+<style>
+@media screen, print {
+    .print-signatures {
+        height: 92px !important;
+        min-height: 92px !important;
+        align-items: stretch !important;
+    }
+
+    .print-sign-cell {
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        text-align: center !important;
+        vertical-align: bottom !important;
+        height: 92px !important;
+        min-height: 92px !important;
+        padding: 0 6px 9px 6px !important;
+        line-height: 1.05 !important;
+        box-sizing: border-box !important;
+    }
 }
 </style>
+
+<script>
+(function () {
+    function fixVoucherSignatureCellsFinal() {
+        document.querySelectorAll(".print-sign-cell").forEach(function (cell) {
+            const text = String(cell.textContent || "").trim();
+
+            if (/J\.?\s*O\.?\s*\(?\s*Accounts\s*\)?/i.test(text)) {
+                cell.textContent = "Accounts";
+            }
+
+            cell.style.setProperty("display", "flex", "important");
+            cell.style.setProperty("align-items", "flex-end", "important");
+            cell.style.setProperty("justify-content", "center", "important");
+            cell.style.setProperty("text-align", "center", "important");
+            cell.style.setProperty("vertical-align", "bottom", "important");
+            cell.style.setProperty("height", "92px", "important");
+            cell.style.setProperty("min-height", "92px", "important");
+            cell.style.setProperty("padding", "0 6px 9px 6px", "important");
+            cell.style.setProperty("line-height", "1.05", "important");
+            cell.style.setProperty("box-sizing", "border-box", "important");
+        });
+    }
+
+    window.fixVoucherSignatureCellsFinal = fixVoucherSignatureCellsFinal;
+
+    document.addEventListener("DOMContentLoaded", function () {
+        fixVoucherSignatureCellsFinal();
+
+        setTimeout(fixVoucherSignatureCellsFinal, 300);
+        setTimeout(fixVoucherSignatureCellsFinal, 800);
+    });
+
+    window.addEventListener("beforeprint", fixVoucherSignatureCellsFinal);
+
+    const originalPrint = window.print;
+    window.print = function () {
+        fixVoucherSignatureCellsFinal();
+        setTimeout(fixVoucherSignatureCellsFinal, 50);
+        return originalPrint.call(window);
+    };
+
+    const observer = new MutationObserver(function () {
+        fixVoucherSignatureCellsFinal();
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+})();
+</script>
+<!-- FINAL_PRINT_SIGNATURE_FIX_END -->
 
