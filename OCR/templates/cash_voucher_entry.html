@@ -877,6 +877,20 @@
             <div class="form-group full-width cv-purpose">
                 <label class="form-label">Purpose</label>
                 <textarea id="purpose" class="form-control" required placeholder="Enter voucher purpose" oninput="markUnsaved()"></textarea>
+
+                <!-- On Duty checkbox (optional) -->
+                <div class="cv-on-duty" style="margin-top:14px;">
+                    <label class="form-label">On Duty <span class="optional-label">(Optional)</span></label>
+
+                    <label class="account-head-type-option" style="margin-top:6px;">
+                        <input type="checkbox" id="onDutyCheckbox">
+                        On Duty
+                    </label>
+
+                    <div id="onDutySelectedContainer"
+                         style="margin-top:10px; display:none;"
+                         aria-hidden="true"></div>
+                </div>
             </div>
 
             <div class="form-group full-width details-section cv-details">
@@ -983,6 +997,29 @@
                 <div class="print-sign-cell">CASHIER</div>
                 <div class="print-sign-cell">RECEIVED BY</div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- On Duty modal (hidden until opened) -->
+<div id="onDutyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:99999;">
+    <div style="max-width:640px; margin:80px auto; background:#fff; border-radius:10px; padding:18px; box-shadow:0 12px 40px rgba(2,6,23,0.4);">
+        <h3 style="margin:0 0 10px 0;">Select On Duty Users</h3>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <label style="font-weight:700; margin-right:6px;">Date</label>
+            <input type="date" id="onDutyModalDate" class="form-control" style="max-width:220px;">
+            <button id="loadOnDutyUsersBtn" class="btn btn-secondary" style="margin-left:8px;">Load Users</button>
+            <button id="onDutyModalCancelBtn" class="btn btn-secondary" style="margin-left:8px;">Cancel</button>
+        </div>
+
+        <div style="margin-top:12px;">
+            <div id="onDutyUsersList"
+                 style="width:100%; max-height:260px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:8px; padding:6px; background:#fff;">
+            </div>
+        </div>
+
+        <div style="margin-top:12px; text-align:right;">
+            <button id="applyOnDutySelectionBtn" class="btn btn-success">Apply Selection</button>
         </div>
     </div>
 </div>
@@ -1101,10 +1138,20 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
     }
 
     function handleAccountHeadInput() {
-        const value = document.getElementById("accountHead").value.trim().toUpperCase();
-        const matched = accountHeadAccounts.find(account => account.name.toUpperCase() === value);
+        const input = document.getElementById("accountHead");
+        const code = document.getElementById("accountHeadCode");
 
-        document.getElementById("accountHeadCode").value = matched ? matched.accode : "";
+        if (!input || !code) return;
+
+        const value = String(input.value || "").trim().toUpperCase();
+
+        const matched = accountHeadAccounts.find(function (account) {
+            return String(account.name || "")
+                .trim()
+                .toUpperCase() === value;
+        });
+
+        code.value = matched ? String(matched.accode || "") : "";
     }
 
     function getFormData() {
@@ -1231,7 +1278,7 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
         document.getElementById("printAmount").innerText = amount;
 
         if (typeof applyFinalCashVoucherPreviewFormat === "function") {
-            applyFinalCashVoucherPreviewFormat((typeof row !== 'undefined' && row) ? row : {});
+            applyFinalCashVoucherPreviewFormat(data);
         }
 
         document.getElementById("printPreview").style.display = "block";
@@ -1732,6 +1779,15 @@ function buildCashVoucherDetailsTableFinal(row) {
 }
 
 function applyFinalCashVoucherPreviewFormat(row = null) {
+    function cashVoucherEscapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     const purposeEl = document.getElementById("pvPurpose") || document.getElementById("printPurpose");
     const previewBox =
         document.querySelector("#previewModal .preview-box") ||
@@ -1754,7 +1810,7 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         purposeLabel.innerText = "NARRATION";
     }
 
-    previewBox.querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row").forEach(function (el) {
+    previewBox.querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row, .preview-on-duty-row").forEach(function (el) {
         el.remove();
     });
 
@@ -1767,6 +1823,118 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     `;
 
     purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+
+    const onDutyEntries =
+        Array.isArray(row && row.on_duty_details)
+            ? row.on_duty_details
+            : (
+                typeof getOnDutyDetails === "function"
+                    ? getOnDutyDetails()
+                    : []
+            );
+    const validOnDutyEntries = onDutyEntries.filter(function (item) {
+        if (!item) return false;
+
+        const person = String(
+            item.person_name || item.personName || ""
+        ).trim();
+
+        return Boolean(person);
+    });
+
+    if (validOnDutyEntries.length) {
+        function formatOnDutyDate(value) {
+            const raw = String(value || "").trim();
+
+            if (/^\d{8}$/.test(raw)) {
+                return (
+                    raw.slice(6, 8) + "-" +
+                    raw.slice(4, 6) + "-" +
+                    raw.slice(0, 4)
+                );
+            }
+
+            if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                return (
+                    raw.slice(8, 10) + "-" +
+                    raw.slice(5, 7) + "-" +
+                    raw.slice(0, 4)
+                );
+            }
+
+            return raw;
+        }
+
+        function formatOnDutyTime(value) {
+            const raw = String(value || "").trim();
+
+            if (!raw) return "";
+
+            // Backend returns YYYY-MM-DD HH24:MI.
+            if (raw.includes(" ")) {
+                return raw.split(" ").pop();
+            }
+
+            return raw;
+        }
+
+        const onDutyTable = `
+            <table class="preview-details-table preview-on-duty-table">
+                <thead>
+                    <tr>
+                        <th style="width:26%;">Person Name</th>
+                        <th style="width:16%;">Date</th>
+                        <th style="width:14%;">From Time</th>
+                        <th style="width:14%;">To Time</th>
+                        <th style="width:30%;">Remark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${validOnDutyEntries.map(function (item) {
+                        const person = String(
+                            item.person_name || item.personName || ""
+                        ).trim();
+
+                        const reason = String(
+                            item.reason || ""
+                        ).trim();
+
+                        const remarks = String(
+                            item.remarks || ""
+                        ).trim();
+
+                        const date = formatOnDutyDate(item.outdate);
+                        const fromTime = formatOnDutyTime(item.outtime);
+                        const toTime = formatOnDutyTime(item.intime);
+
+                        return `
+                            <tr>
+                                <td>${cashVoucherEscapeHtml(person)}</td>
+                                <td>${cashVoucherEscapeHtml(date)}</td>
+                                <td>${cashVoucherEscapeHtml(fromTime)}</td>
+                                <td>${cashVoucherEscapeHtml(toTime)}</td>
+                                <td>${cashVoucherEscapeHtml(remarks)}</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+
+        const onDutyRow = document.createElement("div");
+        onDutyRow.className =
+            "print-line preview-on-duty-row preview-narration-line";
+
+        onDutyRow.innerHTML = `
+            <div class="print-label">ON DUTY</div>
+            <div class="print-value">${onDutyTable}</div>
+        `;
+
+        detailsRow.parentNode.insertBefore(
+            onDutyRow,
+            detailsRow.nextSibling
+        );
+    }
 }
 
 document.addEventListener("click", function (event) {
@@ -1779,7 +1947,12 @@ document.addEventListener("click", function (event) {
         text.includes("AUTHENTICATE")
     ) {
         setTimeout(function () {
-            applyFinalCashVoucherPreviewFormat();
+            const currentData =
+                typeof getFormData === "function"
+                    ? getFormData()
+                    : null;
+
+            applyFinalCashVoucherPreviewFormat(currentData);
         }, 300);
     }
 });
@@ -2347,8 +2520,258 @@ document.addEventListener("click", function (event) {
         }
 
         data.account_type = getMode();
+        data.on_duty_details = (typeof getOnDutyDetails === "function") ? getOnDutyDetails() : [];
         return data;
     };
+
+    // On Duty modal and selection handling
+    function openOnDutyModal() {
+        const modal = document.getElementById("onDutyModal");
+        const dateInput = document.getElementById("onDutyModalDate");
+        const voucherDate = document.getElementById("voucherDate")?.value;
+        dateInput.value = voucherDate || new Date().toISOString().slice(0,10);
+        document.getElementById("onDutyUsersList").innerHTML = "";
+        modal.style.display = "block";
+    }
+
+    function closeOnDutyModal() {
+        const modal = document.getElementById("onDutyModal");
+        modal.style.display = "none";
+    }
+
+    async function loadOnDutyUsersForDate(date) {
+        const list = document.getElementById('onDutyUsersList');
+
+        try {
+            const resp = await fetch(
+                '/api/cash-voucher-entry/on-duty-users?date=' +
+                encodeURIComponent(date),
+                {
+                    cache: 'no-store',
+                    credentials: 'same-origin'
+                }
+            );
+
+            const data = await resp.json();
+
+            list.innerHTML = '';
+
+            if (!data.success || !Array.isArray(data.rows) || data.rows.length === 0) {
+                const empty = document.createElement('div');
+                empty.textContent = 'No users found';
+                empty.style.cssText =
+                    'padding:10px;color:#64748b;text-align:center;';
+                list.appendChild(empty);
+                return;
+            }
+
+            data.rows.forEach(function (r) {
+                const row = document.createElement('label');
+
+                row.style.cssText = [
+                    'display:flex',
+                    'align-items:center',
+                    'gap:10px',
+                    'padding:8px 10px',
+                    'border-bottom:1px solid #eef2f7',
+                    'cursor:pointer',
+                    'user-select:none'
+                ].join(';');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'on-duty-user-checkbox';
+
+                // Keep IDs/data internally for persistence.
+                checkbox.dataset.usercode = String(r.usercode || '');
+                checkbox.dataset.empcode = String(r.empcode || '');
+                checkbox.dataset.outdate = String(r.outdate || '');
+                checkbox.dataset.outtime = String(r.outtime || '');
+                checkbox.dataset.intime = String(r.intime || '');
+                checkbox.dataset.remarks = String(r.remarks || '');
+                checkbox.dataset.username = String(r.username || '');
+
+                const name = document.createElement('span');
+
+                // IMPORTANT:
+                // Only show employee/user name.
+                // Do not expose empcode in the interface.
+                name.textContent = String(r.username || '');
+
+                row.appendChild(checkbox);
+                row.appendChild(name);
+
+                list.appendChild(row);
+            });
+
+        } catch (e) {
+            list.innerHTML = '';
+
+            const error = document.createElement('div');
+            error.textContent = 'Load failed';
+            error.style.cssText =
+                'padding:10px;color:#b91c1c;text-align:center;';
+
+            list.appendChild(error);
+
+            console.error('On Duty user load error:', e);
+        }
+    }
+
+
+    function applyOnDutySelection() {
+        const list = document.getElementById('onDutyUsersList');
+        const container = document.getElementById('onDutySelectedContainer');
+
+        const selected = Array.from(
+            list.querySelectorAll('.on-duty-user-checkbox:checked')
+        );
+
+        container.innerHTML = '';
+
+        if (!selected.length) {
+            container.style.display = 'none';
+            document.getElementById('onDutyCheckbox').checked = false;
+            closeOnDutyModal();
+            return;
+        }
+
+        selected.forEach(function (checkbox) {
+            const usercode = checkbox.dataset.usercode || '';
+            const empcode = checkbox.dataset.empcode || '';
+            const outdate = checkbox.dataset.outdate || '';
+            const outtime = checkbox.dataset.outtime || '';
+            const intime = checkbox.dataset.intime || '';
+            const remarks = checkbox.dataset.remarks || '';
+            const username = checkbox.dataset.username || '';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'on-duty-person';
+
+            // Keep persistence fields hidden in DOM dataset.
+            wrapper.dataset.usercode = usercode;
+            wrapper.dataset.empcode = empcode;
+            wrapper.dataset.outdate = outdate;
+            wrapper.dataset.outtime = outtime;
+            wrapper.dataset.intime = intime;
+            wrapper.dataset.remarks = remarks;
+            wrapper.dataset.person_name = username;
+
+            wrapper.style.cssText =
+                'border:1px solid #e6eef9;' +
+                'padding:8px;' +
+                'border-radius:8px;' +
+                'margin-bottom:8px;' +
+                'background:#fff;';
+
+            const header = document.createElement('div');
+            header.style.cssText =
+                'display:flex;' +
+                'justify-content:space-between;' +
+                'align-items:center;' +
+                'gap:8px;';
+
+            const name = document.createElement('div');
+            name.style.fontWeight = '800';
+            name.textContent = username;
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-secondary remove-on-duty';
+            removeButton.dataset.usercode = usercode;
+            removeButton.textContent = 'Remove';
+
+            header.appendChild(name);
+            header.appendChild(removeButton);
+
+            wrapper.appendChild(header);
+
+            container.appendChild(wrapper);
+        });
+
+        container.style.display = 'block';
+        container.setAttribute('aria-hidden', 'false');
+
+        closeOnDutyModal();
+    }
+
+
+    function getOnDutyDetails() {
+        const container = document.getElementById('onDutySelectedContainer');
+        if (!container) return [];
+
+        const persons = Array.from(container.querySelectorAll('.on-duty-person'));
+        const out = persons.map(function (p) {
+            return {
+                usercode: p.dataset.usercode || '',
+                empcode: p.dataset.empcode || '',
+                outdate: p.dataset.outdate || '',
+                outtime: p.dataset.outtime || '',
+                intime: p.dataset.intime || '',
+                remarks: p.dataset.remarks || '',
+                person_name: p.dataset.person_name || '',};
+        }).filter(function (it) { return it.usercode || it.empcode; });
+
+        return out;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkbox = document.getElementById('onDutyCheckbox');
+        const loadBtn = document.getElementById('loadOnDutyUsersBtn');
+        const cancelBtn = document.getElementById('onDutyModalCancelBtn');
+        const applyBtn = document.getElementById('applyOnDutySelectionBtn');
+        const list = document.getElementById('onDutyUsersList');
+        const container = document.getElementById('onDutySelectedContainer');
+
+        if (checkbox) {
+            checkbox.addEventListener('change', function () {
+                if (checkbox.checked) {
+                    openOnDutyModal();
+                } else {
+                    // uncheck clears selections
+                    container.innerHTML = '';
+                    container.style.display = 'none';
+                }
+            });
+        }
+
+        if (loadBtn) {
+            loadBtn.addEventListener('click', function () {
+                const date = document.getElementById('onDutyModalDate')?.value;
+                if (!date) return alert('Select a date');
+                loadOnDutyUsersForDate(date);
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function () {
+                // if nothing selected, uncheck
+                closeOnDutyModal();
+                if (!container.querySelector('.on-duty-person')) {
+                    document.getElementById('onDutyCheckbox').checked = false;
+                }
+            });
+        }
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function () {
+                applyOnDutySelection();
+            });
+        }
+
+        // delegate remove buttons
+        document.addEventListener('click', function (e) {
+            const rem = e.target.closest('.remove-on-duty');
+            if (rem) {
+                const parent = rem.closest('.on-duty-person');
+                if (parent) parent.remove();
+                if (!container.querySelector('.on-duty-person')) {
+                    container.style.display = 'none';
+                    document.getElementById('onDutyCheckbox').checked = false;
+                }
+            }
+        });
+    });
 
     document.addEventListener("DOMContentLoaded", function () {
         ensureAccountTypeUI();

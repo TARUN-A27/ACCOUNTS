@@ -1719,6 +1719,92 @@ function buildDraftPreviewDetails(details) {
     `;
 }
 
+function buildDraftOnDutySection(onDutyDetails) {
+    const items = Array.isArray(onDutyDetails) ? onDutyDetails : [];
+
+    const validRows = items.filter(function (item) {
+        if (!item) return false;
+
+        return Boolean(
+            String(
+                item.person_name || item.personName || ""
+            ).trim()
+        );
+    });
+
+    if (!validRows.length) {
+        return "";
+    }
+
+    function formatDate(value) {
+        const raw = String(value || "").trim();
+
+        if (/^\d{8}$/.test(raw)) {
+            return (
+                raw.slice(6, 8) + "-" +
+                raw.slice(4, 6) + "-" +
+                raw.slice(0, 4)
+            );
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+            return (
+                raw.slice(8, 10) + "-" +
+                raw.slice(5, 7) + "-" +
+                raw.slice(0, 4)
+            );
+        }
+
+        return raw;
+    }
+
+    function formatTime(value) {
+        const raw = String(value || "").trim();
+        return raw.includes(" ") ? raw.split(" ").pop() : raw;
+    }
+
+    const table = `
+        <table class="preview-details-table preview-on-duty-table">
+            <thead>
+                <tr>
+                    <th style="width:26%;">Person Name</th>
+                    <th style="width:16%;">Date</th>
+                    <th style="width:14%;">From Time</th>
+                    <th style="width:14%;">To Time</th>
+                    <th style="width:30%;">Remark</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${validRows.map(function (item) {
+                    const person = String(
+                        item.person_name || item.personName || ""
+                    ).trim();
+
+                    const reason = String(item.reason || "").trim();
+                    const remarks = String(item.remarks || "").trim();
+
+                    return `
+                        <tr>
+                            <td>${escapeHtml(person)}</td>
+                            <td>${escapeHtml(formatDate(item.outdate))}</td>
+                            <td>${escapeHtml(formatTime(item.outtime))}</td>
+                            <td>${escapeHtml(formatTime(item.intime))}</td>
+                            <td>${escapeHtml(remarks)}</td>
+                        </tr>
+                    `;
+                }).join("")}
+            </tbody>
+        </table>
+    `;
+
+    return `
+        <div class="print-line preview-on-duty-row preview-narration-line">
+            <div class="print-label">ON DUTY</div>
+            <div class="print-value">${table}</div>
+        </div>
+    `;
+}
+
 async function openPreview(id) {
     const row = await fetchVoucher(id);
 
@@ -1762,6 +1848,7 @@ async function openPreview(id) {
             </div>
 
             ${buildDraftPreviewDetails(details)}
+            ${buildDraftOnDutySection(row.on_duty_details || [])}
 
             <div class="print-amount-row">
                 <div class="print-amount-words">

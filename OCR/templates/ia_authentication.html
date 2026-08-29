@@ -2017,7 +2017,7 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         purposeLabel.innerText = "NARRATION";
     }
 
-    previewBox.querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row").forEach(function (el) {
+    previewBox.querySelectorAll(".preview-narration-line, .preview-details-row, .print-narration-row, .preview-on-duty-row").forEach(function (el) {
         el.remove();
     });
 
@@ -2030,6 +2030,32 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     `;
 
     purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+
+    const onDutyEntries = Array.isArray(row && row.on_duty_details) ? row.on_duty_details : [];
+    const onDutyHtml = onDutyEntries
+        .filter(function (item) {
+            if (!item) return false;
+            const person = String(item.person_name || item.personName || "").trim();
+            const reason = String(item.reason || "").trim();
+            return person || reason || item.usercode !== undefined || item.empcode !== undefined;
+        })
+        .map(function (item) {
+            const person = String(item.person_name || item.personName || "").trim();
+            const reason = String(item.reason || "").trim();
+            const label = reason ? `${iaEscapeHtml(person)} - ${iaEscapeHtml(reason)}` : iaEscapeHtml(person);
+            return `<div>${label || ""}</div>`;
+        })
+        .join("");
+
+    if (onDutyHtml) {
+        const onDutyRow = document.createElement("div");
+        onDutyRow.className = "print-line preview-on-duty-row preview-narration-line";
+        onDutyRow.innerHTML = `
+            <div class="print-label">ON DUTY</div>
+            <div class="print-value">${onDutyHtml}</div>
+        `;
+        detailsRow.parentNode.insertBefore(onDutyRow, detailsRow.nextSibling);
+    }
 }
 
 </script>
@@ -2846,7 +2872,7 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         }
 
         previewBox
-            .querySelectorAll(".preview-narration-line, .preview-details-row, .ia-final-details-row, .ia-details-table-row")
+            .querySelectorAll(".preview-narration-line, .preview-details-row, .ia-final-details-row, .ia-details-table-row, .preview-on-duty-row, .ia-on-duty-row")
             .forEach(function (el) {
                 el.remove();
             });
@@ -2859,6 +2885,105 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         `;
 
         purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+
+        const onDutyItems =
+            row && Array.isArray(row.on_duty_details)
+                ? row.on_duty_details
+                : [];
+
+        const validOnDutyItems = onDutyItems.filter(function (item) {
+            if (!item) return false;
+
+            return Boolean(
+                String(
+                    item.person_name || item.personName || ""
+                ).trim()
+            );
+        });
+
+        if (validOnDutyItems.length) {
+            function formatIADate(value) {
+                const raw = String(value || "").trim();
+
+                if (/^\d{8}$/.test(raw)) {
+                    return (
+                        raw.slice(6, 8) + "-" +
+                        raw.slice(4, 6) + "-" +
+                        raw.slice(0, 4)
+                    );
+                }
+
+                if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                    return (
+                        raw.slice(8, 10) + "-" +
+                        raw.slice(5, 7) + "-" +
+                        raw.slice(0, 4)
+                    );
+                }
+
+                return raw;
+            }
+
+            function formatIATime(value) {
+                const raw = String(value || "").trim();
+                return raw.includes(" ") ? raw.split(" ").pop() : raw;
+            }
+
+            const onDutyTable = `
+                <table class="preview-details-table preview-on-duty-table">
+                    <thead>
+                        <tr>
+                            <th style="width:26%;">Person Name</th>
+                            <th style="width:16%;">Date</th>
+                            <th style="width:14%;">From Time</th>
+                            <th style="width:14%;">To Time</th>
+                            <th style="width:30%;">Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${validOnDutyItems.map(function (item) {
+                            const person = String(
+                                item.person_name ||
+                                item.personName ||
+                                ""
+                            ).trim();
+
+                            const reason = String(
+                                item.reason || ""
+                            ).trim();
+
+                            const remarks = String(
+                                item.remarks || ""
+                            ).trim();
+
+                            return `
+                                <tr>
+                                    <td>${escapeHtml(person)}</td>
+                                    <td>${escapeHtml(formatIADate(item.outdate))}</td>
+                                    <td>${escapeHtml(formatIATime(item.outtime))}</td>
+                                    <td>${escapeHtml(formatIATime(item.intime))}</td>
+                                    <td>${escapeHtml(remarks)}</td>
+                                </tr>
+                            `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            `;
+
+            const onDutyRow = document.createElement("div");
+            onDutyRow.className =
+                "print-line preview-on-duty-row ia-on-duty-row";
+
+            onDutyRow.innerHTML = `
+                <div class="print-label">ON DUTY</div>
+                <div class="print-value">${onDutyTable}</div>
+            `;
+
+            detailsRow.parentNode.insertBefore(
+                onDutyRow,
+                detailsRow.nextSibling
+            );
+        }
     }
 
     const oldOpenPreview = window.openPreview;

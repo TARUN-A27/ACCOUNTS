@@ -227,6 +227,90 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
 
             saved_detail_count += 1
 
+        # Persist On Duty details (Task 2B)
+        on_duty_rows = data.get("on_duty_details") or []
+        saved_on_duty = 0
+
+        for od in on_duty_rows:
+            try:
+                usercode_val = od.get("usercode") if od.get("usercode") is not None else None
+            except Exception:
+                usercode_val = None
+
+            try:
+                empcode_val = od.get("empcode") if od.get("empcode") is not None else None
+            except Exception:
+                empcode_val = None
+
+            person_name_val = (od.get("person_name") or od.get("username") or "")
+            remarks_val = od.get("remarks") or ""
+            outdate_val = od.get("outdate") or od.get("out_date") or None
+            outtime_val = str(od.get("outtime") or "").strip() or None
+            intime_val = str(od.get("intime") or "").strip() or None
+
+            # Normalize types and truncate to column sizes
+            try:
+                if outdate_val is not None and str(outdate_val).strip() != "":
+                    outdate_val = int(str(outdate_val).strip())
+                else:
+                    outdate_val = None
+            except Exception:
+                outdate_val = None
+
+            if person_name_val is None:
+                person_name_val = ""
+
+            person_name_val = str(person_name_val)[:250]
+            remarks_val = str(remarks_val or "")[:300]
+
+            # Skip completely empty records
+            if not usercode_val and not empcode_val and not person_name_val and not remarks_val and outdate_val is None:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYONDUTYDETAILS (
+                    ID,
+                    CASHBANKENTRY_ID,
+                    USERCODE,
+                    EMPCODE,
+                    PERSON_NAME,
+                    REMARKS,
+                    OUTDATE,
+                    OUTTIME,
+                    INTIME,
+                    ENTRYDATEANDTIME
+                ) VALUES (
+                    CASHBANKENTRYONDUTY_SEQ.NEXTVAL,
+                    :cashbankentry_id,
+                    :usercode,
+                    :empcode,
+                    :person_name,
+                    :remarks,
+                    :outdate,
+                    CASE
+                        WHEN :outtime IS NULL OR :outtime = '' THEN NULL
+                        ELSE TO_DATE(:outtime, 'YYYY-MM-DD HH24:MI')
+                    END,
+                    CASE
+                        WHEN :intime IS NULL OR :intime = '' THEN NULL
+                        ELSE TO_DATE(:intime, 'YYYY-MM-DD HH24:MI')
+                    END,
+                    SYSDATE
+                )
+            """, {
+                "cashbankentry_id": new_id,
+                "usercode": int(usercode_val) if usercode_val not in (None, "") else None,
+                "empcode": int(empcode_val) if empcode_val not in (None, "") else None,
+                "person_name": person_name_val or None,
+                "remarks": remarks_val or None,
+                "outdate": outdate_val,
+                "outtime": outtime_val,
+                "intime": intime_val
+            })
+
+            saved_on_duty += 1
+
+        # commit parent + details + on-duty together
         conn.commit()
 
         return {
@@ -923,6 +1007,36 @@ def get_cash_voucher_entry_by_id(voucher_id):
             "narration": "\n".join(narration_lines)
         }
 
+        # Load On Duty details if any
+        cursor.execute("""
+            SELECT ID,
+                   USERCODE,
+                   EMPCODE,
+                   PERSON_NAME,
+                   OUTDATE,
+                   TO_CHAR(OUTTIME, 'YYYY-MM-DD HH24:MI') AS OUTTIME,
+                   TO_CHAR(INTIME, 'YYYY-MM-DD HH24:MI') AS INTIME,
+                   REMARKS
+            FROM CASHBANKENTRYONDUTYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+            ORDER BY ID
+        """, {"voucher_id": voucher_id})
+
+        on_duty = []
+        for r in cursor.fetchall():
+            on_duty.append({
+                "id": r[0],
+                "usercode": r[1] if r[1] is not None else "",
+                "empcode": r[2] if r[2] is not None else "",
+                "person_name": r[3] or "",
+                "outdate": r[4] if r[4] is not None else "",
+                "outtime": r[5] or "",
+                "intime": r[6] or "",
+                "remarks": r[7] or ""
+            })
+
+        voucher["on_duty_details"] = on_duty
+
         return {
             "success": True,
             "voucher": voucher,
@@ -1327,6 +1441,7 @@ def update_cash_voucher_entry(voucher_id, data):
                 "total_price": total_price
             })
 
+        # commit parent + details
         conn.commit()
 
         return {
@@ -2405,6 +2520,103 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                 "item_count": item_count,
                 "sub_price": sub_price,
                 "total_price": total_price
+            })
+
+        cursor.execute("""
+            DELETE FROM CASHBANKENTRYONDUTYDETAILS
+            WHERE CASHBANKENTRY_ID = :voucher_id
+        """, {
+            "voucher_id": voucher_id
+        })
+
+        on_duty_rows = data.get("on_duty_details") or []
+        for od in on_duty_rows:
+            if not isinstance(od, dict):
+                continue
+
+            usercode_val = od.get("usercode")
+            empcode_val = od.get("empcode")
+            person_name_val = od.get("person_name")
+            remarks_val = od.get("remarks")
+            outdate_val = od.get("outdate")
+            outtime_val = str(od.get("outtime") or "").strip() or None
+            intime_val = str(od.get("intime") or "").strip() or None
+
+            if outdate_val is None:
+                outdate_val = od.get("out_date")
+
+            if usercode_val not in (None, ""):
+                try:
+                    usercode_val = int(usercode_val)
+                except (TypeError, ValueError):
+                    usercode_val = None
+            else:
+                usercode_val = None
+
+            if empcode_val not in (None, ""):
+                try:
+                    empcode_val = int(empcode_val)
+                except (TypeError, ValueError):
+                    empcode_val = None
+            else:
+                empcode_val = None
+
+            if person_name_val is None:
+                person_name_val = od.get("username") or ""
+            if outdate_val is not None and str(outdate_val).strip() != "":
+                try:
+                    outdate_val = int(str(outdate_val).strip())
+                except (TypeError, ValueError):
+                    outdate_val = None
+            else:
+                outdate_val = None
+
+            person_name_val = str(person_name_val or "")[:250]
+            remarks_val = str(remarks_val or "")[:300]
+
+            if not usercode_val and not empcode_val and not person_name_val and not remarks_val and outdate_val is None:
+                continue
+
+            cursor.execute("""
+                INSERT INTO CASHBANKENTRYONDUTYDETAILS (
+                    ID,
+                    CASHBANKENTRY_ID,
+                    USERCODE,
+                    EMPCODE,
+                    PERSON_NAME,
+                    REMARKS,
+                    OUTDATE,
+                    OUTTIME,
+                    INTIME,
+                    ENTRYDATEANDTIME
+                )
+                VALUES (
+                    CASHBANKENTRYONDUTY_SEQ.NEXTVAL,
+                    :cashbankentry_id,
+                    :usercode,
+                    :empcode,
+                    :person_name,
+                    :remarks,
+                    :outdate,
+                    CASE
+                        WHEN :outtime IS NULL OR :outtime = '' THEN NULL
+                        ELSE TO_DATE(:outtime, 'YYYY-MM-DD HH24:MI')
+                    END,
+                    CASE
+                        WHEN :intime IS NULL OR :intime = '' THEN NULL
+                        ELSE TO_DATE(:intime, 'YYYY-MM-DD HH24:MI')
+                    END,
+                    SYSDATE
+                )
+            """, {
+                "cashbankentry_id": voucher_id,
+                "usercode": usercode_val,
+                "empcode": empcode_val,
+                "person_name": person_name_val or None,
+                "remarks": remarks_val or None,
+                "outdate": outdate_val,
+                "outtime": outtime_val,
+                "intime": intime_val
             })
 
         conn.commit()

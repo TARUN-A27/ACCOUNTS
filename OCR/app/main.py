@@ -295,6 +295,66 @@ def cash_voucher_entry_parties():
         if conn:
             conn.close()
 
+
+@app.route("/api/cash-voucher-entry/on-duty-users")
+def cash_voucher_entry_on_duty_users():
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "message": "Login required", "rows": [], "count": 0}), 401
+
+    date_raw = (request.args.get("date") or "").strip()
+
+    if not date_raw:
+        return jsonify({"success": True, "rows": [], "count": 0})
+
+    # convert YYYY-MM-DD to YYYYMMDD as required by query
+    selected_date = date_raw.replace('-', '')
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT r.Usercode,
+                   d.Empcode,
+                   d.Outdate,
+                   r.UserName,
+                   TO_CHAR(d.OutTime, 'YYYY-MM-DD HH24:MI') AS OutTime,
+                   TO_CHAR(d.InTime, 'YYYY-MM-DD HH24:MI') AS InTime,
+                   d.Remarks AS Remarks
+            FROM HRDNEW.DEPTONDUTYDETAILS d
+            INNER JOIN SCM.RAWUSER r
+                ON r.Empcode = d.Empcode
+            WHERE d.Outdate >= :selected_date
+              AND d.Outdate <= :selected_date
+            ORDER BY r.UserName
+        """, {"selected_date": selected_date})
+
+        rows = []
+        for row in cursor.fetchall():
+            rows.append({
+                "usercode": str(row[0] or ""),
+                "empcode": str(row[1] or ""),
+                "outdate": str(row[2] or ""),
+                "username": str(row[3] or ""),
+                "outtime": str(row[4] or ""),
+                "intime": str(row[5] or ""),
+                "remarks": str(row[6] or "")
+            })
+
+        return jsonify({"success": True, "rows": rows, "count": len(rows)})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e), "rows": [], "count": 0}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @app.route("/api/cash-voucher-entry/save", methods=["POST"])
 def save_cash_voucher_entry():
     if not session.get("logged_in"):
