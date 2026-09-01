@@ -148,7 +148,6 @@ def insert_taruncashbank(voucher_fields, session_data):
         print(voucher_fields)
         print("=" * 80)
 
-        vocno = int(session_data.get("cpa_number"))
         divisioncode = int(session_data.get("divisioncode"))
         yearcode = int(session_data.get("yearcode"))
         usercode = int(session_data.get("usercode"))
@@ -185,6 +184,27 @@ def insert_taruncashbank(voucher_fields, session_data):
 
         conn = get_connection()
         cursor = conn.cursor()
+
+        # TARUNCASHBANK is a test/staging table.
+        #
+        # It must never consume the real company's
+        # NOCONFIG CPA numbering.
+        #
+        # Generate a test-only VOCNO from TARUNCASHBANK itself.
+        cursor.execute("""
+            SELECT NVL(MAX(VOCNO), 0) + 1
+            FROM TARUNCASHBANK
+            WHERE VOCTYPE = 'CPA'
+              AND DIVISIONCODE = :divisioncode
+              AND YEARCODE = :yearcode
+        """, {
+            "divisioncode": divisioncode,
+            "yearcode": yearcode
+        })
+
+        vocno = int(cursor.fetchone()[0])
+
+        print("TARUNCASHBANK test VOCNO:", vocno)
 
         insert_sql = """
             INSERT INTO TARUNCASHBANK (

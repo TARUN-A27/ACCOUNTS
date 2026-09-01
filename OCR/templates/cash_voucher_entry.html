@@ -890,6 +890,13 @@
                     <div id="onDutySelectedContainer"
                          style="margin-top:10px; display:none;"
                          aria-hidden="true"></div>
+
+                    <button type="button"
+                            id="addOnDutyBtn"
+                            class="btn btn-secondary"
+                            style="display:none; margin-top:8px;">
+                        + Add
+                    </button>
                 </div>
             </div>
 
@@ -1447,6 +1454,16 @@ document.getElementById("voucherDate").value = `${yyyy}-${mm}-${dd}`;
                 "aria-hidden",
                 "true"
             );
+        }
+
+        const addOnDutyBtn =
+            document.getElementById(
+                "addOnDutyBtn"
+            );
+
+        if (addOnDutyBtn) {
+            addOnDutyBtn.style.display =
+                "none";
         }
 
         const onDutyUsers =
@@ -2821,80 +2838,399 @@ document.addEventListener("click", function (event) {
 
 
     function applyOnDutySelection() {
-        const list = document.getElementById('onDutyUsersList');
-        const container = document.getElementById('onDutySelectedContainer');
+        const list =
+            document.getElementById(
+                'onDutyUsersList'
+            );
+
+        const container =
+            document.getElementById(
+                'onDutySelectedContainer'
+            );
+
+        const addButton =
+            document.getElementById(
+                'addOnDutyBtn'
+            );
+
+        const onDutyCheckbox =
+            document.getElementById(
+                'onDutyCheckbox'
+            );
+
+        if (!list || !container) {
+            return;
+        }
+
 
         const selected = Array.from(
-            list.querySelectorAll('.on-duty-user-checkbox:checked')
+            list.querySelectorAll(
+                '.on-duty-user-checkbox:checked'
+            )
         );
 
-        container.innerHTML = '';
 
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT clear the existing container here.
+         *
+         * Existing behaviour used:
+         *
+         *     container.innerHTML = '';
+         *
+         * which meant selecting another date removed all
+         * previously selected On Duty people.
+         *
+         * New selections are appended instead.
+         */
         if (!selected.length) {
-            container.style.display = 'none';
-            document.getElementById('onDutyCheckbox').checked = false;
+
+            /*
+             * Existing saved selections must remain untouched
+             * if the user opens Add but applies nothing.
+             */
+            if (
+                !container.querySelector(
+                    '.on-duty-person'
+                )
+            ) {
+                container.style.display =
+                    'none';
+
+                container.setAttribute(
+                    'aria-hidden',
+                    'true'
+                );
+
+                if (onDutyCheckbox) {
+                    onDutyCheckbox.checked =
+                        false;
+                }
+
+                if (addButton) {
+                    addButton.style.display =
+                        'none';
+                }
+            }
+
             closeOnDutyModal();
             return;
         }
 
+
+        let addedCount = 0;
+        let skippedDuplicateCount = 0;
+
+
         selected.forEach(function (checkbox) {
-            const usercode = checkbox.dataset.usercode || '';
-            const empcode = checkbox.dataset.empcode || '';
-            const outdate = checkbox.dataset.outdate || '';
-            const outtime = checkbox.dataset.outtime || '';
-            const intime = checkbox.dataset.intime || '';
-            const remarks = checkbox.dataset.remarks || '';
-            const username = checkbox.dataset.username || '';
 
-            const wrapper = document.createElement('div');
-            wrapper.className = 'on-duty-person';
+            const usercode =
+                checkbox.dataset.usercode || '';
 
-            // Keep persistence fields hidden in DOM dataset.
-            wrapper.dataset.usercode = usercode;
-            wrapper.dataset.empcode = empcode;
-            wrapper.dataset.outdate = outdate;
-            wrapper.dataset.outtime = outtime;
-            wrapper.dataset.intime = intime;
-            wrapper.dataset.reason = checkbox.dataset.reason || '';
-            wrapper.dataset.remarks = remarks;
-            wrapper.dataset.person_name = username;
+            const empcode =
+                checkbox.dataset.empcode || '';
+
+            const outdate =
+                checkbox.dataset.outdate || '';
+
+            const outtime =
+                checkbox.dataset.outtime || '';
+
+            const intime =
+                checkbox.dataset.intime || '';
+
+            const reason =
+                checkbox.dataset.reason || '';
+
+            const remarks =
+                checkbox.dataset.remarks || '';
+
+            const username =
+                checkbox.dataset.username || '';
+
+
+            /*
+             * Exact On Duty identity.
+             *
+             * Same employee on another date/time is allowed.
+             * Different employees on the same date are allowed.
+             *
+             * Only an exact duplicate is blocked.
+             */
+            const recordKey = [
+                usercode,
+                empcode,
+                outdate,
+                outtime,
+                intime
+            ].join('|');
+
+
+            const duplicate =
+                Array.from(
+                    container.querySelectorAll(
+                        '.on-duty-person'
+                    )
+                ).some(function (existing) {
+
+                    const existingKey = [
+                        existing.dataset.usercode || '',
+                        existing.dataset.empcode || '',
+                        existing.dataset.outdate || '',
+                        existing.dataset.outtime || '',
+                        existing.dataset.intime || ''
+                    ].join('|');
+
+                    return (
+                        existingKey === recordKey
+                    );
+                });
+
+
+            if (duplicate) {
+                skippedDuplicateCount += 1;
+                return;
+            }
+
+
+            const wrapper =
+                document.createElement('div');
+
+            wrapper.className =
+                'on-duty-person';
+
+
+            // Keep persistence data in dataset.
+            wrapper.dataset.usercode =
+                usercode;
+
+            wrapper.dataset.empcode =
+                empcode;
+
+            wrapper.dataset.outdate =
+                outdate;
+
+            wrapper.dataset.outtime =
+                outtime;
+
+            wrapper.dataset.intime =
+                intime;
+
+            wrapper.dataset.reason =
+                reason;
+
+            wrapper.dataset.remarks =
+                remarks;
+
+            wrapper.dataset.person_name =
+                username;
+
 
             wrapper.style.cssText =
                 'border:1px solid #e6eef9;' +
-                'padding:8px;' +
+                'padding:10px;' +
                 'border-radius:8px;' +
                 'margin-bottom:8px;' +
                 'background:#fff;';
 
-            const header = document.createElement('div');
+
+            const header =
+                document.createElement('div');
+
             header.style.cssText =
                 'display:flex;' +
                 'justify-content:space-between;' +
-                'align-items:center;' +
-                'gap:8px;';
+                'align-items:flex-start;' +
+                'gap:10px;';
 
-            const name = document.createElement('div');
-            name.style.fontWeight = '800';
-            name.textContent = username;
 
-            const removeButton = document.createElement('button');
-            removeButton.type = 'button';
-            removeButton.className = 'btn btn-secondary remove-on-duty';
-            removeButton.dataset.usercode = usercode;
-            removeButton.textContent = 'Remove';
+            const info =
+                document.createElement('div');
 
-            header.appendChild(name);
-            header.appendChild(removeButton);
+            info.style.cssText =
+                'display:flex;' +
+                'flex-direction:column;' +
+                'gap:3px;';
+
+
+            const name =
+                document.createElement('div');
+
+            name.style.fontWeight =
+                '800';
+
+            name.textContent =
+                username;
+
+
+            const details =
+                document.createElement('div');
+
+            details.style.cssText =
+                'font-size:12px;' +
+                'color:#475569;';
+
+
+            function formatOnDutyCardDate(value) {
+                const raw =
+                    String(value || '').trim();
+
+                if (/^\d{8}$/.test(raw)) {
+                    return (
+                        raw.slice(6, 8) +
+                        '-' +
+                        raw.slice(4, 6) +
+                        '-' +
+                        raw.slice(0, 4)
+                    );
+                }
+
+                if (
+                    /^\d{4}-\d{2}-\d{2}/.test(
+                        raw
+                    )
+                ) {
+                    return (
+                        raw.slice(8, 10) +
+                        '-' +
+                        raw.slice(5, 7) +
+                        '-' +
+                        raw.slice(0, 4)
+                    );
+                }
+
+                return raw;
+            }
+
+
+            function formatOnDutyCardTime(value) {
+                const raw =
+                    String(value || '').trim();
+
+                if (!raw) {
+                    return '';
+                }
+
+                if (raw.includes(' ')) {
+                    return raw.split(' ').pop();
+                }
+
+                return raw;
+            }
+
+
+            const displayDate =
+                formatOnDutyCardDate(
+                    outdate
+                );
+
+            const fromTime =
+                formatOnDutyCardTime(
+                    outtime
+                );
+
+            const toTime =
+                formatOnDutyCardTime(
+                    intime
+                );
+
+
+            let detailText =
+                displayDate
+                    ? 'Date: ' + displayDate
+                    : '';
+
+            if (fromTime || toTime) {
+
+                if (detailText) {
+                    detailText += '  •  ';
+                }
+
+                detailText +=
+                    (fromTime || '-') +
+                    ' → ' +
+                    (toTime || '-');
+            }
+
+
+            details.textContent =
+                detailText;
+
+
+            info.appendChild(name);
+
+            if (detailText) {
+                info.appendChild(details);
+            }
+
+
+            const removeButton =
+                document.createElement(
+                    'button'
+                );
+
+            removeButton.type =
+                'button';
+
+            removeButton.className =
+                'btn btn-secondary remove-on-duty';
+
+            removeButton.textContent =
+                'Remove';
+
+
+            header.appendChild(info);
+            header.appendChild(
+                removeButton
+            );
 
             wrapper.appendChild(header);
 
-            container.appendChild(wrapper);
+            container.appendChild(
+                wrapper
+            );
+
+            addedCount += 1;
         });
 
-        container.style.display = 'block';
-        container.setAttribute('aria-hidden', 'false');
+
+        if (
+            container.querySelector(
+                '.on-duty-person'
+            )
+        ) {
+            container.style.display =
+                'block';
+
+            container.setAttribute(
+                'aria-hidden',
+                'false'
+            );
+
+            if (onDutyCheckbox) {
+                onDutyCheckbox.checked =
+                    true;
+            }
+
+            if (addButton) {
+                addButton.style.display =
+                    'inline-flex';
+            }
+        }
+
 
         closeOnDutyModal();
+
+
+        if (
+            addedCount === 0 &&
+            skippedDuplicateCount > 0
+        ) {
+            alert(
+                'Selected On Duty record is already added.'
+            );
+        }
     }
 
 
@@ -2923,6 +3259,7 @@ document.addEventListener("click", function (event) {
         const loadBtn = document.getElementById('loadOnDutyUsersBtn');
         const cancelBtn = document.getElementById('onDutyModalCancelBtn');
         const applyBtn = document.getElementById('applyOnDutySelectionBtn');
+        const addBtn = document.getElementById('addOnDutyBtn');
         const list = document.getElementById('onDutyUsersList');
         const container = document.getElementById('onDutySelectedContainer');
 
@@ -2931,9 +3268,18 @@ document.addEventListener("click", function (event) {
                 if (checkbox.checked) {
                     openOnDutyModal();
                 } else {
-                    // uncheck clears selections
+                    // Unchecking On Duty clears every selected set.
                     container.innerHTML = '';
                     container.style.display = 'none';
+                    container.setAttribute(
+                        'aria-hidden',
+                        'true'
+                    );
+
+                    if (addBtn) {
+                        addBtn.style.display =
+                            'none';
+                    }
                 }
             });
         }
@@ -2962,6 +3308,16 @@ document.addEventListener("click", function (event) {
             });
         }
 
+        /*
+         * + Add reuses the existing On Duty modal.
+         * User can choose another date and one or more people.
+         */
+        if (addBtn) {
+            addBtn.addEventListener('click', function () {
+                openOnDutyModal();
+            });
+        }
+
         // delegate remove buttons
         document.addEventListener('click', function (e) {
             const rem = e.target.closest('.remove-on-duty');
@@ -2970,7 +3326,19 @@ document.addEventListener("click", function (event) {
                 if (parent) parent.remove();
                 if (!container.querySelector('.on-duty-person')) {
                     container.style.display = 'none';
-                    document.getElementById('onDutyCheckbox').checked = false;
+                    container.setAttribute(
+                        'aria-hidden',
+                        'true'
+                    );
+
+                    document.getElementById(
+                        'onDutyCheckbox'
+                    ).checked = false;
+
+                    if (addBtn) {
+                        addBtn.style.display =
+                            'none';
+                    }
                 }
             }
         });

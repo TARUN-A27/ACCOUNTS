@@ -22,8 +22,7 @@ from auth_service import (
     get_year_codes,
     validate_user,
     create_user,
-    get_division_details,
-    increment_cpa_maxnumber
+    get_division_details
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1115,17 +1114,10 @@ def login():
             error="Invalid department selected"
         )
 
-    cpa_result = increment_cpa_maxnumber(divisioncode, yearcode)
-    print("NOCONFIG CPA result:", cpa_result)
-
-    if not cpa_result.get("success"):
-        return render_template(
-            "login.html",
-            divisions=divisions,
-            years=years,
-            error=cpa_result.get("message", "Unable to update CPA number")
-        )
-
+    # Do NOT modify NOCONFIG during login.
+    #
+    # CPA business numbers must only be allocated when an
+    # actual real CASHBANK transaction is created.
     session["logged_in"] = True
     session["usercode"] = user_result["usercode"]
     session["username"] = username
@@ -1133,7 +1125,6 @@ def login():
     session["divisiondesc"] = division["divdesc"]
     session["yearcode"] = yearcode
     session["voctype"] = "CPA"
-    session["cpa_number"] = cpa_result.get("maxnumber")
 
     if int(session.get("usercode") or 0) == 2008:
         return redirect(url_for("ia_authentication"))
@@ -1220,7 +1211,6 @@ def review_document():
             print("\nAPPROVE BUTTON CLICKED")
 
             session_data = {
-                "cpa_number": session.get("cpa_number"),
                 "usercode": session.get("usercode"),
                 "divisioncode": session.get("divisioncode"),
                 "yearcode": session.get("yearcode"),
@@ -1237,11 +1227,6 @@ def review_document():
 
             print("\nVoucher Fields")
             print(voucher_fields)
-
-            if not session_data["cpa_number"]:
-                return jsonify({
-                    "error": "CPA Number missing from session"
-                }), 500
 
             if not session_data["usercode"]:
                 return jsonify({
