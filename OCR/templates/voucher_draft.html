@@ -1348,18 +1348,53 @@ function renderDraftRows(rows) {
 }
 
 function normalizeVoucher(data, fallbackRow = null) {
-    const row = data.entry || data.row || data.voucher || data.data || data;
+    /*
+     * Prefer the complete voucher returned by the backend.
+     * get_cash_voucher_entry_by_id() places details and On Duty
+     * information on this object.
+     */
+    const row =
+        data.voucher ||
+        data.entry ||
+        data.row ||
+        data.data ||
+        data;
 
     if (fallbackRow) {
-        Object.keys(fallbackRow).forEach(key => {
-            if (row[key] === undefined || row[key] === null || row[key] === "") {
+        Object.keys(fallbackRow).forEach(function (key) {
+            if (
+                row[key] === undefined ||
+                row[key] === null ||
+                row[key] === ""
+            ) {
                 row[key] = fallbackRow[key];
             }
         });
     }
 
     if (!Array.isArray(row.details)) {
-        row.details = data.details || [];
+        row.details =
+            data.voucher?.details ||
+            data.entry?.details ||
+            data.row?.details ||
+            data.details ||
+            [];
+    }
+
+    /*
+     * Explicitly preserve On Duty data. Never allow a lightweight
+     * list/fallback row to replace the complete API data.
+     */
+    if (
+        !Array.isArray(row.on_duty_details) ||
+        row.on_duty_details.length === 0
+    ) {
+        row.on_duty_details =
+            data.voucher?.on_duty_details ||
+            data.entry?.on_duty_details ||
+            data.row?.on_duty_details ||
+            data.data?.on_duty_details ||
+            [];
     }
 
     return row;
@@ -1427,9 +1462,108 @@ function updateEditAccountCode() {
 }
 
 function setEditAccountType(type) {
-    document.getElementById("editAccountOthers").checked = type === "others";
-    document.getElementById("editAccountAdvance").checked = type === "advance";
-    loadAccountHeads(type);
+    const normalized =
+        String(type || "").toLowerCase() === "others"
+            ? "others"
+            : "advance";
+
+    const others =
+        document.getElementById("editAccountOthers");
+    const advance =
+        document.getElementById("editAccountAdvance");
+
+    if (others) {
+        others.checked = normalized === "others";
+    }
+
+    if (advance) {
+        advance.checked = normalized === "advance";
+    }
+
+    return loadAccountHeads(normalized);
+}
+
+
+async function detectEditAccountType(row) {
+    // Use an explicit type if the API provides one later.
+    const explicit = String(
+        row?.account_type || ""
+    ).trim().toLowerCase();
+
+    if (explicit === "others" || explicit === "advance") {
+        return explicit;
+    }
+
+    const targetCode = String(
+        row?.account_head_code || ""
+    ).trim().toUpperCase();
+
+    const targetName = String(
+        row?.account_name || ""
+    ).trim().toUpperCase();
+
+    // Detect membership using the same account APIs
+    // used by Cash Voucher Entry.
+    for (const type of ["others", "advance"]) {
+        try {
+            const response = await fetch(
+                "/api/cash-voucher-entry/accounts?type=" +
+                encodeURIComponent(type),
+                {
+                    cache: "no-store",
+                    credentials: "same-origin"
+                }
+            );
+
+            const data = await response.json();
+
+            const rows =
+                data.rows ||
+                data.accounts ||
+                data.results ||
+                [];
+
+            const matched = rows.some(function (account) {
+                const code = String(
+                    account.accode ||
+                    account.account_head_code ||
+                    account.ACCODE ||
+                    ""
+                ).trim().toUpperCase();
+
+                const name = String(
+                    account.name ||
+                    account.account_name ||
+                    account.NAME ||
+                    ""
+                ).trim().toUpperCase();
+
+                if (targetCode && code) {
+                    return code === targetCode;
+                }
+
+                return Boolean(
+                    targetName &&
+                    name === targetName
+                );
+            });
+
+            if (matched) {
+                return type;
+            }
+
+        } catch (error) {
+            console.error(
+                "Account type detection failed:",
+                type,
+                error
+            );
+        }
+    }
+
+    // Preserve existing default only when it genuinely
+    // cannot be identified.
+    return "advance";
 }
 
 document.addEventListener("change", function (event) {
@@ -1437,12 +1571,28 @@ document.addEventListener("change", function (event) {
         updateEditAccountCode();
     }
 
-    if (event.target && event.target.id === "editAccountOthers" && event.target.checked) {
-        setEditAccountType("others");
+    if (
+        event.target &&
+        event.target.id === "editAccountOthers"
+    ) {
+        if (event.target.checked) {
+            setEditAccountType("others");
+        } else {
+            // Never allow both account categories to be unchecked.
+            event.target.checked = true;
+        }
     }
 
-    if (event.target && event.target.id === "editAccountAdvance" && event.target.checked) {
-        setEditAccountType("advance");
+    if (
+        event.target &&
+        event.target.id === "editAccountAdvance"
+    ) {
+        if (event.target.checked) {
+            setEditAccountType("advance");
+        } else {
+            // Never allow both account categories to be unchecked.
+            event.target.checked = true;
+        }
     }
 });
 
@@ -1474,9 +1624,41 @@ async function openEdit(id) {
     document.getElementById("editPartyName").value = row.party_name || "";
 
     setEditDetails(row.details || []);
-    setEditAccountType("advance");
 
-    document.getElementById("editModalFinal").classList.remove("hidden");
+    // Open the edit modal immediately.
+    // Account-type detection may require database/API lookups,
+    // so it must not block the Edit button.
+    document.getElementById("editModalFinal")
+        .classList.remove("hidden");
+
+    try {
+        const editAccountType =
+            await detectEditAccountType(row);
+
+        await setEditAccountType(editAccountType);
+
+        // loadAccountHeads() only rebuilds the datalist.
+        // Restore the saved voucher account afterwards.
+        document.getElementById("editAccountHead").value =
+            row.account_name || "";
+
+        document.getElementById("editAccountHeadCode").value =
+            row.account_head_code || "";
+
+    } catch (error) {
+        console.error(
+            "Voucher Edit account-type detection failed:",
+            error
+        );
+
+        // Editing must remain usable even if account-type
+        // detection temporarily fails.
+        document.getElementById("editAccountHead").value =
+            row.account_name || "";
+
+        document.getElementById("editAccountHeadCode").value =
+            row.account_head_code || "";
+    }
 }
 
 function closeEditModal() {
@@ -1574,6 +1756,10 @@ async function updateVoucher() {
         amount: document.getElementById("editAmount").value,
         account_name: document.getElementById("editAccountHead").value,
         account_head_code: document.getElementById("editAccountHeadCode").value,
+        account_type:
+            document.getElementById("editAccountOthers").checked
+                ? "others"
+                : "advance",
         person_name: document.getElementById("editPersonName").value,
         purpose: document.getElementById("editPurpose").value,
         invoice_no: document.getElementById("editInvoiceNo").value,
@@ -1767,11 +1953,12 @@ function buildDraftOnDutySection(onDutyDetails) {
         <table class="preview-details-table preview-on-duty-table">
             <thead>
                 <tr>
-                    <th style="width:26%;">Person Name</th>
-                    <th style="width:16%;">Date</th>
-                    <th style="width:14%;">From Time</th>
-                    <th style="width:14%;">To Time</th>
-                    <th style="width:30%;">Remark</th>
+                    <th style="width:22%;">Person Name</th>
+                    <th style="width:13%;">Date</th>
+                    <th style="width:12%;">From Time</th>
+                    <th style="width:12%;">To Time</th>
+                    <th style="width:18%;">Reason</th>
+                    <th style="width:23%;">Remark</th>
                 </tr>
             </thead>
             <tbody>
@@ -1789,6 +1976,7 @@ function buildDraftOnDutySection(onDutyDetails) {
                             <td>${escapeHtml(formatDate(item.outdate))}</td>
                             <td>${escapeHtml(formatTime(item.outtime))}</td>
                             <td>${escapeHtml(formatTime(item.intime))}</td>
+                            <td>${escapeHtml(reason)}</td>
                             <td>${escapeHtml(remarks)}</td>
                         </tr>
                     `;

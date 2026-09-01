@@ -107,6 +107,13 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
         if not is_valid_petty_cash_account(account_name, account_head_code):
             return {"success": False, "message": "Please select a valid account head from the list"}
 
+        account_type = str(
+            data.get("account_type") or ""
+        ).strip().upper()
+
+        if account_type not in ("OTHERS", "ADVANCE"):
+            account_type = None
+
         conn = get_connection()
         cursor = conn.cursor()
 
@@ -117,6 +124,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                 VOUCHERDATE,
                 ACCOUNT_HEAD_CODE,
                 ACCOUNT_NAME,
+                ACCOUNT_TYPE,
                 PERSON_NAME,
                 PURPOSE,
                 AMOUNT,
@@ -133,6 +141,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                 TO_DATE(:voucherdate, 'YYYY-MM-DD'),
                 :account_head_code,
                 :account_name,
+                :account_type,
                 :person_name,
                 :purpose,
                 :amount,
@@ -154,6 +163,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
             "voucherdate": voucherdate,
             "account_head_code": account_head_code,
             "account_name": account_name,
+            "account_type": account_type,
             "person_name": person_name,
             "purpose": purpose,
             "amount": amount,
@@ -243,6 +253,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                 empcode_val = None
 
             person_name_val = (od.get("person_name") or od.get("username") or "")
+            reason_val = od.get("reason") or ""
             remarks_val = od.get("remarks") or ""
             outdate_val = od.get("outdate") or od.get("out_date") or None
             outtime_val = str(od.get("outtime") or "").strip() or None
@@ -261,6 +272,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                 person_name_val = ""
 
             person_name_val = str(person_name_val)[:250]
+            reason_val = str(reason_val or "")[:250]
             remarks_val = str(remarks_val or "")[:300]
 
             # Skip completely empty records
@@ -274,6 +286,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                     USERCODE,
                     EMPCODE,
                     PERSON_NAME,
+                    ONDUTY_REASON,
                     REMARKS,
                     OUTDATE,
                     OUTTIME,
@@ -285,6 +298,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                     :usercode,
                     :empcode,
                     :person_name,
+                    :reason,
                     :remarks,
                     :outdate,
                     CASE
@@ -302,6 +316,7 @@ def insert_cash_voucher_entry(data, session_data, entry_source="MANUAL"):
                 "usercode": int(usercode_val) if usercode_val not in (None, "") else None,
                 "empcode": int(empcode_val) if empcode_val not in (None, "") else None,
                 "person_name": person_name_val or None,
+                "reason": reason_val or None,
                 "remarks": remarks_val or None,
                 "outdate": outdate_val,
                 "outtime": outtime_val,
@@ -961,7 +976,8 @@ def get_cash_voucher_entry_by_id(voucher_id):
                    INVOICE_NO,
                    TO_CHAR(INVOICE_DATE, 'YYYY-MM-DD') AS INVOICE_DATE,
                    PARTY_CODE,
-                   PARTY_NAME
+                   PARTY_NAME,
+                   ACCOUNT_TYPE
             FROM CASHBANKENTRY
             WHERE ID = :voucher_id
         """, {
@@ -1007,12 +1023,17 @@ def get_cash_voucher_entry_by_id(voucher_id):
             "narration": "\n".join(narration_lines)
         }
 
+        voucher["account_type"] = str(
+            row[-1] or ""
+        ).strip().lower()
+
         # Load On Duty details if any
         cursor.execute("""
             SELECT ID,
                    USERCODE,
                    EMPCODE,
                    PERSON_NAME,
+                   ONDUTY_REASON,
                    OUTDATE,
                    TO_CHAR(OUTTIME, 'YYYY-MM-DD HH24:MI') AS OUTTIME,
                    TO_CHAR(INTIME, 'YYYY-MM-DD HH24:MI') AS INTIME,
@@ -1029,10 +1050,11 @@ def get_cash_voucher_entry_by_id(voucher_id):
                 "usercode": r[1] if r[1] is not None else "",
                 "empcode": r[2] if r[2] is not None else "",
                 "person_name": r[3] or "",
-                "outdate": r[4] if r[4] is not None else "",
-                "outtime": r[5] or "",
-                "intime": r[6] or "",
-                "remarks": r[7] or ""
+                "reason": r[4] or "",
+                "outdate": r[5] if r[5] is not None else "",
+                "outtime": r[6] or "",
+                "intime": r[7] or "",
+                "remarks": r[8] or ""
             })
 
         voucher["on_duty_details"] = on_duty
@@ -2419,7 +2441,7 @@ def list_cash_voucher_entries(limit=100, usercode=None):
             conn.close()
 
 
-def update_cash_voucher_entry(voucher_id, data, usercode=None):
+def update_cash_voucher_entry(voucher_id, data, usercode=None, allow_any_user=False):
     conn = None
     cursor = None
 
@@ -2439,6 +2461,13 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                 "message": "Please select a valid Account Head from the list"
             }
 
+        account_type = str(
+            data.get("account_type") or ""
+        ).strip().upper()
+
+        if account_type not in ("OTHERS", "ADVANCE"):
+            account_type = None
+
         conn = get_connection()
         cursor = conn.cursor()
 
@@ -2447,6 +2476,11 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
             SET VOUCHERDATE = TO_DATE(:voucherdate, 'YYYY-MM-DD'),
                 ACCOUNT_HEAD_CODE = :account_head_code,
                 ACCOUNT_NAME = :account_name,
+                ACCOUNT_TYPE = CASE
+                    WHEN :account_type IS NULL
+                    THEN ACCOUNT_TYPE
+                    ELSE :account_type
+                END,
                 PERSON_NAME = :person_name,
                 PURPOSE = :purpose,
                 AMOUNT = :amount,
@@ -2458,11 +2492,15 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                 PARTY_CODE = :party_code,
                 PARTY_NAME = :party_name
             WHERE ID = :voucher_id
-              AND USERCODE = :usercode
+              AND (
+                    :allow_any_user = 1
+                    OR USERCODE = :usercode
+                  )
         """, {
             "voucherdate": data.get("voucherdate"),
             "account_head_code": account_head_code,
             "account_name": account_name,
+            "account_type": account_type,
             "person_name": data.get("person_name"),
             "purpose": data.get("purpose"),
             "amount": float(data.get("amount") or 0),
@@ -2471,7 +2509,8 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
             "party_code": data.get("party_code") or "",
             "party_name": data.get("party_name") or "",
             "voucher_id": voucher_id,
-            "usercode": usercode
+            "usercode": usercode,
+            "allow_any_user": 1 if allow_any_user else 0
         })
 
         if cursor.rowcount == 0:
@@ -2537,6 +2576,7 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
             usercode_val = od.get("usercode")
             empcode_val = od.get("empcode")
             person_name_val = od.get("person_name")
+            reason_val = od.get("reason")
             remarks_val = od.get("remarks")
             outdate_val = od.get("outdate")
             outtime_val = str(od.get("outtime") or "").strip() or None
@@ -2572,6 +2612,7 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                 outdate_val = None
 
             person_name_val = str(person_name_val or "")[:250]
+            reason_val = str(reason_val or "")[:250]
             remarks_val = str(remarks_val or "")[:300]
 
             if not usercode_val and not empcode_val and not person_name_val and not remarks_val and outdate_val is None:
@@ -2584,6 +2625,7 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                     USERCODE,
                     EMPCODE,
                     PERSON_NAME,
+                    ONDUTY_REASON,
                     REMARKS,
                     OUTDATE,
                     OUTTIME,
@@ -2596,6 +2638,7 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                     :usercode,
                     :empcode,
                     :person_name,
+                    :reason,
                     :remarks,
                     :outdate,
                     CASE
@@ -2613,6 +2656,7 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None):
                 "usercode": usercode_val,
                 "empcode": empcode_val,
                 "person_name": person_name_val or None,
+                "reason": reason_val or None,
                 "remarks": remarks_val or None,
                 "outdate": outdate_val,
                 "outtime": outtime_val,

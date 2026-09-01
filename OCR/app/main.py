@@ -208,6 +208,73 @@ def ia_authentication_print(voucher_id):
     return jsonify(result), status_code
 
 
+@app.route("/api/ia-authentication/update/<int:voucher_id>", methods=["POST"])
+def ia_authentication_update(voucher_id):
+    if not session.get("logged_in"):
+        return jsonify({
+            "success": False,
+            "message": "Login required"
+        }), 401
+
+    usercode = session.get("usercode")
+
+    if not is_ia_auth_user(usercode):
+        return jsonify({
+            "success": False,
+            "message": "Only IA authentication user can update voucher"
+        }), 403
+
+    data = request.get_json() or {}
+
+    # IA does not edit these fields directly.
+    # Preserve the existing voucher values rather than clearing them.
+    current_result = get_cash_voucher_entry_by_id(voucher_id)
+
+    if not current_result.get("success"):
+        return jsonify({
+            "success": False,
+            "message": "Voucher not found"
+        }), 404
+
+    current = (
+        current_result.get("voucher")
+        or current_result.get("entry")
+        or current_result.get("row")
+        or {}
+    )
+
+    if not data.get("account_name"):
+        data["account_name"] = current.get("account_name") or ""
+
+    if not data.get("account_head_code"):
+        data["account_head_code"] = (
+            current.get("account_head_code") or ""
+        )
+
+    # IA edit modal does not expose these optional fields.
+    # Never erase them during an IA edit.
+    data["invoice_no"] = current.get("invoice_no") or ""
+    data["invoice_date"] = current.get("invoice_date") or ""
+    data["party_code"] = current.get("party_code") or ""
+    data["party_name"] = current.get("party_name") or ""
+
+    # IA edit does not edit On Duty records.
+    # Preserve all existing On Duty information.
+    data["on_duty_details"] = (
+        current.get("on_duty_details") or []
+    )
+
+    result = update_cash_voucher_entry(
+        voucher_id,
+        data,
+        usercode=usercode,
+        allow_any_user=True
+    )
+
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
 @app.route("/voucher-draft")
 def voucher_draft():
     if not session.get("logged_in"):
@@ -323,10 +390,13 @@ def cash_voucher_entry_on_duty_users():
                    r.UserName,
                    TO_CHAR(d.OutTime, 'YYYY-MM-DD HH24:MI') AS OutTime,
                    TO_CHAR(d.InTime, 'YYYY-MM-DD HH24:MI') AS InTime,
+                   odr.OndutyReason AS OndutyReason,
                    d.Remarks AS Remarks
             FROM HRDNEW.DEPTONDUTYDETAILS d
             INNER JOIN SCM.RAWUSER r
                 ON r.Empcode = d.Empcode
+            LEFT JOIN HRDNEW.REASONFORONDUTY odr
+                ON odr.OndutyReasonCode = d.PurposeCode
             WHERE d.Outdate >= :selected_date
               AND d.Outdate <= :selected_date
             ORDER BY r.UserName
@@ -341,7 +411,8 @@ def cash_voucher_entry_on_duty_users():
                 "username": str(row[3] or ""),
                 "outtime": str(row[4] or ""),
                 "intime": str(row[5] or ""),
-                "remarks": str(row[6] or "")
+                "reason": str(row[6] or ""),
+                "remarks": str(row[7] or "")
             })
 
         return jsonify({"success": True, "rows": rows, "count": len(rows)})
@@ -435,7 +506,13 @@ def update_cash_voucher_entry_route(voucher_id):
         }), 401
 
     data = request.get_json() or {}
-    result = update_cash_voucher_entry(voucher_id, data)
+
+    result = update_cash_voucher_entry(
+        voucher_id,
+        data,
+        usercode=session.get("usercode"),
+        allow_any_user=False
+    )
 
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code

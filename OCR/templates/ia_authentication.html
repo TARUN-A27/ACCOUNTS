@@ -818,6 +818,22 @@
 
             <div class="form-group full-width">
                 <label class="form-label">Account Head</label>
+
+                <div id="iaEditAccountTypeBox"
+                     style="display:flex;align-items:center;gap:20px;margin:7px 0 10px 0;padding:9px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#f8fafc;">
+
+                    <label style="display:flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;">
+                        <input type="checkbox" id="iaEditAccountOthers">
+                        Others
+                    </label>
+
+                    <label style="display:flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;">
+                        <input type="checkbox" id="iaEditAccountAdvance">
+                        Advance
+                    </label>
+
+                </div>
+
                 <input type="text" id="editAccountName" class="form-control" required list="editAccountHeadList" oninput="handleEditAccountHeadInput()">
                 <input type="hidden" id="editAccountCode">
                 <datalist id="editAccountHeadList"></datalist>
@@ -1019,10 +1035,266 @@
     }
 
     function handleEditAccountHeadInput() {
-        const value = document.getElementById("editAccountName").value.trim().toUpperCase();
-        const matched = draftAccountHeadAccounts.find(account => account.name.toUpperCase() === value);
+        const input = document.getElementById("editAccountName");
+        const codeInput = document.getElementById("editAccountCode");
 
-        document.getElementById("editAccountCode").value = matched ? matched.accode : "";
+        if (!input || !codeInput) return;
+
+        const value = String(input.value || "")
+            .trim()
+            .toUpperCase();
+
+        const originalName = String(
+            input.dataset.originalAccountName || ""
+        ).trim().toUpperCase();
+
+        const originalCode = String(
+            input.dataset.originalAccountCode || ""
+        ).trim();
+
+        // If the user has not changed the saved Account Head,
+        // preserve its existing valid account code.
+        if (
+            value &&
+            originalName &&
+            value === originalName &&
+            originalCode
+        ) {
+            codeInput.value = originalCode;
+            return;
+        }
+
+        // Account Head was actually changed.
+        // Resolve the new code from the loaded account list.
+        const matched = draftAccountHeadAccounts.find(function (account) {
+            return String(account.name || "")
+                .trim()
+                .toUpperCase() === value;
+        });
+
+        codeInput.value = matched
+            ? String(matched.accode || "")
+            : "";
+    }
+
+
+    async function loadIAEditAccountHeads(type) {
+        const normalized =
+            String(type || "").toLowerCase() === "others"
+                ? "others"
+                : "advance";
+
+        try {
+            const response = await fetch(
+                "/api/cash-voucher-entry/accounts?type=" +
+                encodeURIComponent(normalized),
+                {
+                    cache: "no-store",
+                    credentials: "same-origin"
+                }
+            );
+
+            const result = await response.json();
+
+            const rows =
+                result.rows ||
+                result.accounts ||
+                result.results ||
+                [];
+
+            draftAccountHeadAccounts = Array.isArray(rows)
+                ? rows
+                : [];
+
+            const list =
+                document.getElementById("editAccountHeadList");
+
+            if (list) {
+                list.innerHTML = "";
+
+                draftAccountHeadAccounts.forEach(function (account) {
+                    const option = document.createElement("option");
+                    option.value =
+                        account.name ||
+                        account.account_name ||
+                        "";
+
+                    list.appendChild(option);
+                });
+            }
+
+        } catch (error) {
+            console.error(
+                "IA Account Head load failed:",
+                error
+            );
+        }
+    }
+
+
+    async function setIAEditAccountType(type, preserveAccount = true) {
+        const normalized =
+            String(type || "").toLowerCase() === "others"
+                ? "others"
+                : "advance";
+
+        const others =
+            document.getElementById("iaEditAccountOthers");
+
+        const advance =
+            document.getElementById("iaEditAccountAdvance");
+
+        if (others) {
+            others.checked = normalized === "others";
+        }
+
+        if (advance) {
+            advance.checked = normalized === "advance";
+        }
+
+        await loadIAEditAccountHeads(normalized);
+
+        if (!preserveAccount) {
+            const name =
+                document.getElementById("editAccountName");
+
+            const code =
+                document.getElementById("editAccountCode");
+
+            if (name) {
+                name.value = "";
+                name.dataset.originalAccountName = "";
+                name.dataset.originalAccountCode = "";
+            }
+
+            if (code) {
+                code.value = "";
+            }
+        }
+    }
+
+
+    async function detectIAEditAccountType(row) {
+        const storedType = String(
+            row?.account_type || ""
+        ).trim().toLowerCase();
+
+        if (
+            storedType === "others" ||
+            storedType === "advance"
+        ) {
+            return storedType;
+        }
+
+        const targetCode = String(
+            row?.account_head_code || ""
+        ).trim().toUpperCase();
+
+        const targetName = String(
+            row?.account_name || ""
+        ).trim().toUpperCase();
+
+        for (const type of ["others", "advance"]) {
+            try {
+                const response = await fetch(
+                    "/api/cash-voucher-entry/accounts?type=" +
+                    encodeURIComponent(type),
+                    {
+                        cache: "no-store",
+                        credentials: "same-origin"
+                    }
+                );
+
+                const result = await response.json();
+
+                const rows =
+                    result.rows ||
+                    result.accounts ||
+                    result.results ||
+                    [];
+
+                const found = rows.some(function (account) {
+                    const code = String(
+                        account.accode ||
+                        account.account_head_code ||
+                        ""
+                    ).trim().toUpperCase();
+
+                    const name = String(
+                        account.name ||
+                        account.account_name ||
+                        ""
+                    ).trim().toUpperCase();
+
+                    if (targetCode && code) {
+                        return targetCode === code;
+                    }
+
+                    return Boolean(
+                        targetName &&
+                        targetName === name
+                    );
+                });
+
+                if (found) {
+                    return type;
+                }
+
+            } catch (error) {
+                console.error(
+                    "IA Account Type detection failed:",
+                    type,
+                    error
+                );
+            }
+        }
+
+        return "advance";
+    }
+
+
+    function bindIAEditAccountTypeControls() {
+        const others =
+            document.getElementById("iaEditAccountOthers");
+
+        const advance =
+            document.getElementById("iaEditAccountAdvance");
+
+        if (
+            others &&
+            !others.dataset.boundAccountType
+        ) {
+            others.dataset.boundAccountType = "1";
+
+            others.addEventListener("change", function () {
+                if (this.checked) {
+                    setIAEditAccountType(
+                        "others",
+                        false
+                    );
+                } else {
+                    this.checked = true;
+                }
+            });
+        }
+
+        if (
+            advance &&
+            !advance.dataset.boundAccountType
+        ) {
+            advance.dataset.boundAccountType = "1";
+
+            advance.addEventListener("change", function () {
+                if (this.checked) {
+                    setIAEditAccountType(
+                        "advance",
+                        false
+                    );
+                } else {
+                    this.checked = true;
+                }
+            });
+        }
     }
 
 
@@ -1232,13 +1504,19 @@
             voucherdate: document.getElementById("editDate").value,
             account_head_code: document.getElementById("editAccountCode").value,
             account_name: document.getElementById("editAccountName").value,
+            account_type:
+                document.getElementById("iaEditAccountOthers")?.checked
+                    ? "others"
+                    : document.getElementById("iaEditAccountAdvance")?.checked
+                        ? "advance"
+                        : "",
             person_name: document.getElementById("editPersonName").value,
             purpose: document.getElementById("editPurpose").value,
             amount: document.getElementById("editAmount").value,
             details: typeof getEditDetailsData === "function" ? getEditDetailsData() : []
         };
 
-        const response = await fetch(`/api/cash-voucher-entry/update/${id}`, {
+        const response = await fetch(`/api/ia-authentication/update/${id}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -1488,11 +1766,109 @@ async function openEdit(id) {
 
         document.getElementById("editId").value = row.id || "";
         document.getElementById("editDate").value = row.voucherdate || "";
-        document.getElementById("editAccountName").value = row.account_name || "";
-        document.getElementById("editAccountCode").value = row.account_head_code || "";
-        document.getElementById("editPersonName").value = row.person_name || "";
-        document.getElementById("editPurpose").value = row.purpose || "";
-        document.getElementById("editAmount").value = row.amount || "";
+        const editAccountName =
+            document.getElementById("editAccountName");
+
+        const editAccountCode =
+            document.getElementById("editAccountCode");
+
+        editAccountName.value =
+            row.account_name || "";
+
+        editAccountCode.value =
+            row.account_head_code || "";
+
+        editAccountName.dataset.originalAccountName =
+            row.account_name || "";
+
+        editAccountName.dataset.originalAccountCode =
+            row.account_head_code || "";
+
+        document.getElementById("editPersonName").value =
+            row.person_name || "";
+
+        document.getElementById("editPurpose").value =
+            row.purpose || "";
+
+        document.getElementById("editAmount").value =
+            row.amount || "";
+
+        // Show the account type that was actually saved
+        // with this voucher immediately when IA opens Edit.
+        const savedAccountType = String(
+            row.account_type || ""
+        ).trim().toLowerCase();
+
+        const iaOthers =
+            document.getElementById("iaEditAccountOthers");
+
+        const iaAdvance =
+            document.getElementById("iaEditAccountAdvance");
+
+        if (iaOthers) {
+            iaOthers.checked =
+                savedAccountType === "others";
+        }
+
+        if (iaAdvance) {
+            iaAdvance.checked =
+                savedAccountType === "advance";
+        }
+
+        // Open immediately. Do not make Edit wait for account queries.
+        document.getElementById("editModal").style.display =
+            "block";
+
+        bindIAEditAccountTypeControls();
+
+        const applyIAAccountType = async function (type) {
+            await setIAEditAccountType(type, true);
+
+            // Preserve the original account after datalist reload.
+            editAccountName.value =
+                row.account_name || "";
+
+            editAccountCode.value =
+                row.account_head_code || "";
+
+            editAccountName.dataset.originalAccountName =
+                row.account_name || "";
+
+            editAccountName.dataset.originalAccountCode =
+                row.account_head_code || "";
+        };
+
+        /*
+         * New vouchers have ACCOUNT_TYPE stored in CASHBANKENTRY.
+         * Trust that value exactly; do not try to infer it from the
+         * Account Head because the same account can exist in BOTH
+         * lists.
+         */
+        if (
+            savedAccountType === "others" ||
+            savedAccountType === "advance"
+        ) {
+            applyIAAccountType(savedAccountType)
+                .catch(function (error) {
+                    console.error(
+                        "IA stored account type setup failed:",
+                        error
+                    );
+                });
+        } else {
+            /*
+             * Legacy vouchers created before ACCOUNT_TYPE existed.
+             * Only those vouchers use the old fallback detection.
+             */
+            detectIAEditAccountType(row)
+                .then(applyIAAccountType)
+                .catch(function (error) {
+                    console.error(
+                        "IA legacy account type detection failed:",
+                        error
+                    );
+                });
+        }
 
         document.getElementById("editModal").style.display = "block";
 
@@ -1791,8 +2167,26 @@ async function openEdit(id) {
 
         document.getElementById("editId").value = row.id || "";
         document.getElementById("editDate").value = row.voucherdate || "";
-        document.getElementById("editAccountName").value = row.account_name || "";
-        document.getElementById("editAccountCode").value = row.account_head_code || "";
+        const editAccountName =
+            document.getElementById("editAccountName");
+
+        const editAccountCode =
+            document.getElementById("editAccountCode");
+
+        editAccountName.value =
+            row.account_name || "";
+
+        editAccountCode.value =
+            row.account_head_code || "";
+
+        // Preserve the saved account identity.
+        // Updating Purpose/Amount/etc. must not invalidate it.
+        editAccountName.dataset.originalAccountName =
+            row.account_name || "";
+
+        editAccountName.dataset.originalAccountCode =
+            row.account_head_code || "";
+
         document.getElementById("editPersonName").value = row.person_name || "";
         document.getElementById("editPurpose").value = row.purpose || "";
         document.getElementById("editAmount").value = row.amount || "";
@@ -2200,106 +2594,6 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
 
 
 <script>
-/* IA KEEP DETAILS DURING PRINT FIX */
-(function () {
-    let lastGoodDetailsHTML = "";
-
-    function getPreviewBox() {
-        return document.querySelector("#previewModal .preview-box");
-    }
-
-    function getDetailsRow() {
-        const box = getPreviewBox();
-        if (!box) return null;
-
-        return box.querySelector(".ia-final-details-row") ||
-               box.querySelector(".preview-details-row") ||
-               box.querySelector(".preview-narration-line");
-    }
-
-    function rememberDetails() {
-        const row = getDetailsRow();
-        if (!row) return;
-
-        const valueCell = row.children && row.children[1] ? row.children[1] : null;
-        if (!valueCell) return;
-
-        const html = String(valueCell.innerHTML || "").trim();
-
-        if (html && html !== "-" && !html.includes("> - <")) {
-            lastGoodDetailsHTML = html;
-        }
-
-        const label = row.querySelector(".print-label");
-        if (label) label.innerText = "DETAILS";
-    }
-
-    function restoreDetailsIfMissing() {
-        const row = getDetailsRow();
-        if (!row) return;
-
-        const label = row.querySelector(".print-label");
-        if (label) label.innerText = "DETAILS";
-
-        const valueCell = row.children && row.children[1] ? row.children[1] : null;
-        if (!valueCell) return;
-
-        const now = String(valueCell.innerText || valueCell.innerHTML || "").trim();
-
-        if ((!now || now === "-") && lastGoodDetailsHTML) {
-            valueCell.innerHTML = lastGoodDetailsHTML;
-        }
-
-        const purpose = document.getElementById("pvPurpose");
-        const purposeRow = purpose ? purpose.closest(".print-line") : null;
-        const purposeLabel = purposeRow ? purposeRow.querySelector(".print-label") : null;
-        if (purposeLabel) purposeLabel.innerText = "NARRATION";
-    }
-
-    // Wrap openPreview so every preview stores its correct DETAILS.
-    const oldOpenPreview = window.openPreview;
-    if (typeof oldOpenPreview === "function") {
-        window.openPreview = async function () {
-            const result = await oldOpenPreview.apply(this, arguments);
-            setTimeout(rememberDetails, 100);
-            setTimeout(rememberDetails, 500);
-            setTimeout(rememberDetails, 1000);
-            return result;
-        };
-    }
-
-    // Wrap print so details are restored immediately before print.
-    const oldPrintVoucherPreviewOnly = window.printVoucherPreviewOnly;
-    window.printVoucherPreviewOnly = function () {
-        restoreDetailsIfMissing();
-        rememberDetails();
-
-        if (typeof oldPrintVoucherPreviewOnly === "function") {
-            return oldPrintVoucherPreviewOnly.apply(this, arguments);
-        }
-
-        window.print();
-    };
-
-    document.addEventListener("click", function (event) {
-        const text = String(event.target?.innerText || "").toUpperCase();
-
-        if (text.includes("PREVIEW")) {
-            setTimeout(rememberDetails, 300);
-            setTimeout(rememberDetails, 800);
-        }
-
-        if (text.includes("AUTHENTICATE") || text.includes("PRINT")) {
-            restoreDetailsIfMissing();
-            setTimeout(restoreDetailsIfMissing, 50);
-            setTimeout(restoreDetailsIfMissing, 150);
-            setTimeout(restoreDetailsIfMissing, 300);
-        }
-    }, true);
-})();
-</script>
-
-<script>
 /* FILTER ONLY FIX - KEEP EXISTING PREVIEW UI */
 (function () {
     const isIAAuthPage =
@@ -2561,40 +2855,149 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         return value;
     }
 
-    function isPendingManual(row) {
-        const source = normalize(row.entry_source || "MANUAL");
-        return !row.authenticated && source === "MANUAL";
+    function isManualVoucher(row) {
+        const source = normalize(
+            row.entry_source || "MANUAL"
+        );
+
+        /*
+         * IA must show BOTH:
+         * - Pending manual vouchers
+         * - Authenticated manual vouchers
+         *
+         * Authentication status must not remove the row.
+         */
+        return source === "MANUAL";
     }
 
     window.renderDraftRows = function (rows) {
         const body = getEl("draftBody");
-        if (!body) return;
+
+        if (!body) {
+            return;
+        }
 
         if (!rows || !rows.length) {
-            body.innerHTML = `<tr><td colspan="8">No pending IA vouchers found.</td></tr>`;
+            body.innerHTML =
+                `<tr>
+                    <td colspan="8">
+                        No IA vouchers found.
+                    </td>
+                </tr>`;
             return;
         }
 
         body.innerHTML = rows.map(function (row) {
+
+            const authenticated =
+                row.authenticated === true ||
+                Boolean(row.authusercode);
+
+            /*
+             * Authenticated vouchers remain in IA.
+             * They cannot be edited anymore, but Preview remains.
+             */
+            const actionHtml = authenticated
+                ? `
+                    <span
+                        class="ia-authenticated-badge"
+                        title="${
+                            escapeHtml(
+                                row.authdateandtime ||
+                                row.authdatetime ||
+                                ""
+                            )
+                        }"
+                    >
+                        Authenticated
+                    </span>
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openPreview(${Number(row.id)})"
+                    >
+                        Preview
+                    </button>
+                `
+                : `
+                    <button
+                        class="btn btn-secondary"
+                        onclick="openEdit(${Number(row.id)})"
+                    >
+                        Edit
+                    </button>
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openPreview(${Number(row.id)})"
+                    >
+                        Preview
+                    </button>
+                `;
+
             return `
-                <tr>
-                    <td>${escapeHtml(displayDate(row.voucherdate || row.date || ""))}</td>
-                    <td>${escapeHtml(row.account_name || "")}</td>
-                    <td>${escapeHtml(row.person_name || "")}</td>
-                    <td>${escapeHtml(row.purpose || "")}</td>
-                    <td>${formatNarration(row.narration || "")}</td>
-                    <td>${escapeHtml(row.amount || "")}</td>
-                    <td>${escapeHtml(row.entrydateandtime || row.entry_time || "")}</td>
+                <tr
+                    data-voucher-id="${Number(row.id)}"
+                    data-authenticated="${authenticated ? "1" : "0"}"
+                >
+                    <td>
+                        ${escapeHtml(
+                            displayDate(
+                                row.voucherdate ||
+                                row.date ||
+                                ""
+                            )
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            row.account_name || ""
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            row.person_name || ""
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            row.purpose || ""
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatNarration(
+                            row.narration || ""
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            row.amount || ""
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            row.entrydateandtime ||
+                            row.entry_time ||
+                            ""
+                        )}
+                    </td>
+
                     <td>
                         <div class="ia-action-cell">
-                            <button class="btn btn-secondary" onclick="openEdit(${row.id})">Edit</button>
-                            <button class="btn btn-primary" onclick="openPreview(${row.id})">Preview</button>
+                            ${actionHtml}
                         </div>
                     </td>
                 </tr>
             `;
         }).join("");
     };
+
 
     window.applyDraftFilters = function () {
         const searchText = normalize(getEl("draftSearch")?.value || "");
@@ -2606,7 +3009,7 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         let rows = Array.isArray(window.draftRows) ? window.draftRows : [];
 
         rows = rows
-            .filter(isPendingManual)
+            .filter(isManualVoucher)
             .filter(function (row) {
                 const rowDate = toISODate(row.voucherdate || row.date || "");
 
@@ -2761,51 +3164,483 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
 </style>
 
 
+
+
 <script>
-/* IA DETAILS TABLE FORMAT FIX */
+/* IA_SINGLE_PREVIEW_CONTROLLER_V2 */
 (function () {
-    let lastIAFullRow = null;
 
-    function escapeHtml(value) {
-        return String(value ?? "").replace(/[<>&"]/g, function (s) {
-            return {
-                "<": "&lt;",
-                ">": "&gt;",
-                "&": "&amp;",
-                '"': "&quot;"
-            }[s];
-        });
+    let iaCurrentVoucher = null;
+
+
+    function escapeIA(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
     }
 
-    function getRowFromResult(result) {
-        return result.row || result.voucher || result.entry || result.data || result;
-    }
 
-    function normalizeDetails(row) {
-        if (row && Array.isArray(row.details) && row.details.length > 0) {
-            return row.details.filter(function (item) {
-                return String(item.narration || "").trim() ||
-                       String(item.count || item.item_count || "").trim() ||
-                       String(item.sub_price || "").trim() ||
-                       String(item.total_price || "").trim();
-            });
+    async function fetchIAFullVoucher(id) {
+        const response = await fetch(
+            `/api/cash-voucher-entry/get/${encodeURIComponent(id)}`,
+            {
+                cache: "no-store",
+                credentials: "same-origin"
+            }
+        );
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(
+                result.message ||
+                "Failed to load voucher"
+            );
         }
 
-        const narration = String(row && row.narration ? row.narration : "").trim();
+        /*
+         * Prefer voucher first because that is the complete
+         * service object containing details/account_type/
+         * on_duty_details.
+         */
+        const row =
+            result.voucher ||
+            result.entry ||
+            result.row ||
+            result.data ||
+            null;
 
-        if (!narration || narration === "-") {
+        if (!row) {
+            throw new Error(
+                "Voucher data not found"
+            );
+        }
+
+        /*
+         * If the API returned related arrays separately,
+         * preserve them too.
+         */
+        if (!Array.isArray(row.details)) {
+            row.details =
+                result.voucher?.details ||
+                result.entry?.details ||
+                result.row?.details ||
+                result.details ||
+                [];
+        }
+
+        if (!Array.isArray(row.on_duty_details)) {
+            row.on_duty_details =
+                result.voucher?.on_duty_details ||
+                result.entry?.on_duty_details ||
+                result.row?.on_duty_details ||
+                result.data?.on_duty_details ||
+                [];
+        }
+
+        return row;
+    }
+
+
+    function setIAAccountType(type) {
+        const normalized =
+            String(type || "")
+                .trim()
+                .toLowerCase();
+
+        const others =
+            document.getElementById(
+                "iaEditAccountOthers"
+            );
+
+        const advance =
+            document.getElementById(
+                "iaEditAccountAdvance"
+            );
+
+        if (others) {
+            others.checked =
+                normalized === "others";
+        }
+
+        if (advance) {
+            advance.checked =
+                normalized === "advance";
+        }
+    }
+
+
+    function restoreIAAccount(row) {
+        const name =
+            document.getElementById(
+                "editAccountName"
+            );
+
+        const code =
+            document.getElementById(
+                "editAccountCode"
+            );
+
+        if (name) {
+            name.value =
+                row.account_name || "";
+
+            name.dataset.originalAccountName =
+                row.account_name || "";
+
+            name.dataset.originalAccountCode =
+                row.account_head_code || "";
+        }
+
+        if (code) {
+            code.value =
+                row.account_head_code || "";
+        }
+    }
+
+
+    // ========================================================
+    // SINGLE IA EDIT
+    // ========================================================
+
+    window.openEdit = async function (id) {
+        try {
+            const row =
+                await fetchIAFullVoucher(id);
+
+            iaCurrentVoucher = row;
+
+            const editId =
+                document.getElementById("editId");
+
+            const editDate =
+                document.getElementById("editDate");
+
+            const editPerson =
+                document.getElementById(
+                    "editPersonName"
+                );
+
+            const editPurpose =
+                document.getElementById(
+                    "editPurpose"
+                );
+
+            const editAmount =
+                document.getElementById(
+                    "editAmount"
+                );
+
+            if (editId) {
+                editId.value = row.id || "";
+            }
+
+            if (editDate) {
+                editDate.value =
+                    row.voucherdate || "";
+            }
+
+            if (editPerson) {
+                editPerson.value =
+                    row.person_name || "";
+            }
+
+            if (editPurpose) {
+                editPurpose.value =
+                    row.purpose || "";
+            }
+
+            if (editAmount) {
+                editAmount.value =
+                    row.amount || "";
+            }
+
+            restoreIAAccount(row);
+
+            if (
+                typeof setEditDetailsData ===
+                "function"
+            ) {
+                setEditDetailsData(
+                    Array.isArray(row.details)
+                        ? row.details
+                        : []
+                );
+            }
+
+            let type = String(
+                row.account_type || ""
+            )
+                .trim()
+                .toLowerCase();
+
+            /*
+             * New vouchers use the stored ACCOUNT_TYPE.
+             * Only legacy NULL vouchers need fallback detection.
+             */
+            if (
+                type !== "others" &&
+                type !== "advance"
+            ) {
+                if (
+                    typeof detectIAEditAccountType ===
+                    "function"
+                ) {
+                    try {
+                        type =
+                            await detectIAEditAccountType(
+                                row
+                            );
+                    } catch (error) {
+                        console.warn(
+                            "Legacy IA type detection failed:",
+                            error
+                        );
+                    }
+                }
+            }
+
+            if (
+                type === "others" ||
+                type === "advance"
+            ) {
+                /*
+                 * The voucher already contains its saved
+                 * ACCOUNT_TYPE, ACCOUNT_NAME and ACCOUNT_HEAD_CODE.
+                 *
+                 * DO NOT download the complete account list here.
+                 * ADVANCE contains tens of thousands of accounts and
+                 * was blocking the Edit modal while they were loaded
+                 * into the datalist.
+                 */
+                setIAAccountType(type);
+                restoreIAAccount(row);
+
+                const accountInput =
+                    document.getElementById(
+                        "editAccountName"
+                    );
+
+                if (accountInput) {
+                    accountInput.dataset.iaLazyAccountType =
+                        type;
+
+                    accountInput.dataset.iaLoadedAccountType =
+                        "";
+
+                    accountInput.dataset.iaAccountLoading =
+                        "0";
+
+                    /*
+                     * Load the correct account list only if the
+                     * IA user actually interacts with Account Head.
+                     *
+                     * Viewing/editing the other voucher fields now
+                     * requires NO large account retrieval.
+                     */
+                    accountInput.onfocus = function () {
+                        const input = this;
+
+                        const wantedType =
+                            String(
+                                input.dataset
+                                    .iaLazyAccountType ||
+                                ""
+                            ).trim().toLowerCase();
+
+                        if (
+                            !wantedType ||
+                            typeof loadIAEditAccountHeads !==
+                                "function"
+                        ) {
+                            return;
+                        }
+
+                        if (
+                            input.dataset
+                                .iaLoadedAccountType ===
+                                wantedType
+                        ) {
+                            return;
+                        }
+
+                        if (
+                            input.dataset
+                                .iaAccountLoading === "1"
+                        ) {
+                            return;
+                        }
+
+                        input.dataset.iaAccountLoading =
+                            "1";
+
+                        Promise.resolve(
+                            loadIAEditAccountHeads(
+                                wantedType
+                            )
+                        )
+                            .then(function () {
+                                input.dataset
+                                    .iaLoadedAccountType =
+                                    wantedType;
+
+                                /*
+                                 * Keep the stored checkbox selection.
+                                 */
+                                setIAAccountType(
+                                    wantedType
+                                );
+                            })
+                            .catch(function (error) {
+                                console.warn(
+                                    "Lazy IA account load failed:",
+                                    error
+                                );
+                            })
+                            .finally(function () {
+                                input.dataset
+                                    .iaAccountLoading =
+                                    "0";
+                            });
+                    };
+                }
+            }
+
+            if (
+                typeof bindIAEditAccountTypeControls ===
+                "function"
+            ) {
+                bindIAEditAccountTypeControls();
+            }
+
+            const modal =
+                document.getElementById(
+                    "editModal"
+                );
+
+            if (modal) {
+                modal.style.display = "block";
+            }
+
+        } catch (error) {
+            console.error(
+                "IA Edit failed:",
+                error
+            );
+
+            alert(
+                "Edit failed: " +
+                (error.message || error)
+            );
+        }
+    };
+
+
+    // ========================================================
+    // PREVIEW HELPERS
+    // ========================================================
+
+    function formatIADate(value) {
+        const raw =
+            String(value || "").trim();
+
+        if (/^\d{8}$/.test(raw)) {
+            return (
+                raw.slice(6, 8) +
+                "-" +
+                raw.slice(4, 6) +
+                "-" +
+                raw.slice(0, 4)
+            );
+        }
+
+        if (
+            /^\d{4}-\d{2}-\d{2}/.test(raw)
+        ) {
+            return (
+                raw.slice(8, 10) +
+                "-" +
+                raw.slice(5, 7) +
+                "-" +
+                raw.slice(0, 4)
+            );
+        }
+
+        return raw;
+    }
+
+
+    function formatIATime(value) {
+        const raw =
+            String(value || "").trim();
+
+        if (!raw) {
+            return "";
+        }
+
+        if (raw.includes(" ")) {
+            return raw.split(" ").pop();
+        }
+
+        return raw;
+    }
+
+
+    function normalizeDetails(row) {
+        if (
+            Array.isArray(row.details) &&
+            row.details.length
+        ) {
+            return row.details.filter(
+                function (item) {
+                    if (!item) {
+                        return false;
+                    }
+
+                    return Boolean(
+                        String(
+                            item.narration || ""
+                        ).trim() ||
+                        String(
+                            item.count ||
+                            item.item_count ||
+                            ""
+                        ).trim() ||
+                        String(
+                            item.sub_price || ""
+                        ).trim() ||
+                        String(
+                            item.total_price || ""
+                        ).trim()
+                    );
+                }
+            );
+        }
+
+        const narration =
+            String(
+                row.narration || ""
+            ).trim();
+
+        if (
+            !narration ||
+            narration === "-"
+        ) {
             return [];
         }
 
         return narration
-            .split(/\n|,/)
+            .split(/\n/)
             .map(function (line) {
                 return line.trim();
             })
             .filter(Boolean)
             .map(function (line) {
                 return {
-                    narration: line.replace(/^\d+\.\s*/, ""),
+                    narration: line,
                     count: "",
                     sub_price: "",
                     total_price: ""
@@ -2813,8 +3648,10 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
             });
     }
 
-    function buildDetailsTable(row) {
-        const details = normalizeDetails(row);
+
+    function buildIADetailsTable(row) {
+        const details =
+            normalizeDetails(row);
 
         if (!details.length) {
             return "-";
@@ -2830,18 +3667,48 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
                         <th>Total</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     ${details.map(function (item) {
-                        const count = item.count || item.item_count || "";
-                        const subPrice = item.sub_price || "";
-                        const totalPrice = item.total_price || "";
+                        const count =
+                            item.count ||
+                            item.item_count ||
+                            "";
+
+                        const subPrice =
+                            item.sub_price || "";
+
+                        const totalPrice =
+                            item.total_price || "";
 
                         return `
                             <tr>
-                                <td>${escapeHtml(item.narration || "")}</td>
-                                <td>${escapeHtml(count)}</td>
-                                <td>${subPrice !== "" ? "Rs. " + escapeHtml(subPrice) : ""}</td>
-                                <td>${totalPrice !== "" ? "Rs. " + escapeHtml(totalPrice) : ""}</td>
+                                <td>${escapeIA(
+                                    item.narration ||
+                                    ""
+                                )}</td>
+
+                                <td>${escapeIA(
+                                    count
+                                )}</td>
+
+                                <td>${
+                                    subPrice !== ""
+                                        ? "Rs. " +
+                                          escapeIA(
+                                              subPrice
+                                          )
+                                        : ""
+                                }</td>
+
+                                <td>${
+                                    totalPrice !== ""
+                                        ? "Rs. " +
+                                          escapeIA(
+                                              totalPrice
+                                          )
+                                        : ""
+                                }</td>
                             </tr>
                         `;
                     }).join("")}
@@ -2850,133 +3717,250 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         `;
     }
 
-    function applyIADetailsTable(row) {
-        if (!row) {
-            row = lastIAFullRow;
+
+    function uniqueOnDutyItems(row) {
+        const source =
+            Array.isArray(
+                row.on_duty_details
+            )
+                ? row.on_duty_details
+                : [];
+
+        const seen = new Set();
+
+        return source.filter(function (item) {
+            if (!item) {
+                return false;
+            }
+
+            const person =
+                String(
+                    item.person_name ||
+                    item.personName ||
+                    ""
+                ).trim();
+
+            if (!person) {
+                return false;
+            }
+
+            /*
+             * ID is ideal. Composite key protects old rows too.
+             */
+            const key =
+                item.id != null
+                    ? "ID:" + item.id
+                    : [
+                        item.usercode || "",
+                        item.empcode || "",
+                        item.outdate || "",
+                        item.outtime || "",
+                        item.intime || "",
+                        person,
+                        item.reason || "",
+                        item.remarks || ""
+                    ].join("|");
+
+            if (seen.has(key)) {
+                return false;
+            }
+
+            seen.add(key);
+            return true;
+        });
+    }
+
+
+    function buildIAOnDutyTable(row) {
+        const items =
+            uniqueOnDutyItems(row);
+
+        if (!items.length) {
+            return "";
         }
 
-        if (!row) return;
+        return `
+            <table class="preview-details-table preview-on-duty-table">
+                <thead>
+                    <tr>
+                        <th style="width:22%;">
+                            Person Name
+                        </th>
 
-        lastIAFullRow = row;
-        window.lastIAFullRow = row;
+                        <th style="width:13%;">
+                            Date
+                        </th>
 
-        const previewBox = document.querySelector("#previewModal .preview-box");
-        const purpose = document.getElementById("pvPurpose");
-        const purposeRow = purpose ? purpose.closest(".print-line") : null;
+                        <th style="width:12%;">
+                            From Time
+                        </th>
 
-        if (!previewBox || !purposeRow) return;
+                        <th style="width:12%;">
+                            To Time
+                        </th>
 
-        const purposeLabel = purposeRow.querySelector(".print-label");
-        if (purposeLabel) {
-            purposeLabel.innerText = "NARRATION";
+                        <th style="width:18%;">
+                            Reason
+                        </th>
+
+                        <th style="width:23%;">
+                            Remark
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${items.map(function (item) {
+                        return `
+                            <tr>
+                                <td>${escapeIA(
+                                    item.person_name ||
+                                    item.personName ||
+                                    ""
+                                )}</td>
+
+                                <td>${escapeIA(
+                                    formatIADate(
+                                        item.outdate
+                                    )
+                                )}</td>
+
+                                <td>${escapeIA(
+                                    formatIATime(
+                                        item.outtime
+                                    )
+                                )}</td>
+
+                                <td>${escapeIA(
+                                    formatIATime(
+                                        item.intime
+                                    )
+                                )}</td>
+
+                                <td>${escapeIA(
+                                    item.reason || ""
+                                )}</td>
+
+                                <td>${escapeIA(
+                                    item.remarks || ""
+                                )}</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+
+
+    function renderIASinglePreview(row) {
+        const previewBox =
+            document.querySelector(
+                "#previewModal .preview-box"
+            );
+
+        const purpose =
+            document.getElementById(
+                "pvPurpose"
+            );
+
+        const purposeRow =
+            purpose
+                ? purpose.closest(
+                    ".print-line"
+                )
+                : null;
+
+        if (
+            !previewBox ||
+            !purposeRow
+        ) {
+            throw new Error(
+                "IA preview layout not found"
+            );
         }
 
+
+        /*
+         * CRITICAL:
+         * Remove every dynamically generated DETAILS /
+         * ON DUTY row from all old implementations.
+         * We then create exactly one copy.
+         */
         previewBox
-            .querySelectorAll(".preview-narration-line, .preview-details-row, .ia-final-details-row, .ia-details-table-row, .preview-on-duty-row, .ia-on-duty-row")
+            .querySelectorAll(
+                [
+                    ".preview-narration-line",
+                    ".preview-details-row",
+                    ".print-narration-row",
+                    ".preview-on-duty-row",
+                    ".ia-on-duty-row",
+                    ".ia-details-table-row",
+                    ".ia-final-details-row",
+                    ".ia-final-forced-on-duty",
+                    ".ia-single-details-row",
+                    ".ia-single-on-duty-row"
+                ].join(",")
+            )
             .forEach(function (el) {
                 el.remove();
             });
 
-        const detailsRow = document.createElement("div");
-        detailsRow.className = "print-line preview-details-row ia-details-table-row";
+
+        const purposeLabel =
+            purposeRow.querySelector(
+                ".print-label"
+            );
+
+        if (purposeLabel) {
+            purposeLabel.textContent =
+                "NARRATION";
+        }
+
+
+        const detailsRow =
+            document.createElement("div");
+
+        detailsRow.className =
+            "print-line " +
+            "ia-single-details-row";
+
         detailsRow.innerHTML = `
-            <div class="print-label">DETAILS</div>
-            <div class="print-value">${buildDetailsTable(row)}</div>
+            <div class="print-label">
+                DETAILS
+            </div>
+
+            <div class="print-value">
+                ${buildIADetailsTable(row)}
+            </div>
         `;
 
-        purposeRow.parentNode.insertBefore(detailsRow, purposeRow.nextSibling);
+        purposeRow.parentNode.insertBefore(
+            detailsRow,
+            purposeRow.nextSibling
+        );
 
-        const onDutyItems =
-            row && Array.isArray(row.on_duty_details)
-                ? row.on_duty_details
-                : [];
 
-        const validOnDutyItems = onDutyItems.filter(function (item) {
-            if (!item) return false;
+        const onDutyTable =
+            buildIAOnDutyTable(row);
 
-            return Boolean(
-                String(
-                    item.person_name || item.personName || ""
-                ).trim()
-            );
-        });
+        if (onDutyTable) {
+            const onDutyRow =
+                document.createElement("div");
 
-        if (validOnDutyItems.length) {
-            function formatIADate(value) {
-                const raw = String(value || "").trim();
-
-                if (/^\d{8}$/.test(raw)) {
-                    return (
-                        raw.slice(6, 8) + "-" +
-                        raw.slice(4, 6) + "-" +
-                        raw.slice(0, 4)
-                    );
-                }
-
-                if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-                    return (
-                        raw.slice(8, 10) + "-" +
-                        raw.slice(5, 7) + "-" +
-                        raw.slice(0, 4)
-                    );
-                }
-
-                return raw;
-            }
-
-            function formatIATime(value) {
-                const raw = String(value || "").trim();
-                return raw.includes(" ") ? raw.split(" ").pop() : raw;
-            }
-
-            const onDutyTable = `
-                <table class="preview-details-table preview-on-duty-table">
-                    <thead>
-                        <tr>
-                            <th style="width:26%;">Person Name</th>
-                            <th style="width:16%;">Date</th>
-                            <th style="width:14%;">From Time</th>
-                            <th style="width:14%;">To Time</th>
-                            <th style="width:30%;">Remark</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${validOnDutyItems.map(function (item) {
-                            const person = String(
-                                item.person_name ||
-                                item.personName ||
-                                ""
-                            ).trim();
-
-                            const reason = String(
-                                item.reason || ""
-                            ).trim();
-
-                            const remarks = String(
-                                item.remarks || ""
-                            ).trim();
-
-                            return `
-                                <tr>
-                                    <td>${escapeHtml(person)}</td>
-                                    <td>${escapeHtml(formatIADate(item.outdate))}</td>
-                                    <td>${escapeHtml(formatIATime(item.outtime))}</td>
-                                    <td>${escapeHtml(formatIATime(item.intime))}</td>
-                                    <td>${escapeHtml(remarks)}</td>
-                                </tr>
-                            `;
-                        }).join("")}
-                    </tbody>
-                </table>
-            `;
-
-            const onDutyRow = document.createElement("div");
             onDutyRow.className =
-                "print-line preview-on-duty-row ia-on-duty-row";
+                "print-line " +
+                "preview-on-duty-row " +
+                "ia-single-on-duty-row";
 
             onDutyRow.innerHTML = `
-                <div class="print-label">ON DUTY</div>
-                <div class="print-value">${onDutyTable}</div>
+                <div class="print-label">
+                    ON DUTY
+                </div>
+
+                <div class="print-value">
+                    ${onDutyTable}
+                </div>
             `;
 
             detailsRow.parentNode.insertBefore(
@@ -2986,61 +3970,205 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         }
     }
 
-    const oldOpenPreview = window.openPreview;
+
+    // ========================================================
+    // ONE AND ONLY ACTIVE IA PREVIEW
+    // ========================================================
 
     window.openPreview = async function (id) {
-        let result;
-
-        if (typeof oldOpenPreview === "function") {
-            result = await oldOpenPreview.apply(this, arguments);
-        }
-
         try {
-            const response = await fetch(`/api/cash-voucher-entry/get/${id}`, {
-                cache: "no-store"
-            });
+            const row =
+                await fetchIAFullVoucher(id);
 
-            const apiResult = await response.json();
+            iaCurrentVoucher = row;
+            window.lastIAFullRow = row;
 
-            if (apiResult.success) {
-                const row = getRowFromResult(apiResult);
-                applyIADetailsTable(row);
-                setTimeout(function () { applyIADetailsTable(row); }, 250);
-                setTimeout(function () { applyIADetailsTable(row); }, 700);
+            window.selectedVoucherId =
+                row.id;
+
+            if (
+                typeof selectedVoucherId !==
+                "undefined"
+            ) {
+                selectedVoucherId =
+                    row.id;
             }
+
+            if (
+                typeof selectedVoucherIdForAuth !==
+                "undefined"
+            ) {
+                selectedVoucherIdForAuth =
+                    row.id;
+            }
+
+
+            const voucherNo =
+                document.getElementById(
+                    "pvVoucherNo"
+                );
+
+            const date =
+                document.getElementById(
+                    "pvDate"
+                );
+
+            const account =
+                document.getElementById(
+                    "pvAccountHead"
+                );
+
+            const person =
+                document.getElementById(
+                    "pvPersonName"
+                );
+
+            const purpose =
+                document.getElementById(
+                    "pvPurpose"
+                );
+
+            const amount =
+                document.getElementById(
+                    "pvAmount"
+                );
+
+            const words =
+                document.getElementById(
+                    "pvAmountWords"
+                );
+
+
+            if (voucherNo) {
+                voucherNo.textContent =
+                    row.id || "";
+            }
+
+            if (date) {
+                date.textContent =
+                    typeof formatDateForDisplay ===
+                    "function"
+                        ? formatDateForDisplay(
+                              row.voucherdate ||
+                              ""
+                          )
+                        : row.voucherdate ||
+                          "";
+            }
+
+            if (account) {
+                account.textContent =
+                    row.account_name || "";
+            }
+
+            if (person) {
+                person.textContent =
+                    row.person_name || "";
+            }
+
+            if (purpose) {
+                purpose.textContent =
+                    row.purpose || "";
+            }
+
+            if (amount) {
+                amount.textContent =
+                    row.amount ?? "";
+            }
+
+            if (
+                words &&
+                typeof numberToWords ===
+                "function"
+            ) {
+                words.textContent =
+                    numberToWords(
+                        row.amount || 0
+                    ).replace(
+                        " Rupees Only",
+                        ""
+                    );
+            }
+
+
+            /*
+             * Render exactly once.
+             * No wrappers.
+             * No delayed setTimeout renderer.
+             */
+            renderIASinglePreview(row);
+
+
+            const modal =
+                document.getElementById(
+                    "previewModal"
+                );
+
+            if (modal) {
+                modal.style.display =
+                    "block";
+            }
+
         } catch (error) {
-            console.warn("IA details table fetch failed:", error);
-        }
+            console.error(
+                "IA Preview failed:",
+                error
+            );
 
-        return result;
+            alert(
+                "Preview failed: " +
+                (error.message || error)
+            );
+        }
     };
 
-    const oldPrintVoucherPreviewOnly = window.printVoucherPreviewOnly;
 
-    window.printVoucherPreviewOnly = function () {
-        applyIADetailsTable(lastIAFullRow || window.lastIAFullRow);
+    /*
+     * Expose current row for the existing print function.
+     * The existing IA CLEAN PRINT function can clone the
+     * already-correct preview without rebuilding it.
+     */
+    window.getIACurrentVoucher =
+        function () {
+            return iaCurrentVoucher;
+        };
 
-        if (typeof oldPrintVoucherPreviewOnly === "function") {
-            return oldPrintVoucherPreviewOnly.apply(this, arguments);
-        }
-
-        return window.print();
-    };
-
-    document.addEventListener("click", function (event) {
-        const text = String(event.target?.innerText || "").toUpperCase();
-
-        if (text.includes("PREVIEW")) {
-            setTimeout(function () { applyIADetailsTable(lastIAFullRow || window.lastIAFullRow); }, 500);
-        }
-
-        if (text.includes("PRINT") || text.includes("AUTHENTICATE")) {
-            applyIADetailsTable(lastIAFullRow || window.lastIAFullRow);
-            setTimeout(function () { applyIADetailsTable(lastIAFullRow || window.lastIAFullRow); }, 100);
-        }
-    }, true);
 })();
 </script>
+
+
+
+<style>
+/* IA_AUTHENTICATED_ROW_STATUS_STYLE */
+
+.ia-authenticated-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 32px;
+    padding: 5px 11px;
+
+    border-radius: 999px;
+
+    background: #dcfce7;
+    border: 1px solid #86efac;
+
+    color: #166534;
+
+    font-size: 12px;
+    font-weight: 800;
+
+    white-space: nowrap;
+}
+
+.ia-action-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+</style>
 
 </body>
 </html>
