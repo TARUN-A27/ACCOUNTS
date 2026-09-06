@@ -2004,10 +2004,15 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     }
 
     const purposeEl = document.getElementById("pvPurpose") || document.getElementById("printPurpose");
-    const previewBox =
+    let previewBox =
         document.querySelector("#previewModal .preview-box") ||
         document.querySelector("#printPreview") ||
         document.querySelector(".preview-box");
+
+    const existingPages = previewBox && previewBox.closest(".cash-voucher-pages");
+    if (existingPages) {
+        existingPages.replaceWith(previewBox);
+    }
 
     if (!purposeEl || !previewBox) {
         return;
@@ -2152,6 +2157,29 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
             detailsRow.nextSibling
         );
     }
+
+    paginateCashVoucherEntryPages(previewBox);
+}
+
+/* Presentation only: clone the complete voucher and limit each clone to three
+ * existing On Duty rows. This never changes saved voucher data. */
+function paginateCashVoucherEntryPages(previewBox) {
+    const onDutyRow = previewBox && previewBox.querySelector(".preview-on-duty-row");
+    const rows = onDutyRow ? Array.from(onDutyRow.querySelectorAll("tbody tr")) : [];
+    if (rows.length <= 3) return;
+
+    const pages = document.createElement("div");
+    pages.className = "cash-voucher-pages";
+    for (let start = 0; start < rows.length; start += 3) {
+        const page = previewBox.cloneNode(true);
+        page.classList.add("cash-voucher-page");
+        const body = page.querySelector(".preview-on-duty-row tbody");
+        body.replaceChildren(...rows.slice(start, start + 3).map(function (item) {
+            return item.cloneNode(true);
+        }));
+        pages.appendChild(page);
+    }
+    previewBox.replaceWith(pages);
 }
 
 document.addEventListener("click", function (event) {
@@ -2181,6 +2209,7 @@ document.addEventListener("click", function (event) {
 (function () {
     window.printVoucherPreviewOnly = function () {
         const source =
+            document.querySelector("#previewModal .cash-voucher-pages") ||
             document.querySelector("#previewModal .preview-box") ||
             document.querySelector("#printPreview .print-box") ||
             document.querySelector(".preview-box") ||
@@ -2233,6 +2262,15 @@ document.addEventListener("click", function (event) {
                 overflow: hidden;
                 page-break-inside: avoid;
                 break-inside: avoid;
+            }
+
+            .cash-voucher-pages .cash-voucher-page {
+                page-break-after: always;
+                break-after: page;
+            }
+            .cash-voucher-pages .cash-voucher-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
             }
 
             .print-company {
@@ -2398,6 +2436,11 @@ document.addEventListener("click", function (event) {
                 vertical-align: top;
             }
 
+            .preview-on-duty-table tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
             .modal-title,
             .modal-actions,
             button {
@@ -2432,6 +2475,12 @@ document.addEventListener("click", function (event) {
     };
 })();
 </script>
+
+<style>
+.cash-voucher-pages { display: grid; gap: 18px; }
+.cash-voucher-pages .cash-voucher-page { page-break-inside: avoid; break-inside: avoid; }
+@media print { .cash-voucher-pages { display: block; gap: 0; } }
+</style>
 
 
 <script>

@@ -2464,6 +2464,9 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     display: none;
 }
 
+.ia-voucher-pages { display: grid; gap: 18px; }
+.ia-voucher-page { page-break-inside: avoid; break-inside: avoid; }
+
 @media print {
     @page {
         size: A4 portrait;
@@ -2498,6 +2501,25 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         padding: 7mm 7mm 3mm 7mm !important;
         box-sizing: border-box !important;
         overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .ia-voucher-pages {
+        display: block !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .ia-voucher-page {
+        page-break-after: always !important;
+        break-after: page !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .ia-voucher-page:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+    }
+
+    body.ia-print-active #iaPrintOnly .preview-on-duty-table tr {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -2561,7 +2583,8 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
     window.printVoucherPreviewOnly = function () {
         fixIALabels();
 
-        const source = document.querySelector("#previewModal .preview-box");
+        const source = document.querySelector("#previewModal .ia-voucher-pages") ||
+            document.querySelector("#previewModal .preview-box");
         if (!source) {
             alert("Voucher preview not found. Open preview first.");
             return;
@@ -3970,6 +3993,25 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         }
     }
 
+    function paginateIAVoucherPages(previewBox) {
+        const onDutyRow = previewBox && previewBox.querySelector(".preview-on-duty-row");
+        const rows = onDutyRow ? Array.from(onDutyRow.querySelectorAll("tbody tr")) : [];
+        if (rows.length <= 3) return;
+
+        const pages = document.createElement("div");
+        pages.className = "ia-voucher-pages";
+        for (let start = 0; start < rows.length; start += 3) {
+            const page = previewBox.cloneNode(true);
+            page.classList.add("ia-voucher-page");
+            const body = page.querySelector(".preview-on-duty-row tbody");
+            body.replaceChildren(...rows.slice(start, start + 3).map(function (item) {
+                return item.cloneNode(true);
+            }));
+            pages.appendChild(page);
+        }
+        previewBox.replaceWith(pages);
+    }
+
 
     // ========================================================
     // ONE AND ONLY ACTIVE IA PREVIEW
@@ -4097,6 +4139,7 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
              * No delayed setTimeout renderer.
              */
             renderIASinglePreview(row);
+            paginateIAVoucherPages(document.querySelector("#previewModal .preview-box"));
 
 
             const modal =
@@ -4254,4 +4297,3 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
 })();
 </script>
 <!-- FINAL_PRINT_SIGNATURE_FIX_END -->
-

@@ -1993,6 +1993,26 @@ function buildDraftOnDutySection(onDutyDetails) {
     `;
 }
 
+function paginateDraftVoucherPages(container) {
+    const previewBox = container && container.querySelector(".print-box");
+    const onDutyRow = previewBox && previewBox.querySelector(".preview-on-duty-row");
+    const rows = onDutyRow ? Array.from(onDutyRow.querySelectorAll("tbody tr")) : [];
+    if (rows.length <= 3) return;
+
+    const pages = document.createElement("div");
+    pages.className = "draft-voucher-pages";
+    for (let start = 0; start < rows.length; start += 3) {
+        const page = previewBox.cloneNode(true);
+        page.classList.add("draft-voucher-page");
+        const body = page.querySelector(".preview-on-duty-row tbody");
+        body.replaceChildren(...rows.slice(start, start + 3).map(function (item) {
+            return item.cloneNode(true);
+        }));
+        pages.appendChild(page);
+    }
+    previewBox.replaceWith(pages);
+}
+
 async function openPreview(id) {
     const row = await fetchVoucher(id);
 
@@ -2058,12 +2078,14 @@ async function openPreview(id) {
         </div>
     `;
 
+    paginateDraftVoucherPages(document.getElementById("previewContentFinal"));
     document.getElementById("previewModalFinal").classList.remove("hidden");
 }
 
 
 function printDraftVoucherOnly() {
-    const box = document.querySelector("#previewContentFinal .print-box");
+    const box = document.querySelector("#previewContentFinal .draft-voucher-pages") ||
+        document.querySelector("#previewContentFinal .print-box");
 
     if (!box) {
         window.print();
@@ -2082,6 +2104,11 @@ function printDraftVoucherOnly() {
 
     const css = `
         <style>
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
             body {
                 margin: 0;
                 padding: 12px;
@@ -2097,6 +2124,17 @@ function printDraftVoucherOnly() {
                 border-radius: 6px;
                 padding: 16px;
                 box-sizing: border-box;
+            }
+
+            .draft-voucher-pages .draft-voucher-page {
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .draft-voucher-pages .draft-voucher-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
             }
 
             .print-company {
@@ -2171,6 +2209,8 @@ function printDraftVoucherOnly() {
                 font-size: 11px;
                 font-weight: 900;
                 text-align: center;
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
 
             .print-sign-cell {
@@ -2193,6 +2233,11 @@ function printDraftVoucherOnly() {
             .preview-details-table td {
                 border: 1px solid #1d4ed8;
                 padding: 4px 6px;
+            }
+
+            .preview-on-duty-table tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
 
             .preview-details-table th {
@@ -2291,6 +2336,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 <!-- FINAL_PRINT_SIGNATURE_FIX_START -->
+<style>
+.draft-voucher-pages { display: grid; gap: 18px; }
+.draft-voucher-page { page-break-inside: avoid; break-inside: avoid; }
+@media print { .draft-voucher-pages { display: block; gap: 0; } }
+</style>
+
 <style>
 @media screen, print {
     .print-signatures {
