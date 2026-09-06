@@ -443,4 +443,238 @@ document.addEventListener("keydown", function(event) {
 loadHistory();
 </script>
 
+
+<style>
+/* HISTORY FRONTEND FIT FINAL */
+
+body {
+    overflow-x: hidden !important;
+}
+
+.app-shell {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+}
+
+.page-header,
+.card {
+    width: min(1180px, calc(100vw - 36px)) !important;
+    max-width: min(1180px, calc(100vw - 36px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.page-header {
+    margin-bottom: 14px !important;
+}
+
+.card {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06) !important;
+}
+
+.card-body {
+    padding: 14px 16px !important;
+}
+
+.card-body .row.g-3 {
+    display: grid !important;
+    grid-template-columns: 160px 170px 170px 170px minmax(240px, 1fr) !important;
+    gap: 12px !important;
+}
+
+.card-body .row.g-3 > * {
+    width: auto !important;
+    max-width: none !important;
+    flex: none !important;
+}
+
+.form-label {
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    color: #334155 !important;
+}
+
+.form-control,
+.form-select {
+    height: 38px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}
+
+.table-responsive {
+    width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+.table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+}
+
+.table th,
+.table td {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    vertical-align: middle !important;
+    padding: 10px 9px !important;
+    font-size: 12px !important;
+    line-height: 1.22 !important;
+}
+
+.table th {
+    color: #334155 !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+}
+
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: 88px !important;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+    width: 110px !important;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 38% !important;
+    font-weight: 900 !important;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+    width: 105px !important;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+    width: 82px !important;
+    text-align: center !important;
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+    width: 76px !important;
+    text-align: right !important;
+    font-weight: 900 !important;
+}
+
+.table th:nth-child(7),
+.table td:nth-child(7) {
+    width: 72px !important;
+    text-align: right !important;
+}
+
+.badge,
+[class*="status-"] {
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 11px !important;
+    padding: 5px 8px !important;
+    border-radius: 999px !important;
+    font-weight: 900 !important;
+}
+
+#historyTable td:nth-child(3) {
+    color: #0f172a !important;
+}
+
+#historyTable td:nth-child(4) {
+    text-transform: capitalize !important;
+}
+
+@media (max-width: 1100px) {
+    .page-header,
+    .card {
+        width: calc(100vw - 24px) !important;
+        max-width: calc(100vw - 24px) !important;
+    }
+
+    .card-body .row.g-3 {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .table th,
+    .table td {
+        font-size: 11px !important;
+        padding: 8px 7px !important;
+    }
+}
+
+</style>
+<script>
+/* HISTORY FRONTEND FIT FINAL */
+
+(function () {
+    function middleTrim(text, maxLength) {
+        text = String(text || "").trim();
+
+        if (text.length <= maxLength) return text;
+
+        const start = Math.ceil((maxLength - 3) * 0.55);
+        const end = Math.floor((maxLength - 3) * 0.45);
+
+        return text.slice(0, start) + "..." + text.slice(text.length - end);
+    }
+
+    function cleanType(text) {
+        return String(text || "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function compactHistoryTable() {
+        const rows = document.querySelectorAll("#historyTable tr");
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll("td");
+
+            if (cells.length >= 6) {
+                const docCell = cells[2];
+                const typeCell = cells[3];
+
+                if (docCell && !docCell.dataset.fullText) {
+                    const full = docCell.innerText.trim();
+                    docCell.dataset.fullText = full;
+                    docCell.title = full;
+                    docCell.innerText = middleTrim(full, 62);
+                }
+
+                if (typeCell && !typeCell.dataset.cleaned) {
+                    typeCell.innerText = cleanType(typeCell.innerText);
+                    typeCell.dataset.cleaned = "1";
+                }
+            }
+        });
+    }
+
+    const target = document.getElementById("historyTable");
+
+    if (target) {
+        const observer = new MutationObserver(compactHistoryTable);
+        observer.observe(target, {childList: true, subtree: true, characterData: true});
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        compactHistoryTable();
+        setTimeout(compactHistoryTable, 500);
+        setTimeout(compactHistoryTable, 1500);
+    });
+
+    window.compactHistoryTable = compactHistoryTable;
+})();
+
+</script>
+
 {% endblock %}

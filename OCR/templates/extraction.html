@@ -2,178 +2,260 @@
 
 {% block content %}
 <style>
-    .extract-app {
-        max-width: 1440px;
+    .ocr-page {
+        width: min(1180px, calc(100vw - 32px));
         margin: 0 auto;
     }
 
-    .extract-header {
+    .ocr-header {
         display: flex;
         justify-content: space-between;
-        gap: 18px;
         align-items: flex-end;
-        margin-bottom: 18px;
+        gap: 14px;
+        margin-bottom: 12px;
     }
 
-    .extract-title {
-        font-size: 30px;
+    .ocr-title {
+        font-size: 26px;
         font-weight: 900;
-        color: #111827;
+        color: #0f172a;
         letter-spacing: -0.04em;
+        line-height: 1.05;
     }
 
-    .extract-subtitle {
+    .ocr-subtitle {
+        color: #52637a;
+        font-size: 13px;
         margin-top: 5px;
-        color: #6b7280;
-        font-size: 14px;
+        max-width: 440px;
+        line-height: 1.25;
     }
 
-    .extract-layout {
-        display: grid;
-        grid-template-columns: 300px minmax(520px, 1fr) 360px;
-        gap: 18px;
-        align-items: start;
-    }
-
-    .panel {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 20px;
-        box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
-        overflow: hidden;
-    }
-
-    .panel-head {
-        padding: 16px 18px;
-        border-bottom: 1px solid #eef2f7;
+    .ocr-actions {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-    }
-
-    .panel-title {
-        font-size: 15px;
-        font-weight: 900;
-        color: #111827;
-    }
-
-    .panel-body {
-        padding: 16px;
-    }
-
-    .scan-list {
-        max-height: 710px;
-        overflow: auto;
-        padding: 10px;
-    }
-
-    .scan-item {
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        padding: 10px;
-        margin-bottom: 10px;
-        cursor: pointer;
-        background: #ffffff;
-        transition: 0.15s ease;
-    }
-
-    .scan-item:hover {
-        border-color: #94a3b8;
-        transform: translateY(-1px);
-    }
-
-    .scan-item.active {
-        border-color: #111827;
-        background: #f8fafc;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-    }
-
-    .scan-thumb {
-        width: 100%;
-        height: 132px;
-        object-fit: contain;
-        background: #f8fafc;
-        border-radius: 12px;
-        border: 1px solid #eef2f7;
-    }
-
-    .scan-name {
-        font-size: 12px;
-        font-weight: 800;
-        color: #111827;
-        margin-top: 8px;
-        word-break: break-word;
-    }
-
-    .scan-meta {
-        font-size: 11px;
-        color: #6b7280;
-        margin-top: 4px;
-    }
-
-    .toolbar {
-        display: flex;
+        justify-content: flex-end;
         gap: 8px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
 
-    .btn {
+    .ocr-btn {
         border: none;
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-size: 13px;
+        border-radius: 11px;
+        padding: 9px 13px;
+        font-size: 12px;
         font-weight: 900;
         cursor: pointer;
-        transition: 0.15s ease;
+        white-space: nowrap;
+        transition: 0.12s ease;
     }
 
-    .btn:hover {
+    .ocr-btn:hover {
         transform: translateY(-1px);
     }
 
-    .btn-primary {
-        background: #111827;
-        color: #ffffff;
-    }
-
-    .btn-blue {
-        background: #2563eb;
-        color: #ffffff;
-    }
-
-    .btn-light {
-        background: #f3f4f6;
-        color: #111827;
-        border: 1px solid #e5e7eb;
-    }
-
-    .btn-danger {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-    }
-
-    .btn:disabled {
-        opacity: 0.5;
+    .ocr-btn:disabled {
+        opacity: 0.48;
         cursor: not-allowed;
         transform: none;
     }
 
+    .ocr-btn-dark {
+        background: #020617;
+        color: #ffffff;
+    }
+
+    .ocr-btn-blue {
+        background: #2563eb;
+        color: #ffffff;
+    }
+
+    .ocr-btn-light {
+        background: #f8fafc;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+    }
+
+    .ocr-batch {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .ocr-batch input {
+        width: 14px;
+        height: 14px;
+    }
+
+    .ocr-layout {
+        display: grid;
+        grid-template-columns: 250px minmax(480px, 1fr) 300px;
+        gap: 12px;
+        height: calc(100vh - 292px);
+        min-height: 430px;
+        max-height: 610px;
+        align-items: stretch;
+    }
+
+    .ocr-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ocr-panel-head {
+        min-height: 50px;
+        padding: 12px 14px;
+        border-bottom: 1px solid #eef2f7;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .ocr-panel-title {
+        font-size: 14px;
+        font-weight: 900;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+
+    .ocr-head-tools {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+
+    .ocr-count {
+        min-width: 30px;
+        height: 30px;
+        padding: 0 8px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .ocr-limit-label {
+        font-size: 11px;
+        color: #52637a;
+        font-weight: 900;
+    }
+
+    .ocr-select {
+        height: 30px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 11px;
+        font-weight: 900;
+        padding: 0 8px;
+    }
+
+    .scan-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 10px;
+    }
+
+    .scan-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 9px;
+        margin-bottom: 9px;
+        cursor: pointer;
+        transition: 0.12s ease;
+    }
+
+    .scan-item:hover {
+        border-color: #94a3b8;
+    }
+
+    .scan-item.active {
+        border-color: #020617;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+        background: #f8fafc;
+    }
+
+    .scan-thumb {
+        width: 100%;
+        height: 108px;
+        object-fit: contain;
+        background: #f8fafc;
+        border: 1px solid #eef2f7;
+        border-radius: 11px;
+        display: block;
+    }
+
+    .scan-name {
+        margin-top: 7px;
+        color: #0f172a;
+        font-size: 11px;
+        line-height: 1.25;
+        font-weight: 900;
+        word-break: break-word;
+    }
+
+    .scan-meta {
+        margin-top: 3px;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .preview-tools {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    .preview-tool-btn {
+        min-width: 34px;
+        height: 30px;
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
     .viewer-shell {
-        height: 760px;
+        flex: 1;
+        min-height: 0;
+        position: relative;
+        overflow: hidden;
+        cursor: grab;
+        user-select: none;
         background:
             linear-gradient(45deg, #f8fafc 25%, transparent 25%),
             linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
             linear-gradient(45deg, transparent 75%, #f8fafc 75%),
             linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
-        background-size: 26px 26px;
-        background-position: 0 0, 0 13px, 13px -13px, -13px 0px;
-        border-radius: 0 0 20px 20px;
-        position: relative;
-        overflow: hidden;
-        cursor: grab;
-        user-select: none;
+        background-size: 24px 24px;
+        background-position: 0 0, 0 12px, 12px -12px, -12px 0;
     }
 
     .viewer-shell.dragging {
@@ -186,9 +268,10 @@
         align-items: center;
         justify-content: center;
         color: #64748b;
-        text-align: center;
+        font-size: 13px;
         font-weight: 800;
-        padding: 30px;
+        text-align: center;
+        padding: 28px;
     }
 
     .preview-image {
@@ -197,422 +280,239 @@
         left: 50%;
         max-width: none;
         transform-origin: center center;
-        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+        box-shadow: 0 16px 38px rgba(15, 23, 42, 0.18);
         background: #ffffff;
-        border-radius: 8px;
-    }
-
-    .zoom-badge {
-        font-size: 12px;
-        font-weight: 900;
-        color: #475569;
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        padding: 8px 10px;
-        border-radius: 999px;
-    }
-
-    .status-box {
-        padding: 13px 14px;
-        border-radius: 14px;
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        color: #374151;
-        font-size: 13px;
-        line-height: 1.5;
-        margin-bottom: 14px;
-    }
-
-    .selected-file-box {
-        padding: 12px;
-        border-radius: 14px;
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        color: #1e3a8a;
-        font-size: 12px;
-        font-weight: 800;
-        word-break: break-word;
-        margin-bottom: 14px;
-    }
-
-    .result-box {
-        background: #0b1220;
-        color: #e5e7eb;
-        border-radius: 16px;
-        padding: 14px;
-        white-space: pre-wrap;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        font-size: 12px;
-        max-height: 510px;
-        overflow: auto;
-    }
-
-    .field-card {
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 12px;
-        margin-bottom: 10px;
-        background: #ffffff;
-    }
-
-    .field-label {
-        font-size: 11px;
-        color: #6b7280;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        margin-bottom: 4px;
-    }
-
-    .field-value {
-        font-size: 14px;
-        color: #111827;
-        font-weight: 800;
-        min-height: 18px;
+        border-radius: 6px;
     }
 
     .hidden {
+        display: none !important;
+    }
+
+    .result-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 12px;
+    }
+
+    .selected-file-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+        border-radius: 12px;
+        padding: 10px 11px;
+        font-size: 11px;
+        line-height: 1.3;
+        font-weight: 900;
+        word-break: break-word;
+        margin-bottom: 10px;
+    }
+
+    .status-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        border-radius: 12px;
+        padding: 10px 11px;
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+
+    .status-box.error {
+        background: #fef2f2;
+        color: #991b1b;
+        border-color: #fecaca;
+    }
+
+    .field-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 11px;
+        margin-bottom: 8px;
+    }
+
+    .field-label {
+        color: #64748b;
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        font-weight: 900;
+        margin-bottom: 5px;
+    }
+
+    .field-value {
+        color: #0f172a;
+        font-size: 13px;
+        line-height: 1.3;
+        font-weight: 900;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+
+    .field-value.empty {
+        color: #94a3b8;
+    }
+
+    .ocr-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: rgba(248, 250, 252, 0.82);
+        backdrop-filter: blur(5px);
         display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ocr-loading-card {
+        width: 340px;
+        max-width: calc(100vw - 40px);
+        background: #ffffff;
+        border-radius: 18px;
+        border: 1px solid #dbe3ef;
+        padding: 24px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+        text-align: center;
+    }
+
+    .ocr-spinner {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        border: 5px solid #e5e7eb;
+        border-top-color: #020617;
+        animation: spin 0.85s linear infinite;
+        margin: 0 auto 14px auto;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .ocr-loading-title {
+        font-size: 17px;
+        color: #0f172a;
+        font-weight: 900;
+        margin-bottom: 6px;
+    }
+
+    .ocr-loading-text {
+        color: #52637a;
+        font-size: 13px;
+        font-weight: 800;
+        white-space: pre-line;
     }
 
     @media (max-width: 1180px) {
-        .extract-layout {
-            grid-template-columns: 280px 1fr;
+        .ocr-page {
+            width: min(1100px, calc(100vw - 20px));
         }
 
-        .right-panel {
-            grid-column: 1 / -1;
-        }
-    }
-
-    @media (max-width: 780px) {
-        .extract-layout {
-            grid-template-columns: 1fr;
+        .ocr-layout {
+            grid-template-columns: 225px minmax(410px, 1fr) 285px;
+            gap: 10px;
         }
 
-        .viewer-shell {
-            height: 560px;
-        }
-
-        .extract-header {
-            flex-direction: column;
-            align-items: stretch;
+        .ocr-btn {
+            padding: 8px 10px;
+            font-size: 11px;
         }
     }
-
-.result-approve-btn {
-    width: 100%;
-    margin-top: 14px;
-    padding: 13px 16px;
-    border-radius: 14px;
-    border: none;
-    background: #020617;
-    color: white;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.result-approve-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-
-/* ===== EXTRACTION PAGE ALIGNMENT FIX ===== */
-
-html,
-body {
-    height: 100%;
-    overflow: hidden;
-}
-
-.extraction-page,
-.extraction-wrapper,
-.page-container,
-.main-content {
-    max-height: calc(100vh - 80px);
-    overflow: hidden;
-}
-
-.extraction-header,
-.page-header {
-    margin-bottom: 12px !important;
-}
-
-.extraction-layout,
-.extraction-grid,
-.scan-extraction-layout {
-    display: grid !important;
-    grid-template-columns: 260px minmax(420px, 1fr) 360px !important;
-    gap: 14px !important;
-    height: calc(100vh - 150px) !important;
-    max-height: calc(100vh - 150px) !important;
-    overflow: hidden !important;
-    align-items: stretch !important;
-}
-
-.scan-list-panel,
-.scanned-files-panel,
-.left-panel,
-.document-list-panel {
-    height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.scan-list,
-.scanned-list,
-#scanList,
-#scannedDocumentsList {
-    flex: 1 !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
-
-.preview-panel,
-.image-preview-panel,
-.center-panel {
-    height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.preview-toolbar,
-.image-toolbar,
-.viewer-toolbar {
-    flex-shrink: 0 !important;
-    margin-bottom: 8px !important;
-}
-
-.preview-container,
-.image-container,
-.image-viewer,
-#imageViewer,
-#previewContainer {
-    flex: 1 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: #f8fafc !important;
-    border-radius: 14px !important;
-}
-
-.preview-container img,
-.image-container img,
-.image-viewer img,
-#previewImage,
-#selectedImage {
-    max-width: 100% !important;
-    max-height: 100% !important;
-    object-fit: contain !important;
-}
-
-.result-panel,
-.extraction-result-panel,
-.right-panel {
-    height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.result-panel h2,
-.result-panel h3,
-.extraction-result-panel h2,
-.extraction-result-panel h3 {
-    flex-shrink: 0 !important;
-    margin-bottom: 10px !important;
-}
-
-#structuredFields,
-.structured-fields,
-.result-fields {
-    flex: 1 !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding-right: 4px !important;
-}
-
-.field-card,
-.result-field,
-.extracted-field {
-    margin-bottom: 8px !important;
-    padding: 10px 12px !important;
-    border-radius: 12px !important;
-}
-
-.actions,
-.extraction-actions,
-.button-row {
-    flex-shrink: 0 !important;
-    display: flex !important;
-    gap: 10px !important;
-    flex-wrap: wrap !important;
-    margin-top: 10px !important;
-}
-
-#approveBtnInsideResult,
-#approveBtnBottom,
-.result-approve-btn {
-    flex-shrink: 0 !important;
-    margin-top: 10px !important;
-}
-
-/* Compact buttons */
-.btn,
-button {
-    white-space: nowrap;
-}
-
-/* Responsive fallback */
-@media (max-width: 1200px) {
-    html,
-    body {
-        overflow: auto;
-    }
-
-    .extraction-layout,
-    .extraction-grid,
-    .scan-extraction-layout {
-        grid-template-columns: 1fr !important;
-        height: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
-    }
-
-    .scan-list-panel,
-    .scanned-files-panel,
-    .left-panel,
-    .document-list-panel,
-    .preview-panel,
-    .image-preview-panel,
-    .center-panel,
-    .result-panel,
-    .extraction-result-panel,
-    .right-panel {
-        height: auto !important;
-        max-height: none !important;
-    }
-
-    .preview-container,
-    .image-container,
-    .image-viewer,
-    #imageViewer,
-    #previewContainer {
-        height: 520px !important;
-        flex: none !important;
-    }
-}
-
-
-/* AUTO HIDE STATUS MESSAGE */
-.status-box,
-.message-box,
-#statusBox,
-#resultStatus,
-#messageBox {
-    transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.status-box.hidden,
-.message-box.hidden,
-#statusBox.hidden,
-#resultStatus.hidden,
-#messageBox.hidden {
-    display: none !important;
-}
-
-
-.preview-pdf {
-    width: 100%;
-    height: 100%;
-    min-height: 520px;
-    border: none;
-    background: #ffffff;
-    border-radius: 10px;
-}
-
-.preview-pdf.hidden {
-    display: none;
-}
-
 </style>
 
-<div class="extract-app">
-    <div class="extract-header">
+<div class="ocr-page">
+    <div class="ocr-header">
         <div>
-            <div class="extract-title">Document Extraction</div>
-            <div class="extract-subtitle">Scan A5 voucher from ADF, inspect image, zoom/move, then extract OCR data.</div>
+            <div class="ocr-title">Document Extraction</div>
+            <div class="ocr-subtitle">Scan voucher from ADF, preview the image, then extract OCR data.</div>
         </div>
 
-        <div class="toolbar">
-            <button class="btn btn-primary" id="startScanBtn" onclick="startScan()">Start Extraction</button>
-            <button class="btn btn-blue" id="extractBtn" onclick="extractSelected()" disabled>Extract Selected</button>
-            <button class="btn btn-primary" id="approveBtn" onclick="approveOcrVoucher()" disabled>Approve & Insert</button>
-            <button class="btn btn-light" onclick="loadScannedDocuments()">Refresh List</button>
+        <div class="ocr-actions">
+            <button class="ocr-btn ocr-btn-dark" id="startScanBtn" onclick="startExtraction()">Start Extraction</button>
+
+            <label class="ocr-batch">
+                <input type="checkbox" id="batchAdfToggle">
+                Batch ADF
+            </label>
+
+            <button class="ocr-btn ocr-btn-blue" id="extractBtn" onclick="extractSelected()" disabled>Extract Selected</button>
+            <button class="ocr-btn ocr-btn-dark" id="approveBtn" onclick="approveOcrVoucher()" disabled>Approve & Insert</button>
+            <button class="ocr-btn ocr-btn-light" onclick="loadScannedDocuments(true)">Refresh List</button>
         </div>
     </div>
 
-    <div class="extract-layout">
-        <div class="panel">
-            <div class="panel-head">
-                <div class="panel-title">Scanned Files</div>
-                <span id="scanCount" class="zoom-badge">0</span>
+    <div class="ocr-layout">
+        <div class="ocr-panel">
+            <div class="ocr-panel-head">
+                <div class="ocr-panel-title">Scanned<br>Files</div>
+
+                <div class="ocr-head-tools">
+                    <span class="ocr-limit-label">Show</span>
+                    <select id="scanFileLimit" class="ocr-select" onchange="loadScannedDocuments(true)">
+                        <option value="10">10 files</option>
+                        <option value="20">20 files</option>
+                        <option value="50">50 files</option>
+                        <option value="all">All PNG</option>
+                    </select>
+                    <span id="scanCount" class="ocr-count">0</span>
+                </div>
             </div>
+
             <div id="scanList" class="scan-list">
-                <div class="viewer-empty">No scanned documents yet.</div>
+                <div class="viewer-empty">No scanned PNG files yet.</div>
             </div>
         </div>
 
-        <div class="panel">
-            <div class="panel-head">
-                <div class="panel-title">Image Preview</div>
-                <div class="toolbar">
-                    <span id="zoomBadge" class="zoom-badge">100%</span>
-                    <button class="btn btn-light" onclick="zoomOut()">−</button>
-                    <button class="btn btn-light" onclick="zoomIn()">+</button>
-                    <button class="btn btn-light" onclick="fitImage()">Fit</button>
-                    <button class="btn btn-light" onclick="resetView()">Reset</button>
-                    <button class="btn btn-light" onclick="rotateImage()">Rotate</button>
+        <div class="ocr-panel">
+            <div class="ocr-panel-head">
+                <div class="ocr-panel-title">Image Preview</div>
+
+                <div class="preview-tools">
+                    <span id="zoomBadge" class="ocr-count">100%</span>
+                    <button class="preview-tool-btn" onclick="zoomOut()">−</button>
+                    <button class="preview-tool-btn" onclick="zoomIn()">+</button>
+                    <button class="preview-tool-btn" onclick="fitImage()">Fit</button>
+                    <button class="preview-tool-btn" onclick="resetView()">Reset</button>
+                    <button class="preview-tool-btn" onclick="rotateImage()">Rotate</button>
                 </div>
             </div>
 
             <div id="viewerShell" class="viewer-shell">
-                <div id="viewerEmpty" class="viewer-empty">
-                    Select or scan a document to preview.
-                </div>
+                <div id="viewerEmpty" class="viewer-empty">Select or scan a PNG voucher to preview.</div>
                 <img id="previewImage" class="preview-image hidden" draggable="false">
-                <iframe id="previewPdf" class="preview-pdf hidden"></iframe>
             </div>
         </div>
 
-        <div class="panel right-panel">
-            <div class="panel-head">
-                <div class="panel-title">Extraction Result</div>
+        <div class="ocr-panel">
+            <div class="ocr-panel-head">
+                <div class="ocr-panel-title">Extraction Result</div>
             </div>
-            <div class="panel-body">
-                <div id="statusBox" class="status-box">
-                    Ready. Place A5 voucher vertically in ADF and click Start Extraction.
-                </div>
 
+            <div class="result-body">
+                <div id="statusBox" class="status-box hidden"></div>
                 <div id="selectedFileBox" class="selected-file-box hidden"></div>
-
-                <div id="structuredFields" class="hidden"></div>
-
+                <div id="structuredFields"></div>
             </div>
         </div>
     </div>
 </div>
 
+<div id="ocrLoading" class="ocr-loading">
+    <div class="ocr-loading-card">
+        <div class="ocr-spinner"></div>
+        <div class="ocr-loading-title">Processing Voucher</div>
+        <div id="ocrLoadingText" class="ocr-loading-text">Scanning from feeder...</div>
+    </div>
+</div>
+
 <script>
+const LOCAL_AGENT = "http://127.0.0.1:6060";
+const UPLOAD_FIELD_NAME = "document";
+
 let scannedDocuments = [];
 let selectedDoc = null;
 let selectedBlob = null;
@@ -622,64 +522,96 @@ let scale = 1;
 let rotation = 0;
 let translateX = 0;
 let translateY = 0;
-
 let dragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
 let startTranslateX = 0;
 let startTranslateY = 0;
 
-const UPLOAD_FIELD_NAME = "document";
+function showLoading(message) {
+    const overlay = document.getElementById("ocrLoading");
+    const text = document.getElementById("ocrLoadingText");
 
-
-let statusHideTimer = null;
-
-function setStatus(message, type = "info", autoHide = true) {
-    const statusBox = document.getElementById("statusBox")
-        || document.getElementById("resultStatus")
-        || document.getElementById("messageBox")
-        || document.querySelector(".status-box")
-        || document.querySelector(".message-box");
-
-    if (!statusBox) return;
-
-    clearTimeout(statusHideTimer);
-
-    statusBox.innerText = message || "";
-    statusBox.classList.remove("hidden");
-    statusBox.classList.remove("success", "error", "info");
-    statusBox.classList.add(type || "info");
-
-    if (autoHide) {
-        statusHideTimer = setTimeout(function () {
-            statusBox.classList.add("hidden");
-            statusBox.innerText = "";
-        }, 2000);
-    }
+    text.innerText = message || "Processing voucher...";
+    overlay.style.display = "flex";
 }
 
+function hideLoading() {
+    document.getElementById("ocrLoading").style.display = "none";
+}
 
-function updateButtons() {
-    document.getElementById("extractBtn").disabled = !selectedDoc;
+function showStatus(message, type = "info") {
+    const box = document.getElementById("statusBox");
+
+    if (!message) {
+        box.classList.add("hidden");
+        box.innerText = "";
+        return;
+    }
+
+    box.classList.remove("hidden", "error");
+    if (type === "error") box.classList.add("error");
+    box.innerText = message;
 }
 
 function formatSize(bytes) {
     if (!bytes) return "0 KB";
-    return Math.round(bytes / 1024) + " KB";
+    return Math.round(Number(bytes) / 1024) + " KB";
+}
+
+function getLimit() {
+    return document.getElementById("scanFileLimit").value || "10";
+}
+
+async function loadScannedDocuments(forceLatest = false) {
+    try {
+        const limit = getLimit();
+
+        const response = await fetch("/api/scanned-documents?limit=" + encodeURIComponent(limit), {
+            cache: "no-store",
+            credentials: "same-origin"
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            showStatus("Could not load scanned files: " + (data.message || "Unknown error"), "error");
+            return;
+        }
+
+        scannedDocuments = data.documents || data.rows || [];
+
+        document.getElementById("scanCount").innerText = data.total_count ?? scannedDocuments.length;
+
+        if (forceLatest || !selectedDoc) {
+            selectedDoc = scannedDocuments.length ? scannedDocuments[0] : null;
+        } else if (selectedDoc) {
+            const existing = scannedDocuments.find(doc => doc.filename === selectedDoc.filename);
+            selectedDoc = existing || (scannedDocuments.length ? scannedDocuments[0] : null);
+        }
+
+        renderScanList();
+
+        if (selectedDoc) {
+            showSelectedDocument(false);
+        }
+
+    } catch (error) {
+        showStatus("Scanned file list error: " + error.message, "error");
+    }
 }
 
 function renderScanList() {
     const list = document.getElementById("scanList");
-    document.getElementById("scanCount").innerText = scannedDocuments.length;
 
     if (!scannedDocuments.length) {
-        list.innerHTML = `<div class="viewer-empty">No scanned documents yet.</div>`;
+        list.innerHTML = `<div class="viewer-empty">No scanned PNG files yet.</div>`;
         return;
     }
 
     list.innerHTML = scannedDocuments.map((doc, index) => {
         const active = selectedDoc && selectedDoc.filename === doc.filename ? "active" : "";
-        const url = doc.file_url + "?t=" + Date.now();
+        const url = (doc.file_url || doc.url || doc.path) + "?t=" + Date.now();
 
         return `
             <div class="scan-item ${active}" onclick="selectDocument(${index})">
@@ -691,59 +623,38 @@ function renderScanList() {
     }).join("");
 }
 
-async function loadScannedDocuments() {
-    try {
-        const response = await fetch("/api/scanned-documents");
-        const data = await response.json();
-
-        if (!data.success) {
-            setStatus("Could not load scanned files: " + (data.message || "Unknown error"));
-            return;
-        }
-
-        scannedDocuments = data.rows || [];
-
-        if (!selectedDoc && scannedDocuments.length) {
-            selectedDoc = scannedDocuments[0];
-        }
-
-        renderScanList();
-
-        if (selectedDoc) {
-            showSelectedDocument();
-        }
-
-    } catch (error) {
-        setStatus("Scanned file list error: " + error.message);
-    }
-}
-
 function selectDocument(index) {
     selectedDoc = scannedDocuments[index];
     selectedBlob = null;
     renderScanList();
-    showSelectedDocument();
+    showSelectedDocument(true);
 }
 
-function showSelectedDocument() {
+function showSelectedDocument(showMessage = true) {
     if (!selectedDoc) return;
 
     const img = document.getElementById("previewImage");
     const empty = document.getElementById("viewerEmpty");
+    const box = document.getElementById("selectedFileBox");
 
-    document.getElementById("selectedFileBox").classList.remove("hidden");
-    document.getElementById("selectedFileBox").innerText = "Selected: " + selectedDoc.filename;
+    const url = (selectedDoc.file_url || selectedDoc.url || selectedDoc.path) + "?t=" + Date.now();
+
+    box.classList.remove("hidden");
+    box.innerText = "Selected: " + selectedDoc.filename;
 
     empty.classList.add("hidden");
     img.classList.remove("hidden");
-    img.src = selectedDoc.file_url + "?t=" + Date.now();
+    img.src = url;
 
-    img.onload = () => {
+    img.onload = function () {
         fitImage();
     };
 
-    updateButtons();
-    setStatus("Preview loaded. Zoom, move around, then click Extract Selected.");
+    document.getElementById("extractBtn").disabled = false;
+
+    if (showMessage) {
+        showStatus("");
+    }
 }
 
 function applyTransform() {
@@ -760,9 +671,13 @@ function fitImage() {
 
     const shellW = shell.clientWidth - 40;
     const shellH = shell.clientHeight - 40;
+    const rotated = rotation % 180 !== 0;
 
-    const fitScale = Math.min(shellW / img.naturalWidth, shellH / img.naturalHeight);
-    scale = Math.max(0.1, Math.min(fitScale, 3));
+    const imageW = rotated ? img.naturalHeight : img.naturalWidth;
+    const imageH = rotated ? img.naturalWidth : img.naturalHeight;
+
+    const fitScale = Math.min(shellW / imageW, shellH / imageH);
+    scale = Math.max(0.05, Math.min(fitScale, 4));
     translateX = 0;
     translateY = 0;
 
@@ -778,18 +693,18 @@ function resetView() {
 }
 
 function zoomIn() {
-    scale = Math.min(scale + 0.15, 5);
+    scale = Math.min(scale + 0.15, 6);
     applyTransform();
 }
 
 function zoomOut() {
-    scale = Math.max(scale - 0.15, 0.1);
+    scale = Math.max(scale - 0.15, 0.05);
     applyTransform();
 }
 
 function rotateImage() {
     rotation = (rotation + 90) % 360;
-    applyTransform();
+    fitImage();
 }
 
 document.getElementById("viewerShell").addEventListener("wheel", function(event) {
@@ -798,9 +713,9 @@ document.getElementById("viewerShell").addEventListener("wheel", function(event)
     if (!selectedDoc) return;
 
     if (event.deltaY < 0) {
-        scale = Math.min(scale + 0.08, 5);
+        scale = Math.min(scale + 0.08, 6);
     } else {
-        scale = Math.max(scale - 0.08, 0.1);
+        scale = Math.max(scale - 0.08, 0.05);
     }
 
     applyTransform();
@@ -832,175 +747,199 @@ window.addEventListener("mouseup", function() {
     document.getElementById("viewerShell").classList.remove("dragging");
 });
 
+function base64ToBlob(base64, mimeType) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
 
-
-async function startScan() {
-    setStatus("Scanning document...");
-    document.getElementById("startScanBtn").disabled = true;
-    document.getElementById("extractBtn").disabled = true;
-    if (document.getElementById("approveBtn")) document.getElementById("approveBtn").disabled = true;
-        const insideApproveBtnDone = document.getElementById("approveBtnInsideResult");
-        if (insideApproveBtnDone) {
-            insideApproveBtnDone.disabled = true;
-            insideApproveBtnDone.innerText = "Inserted";
-        }
-        if (document.getElementById("approveBtnBottom")) document.getElementById("approveBtnBottom").disabled = true;
-    document.getElementById("structuredFields").classList.add("hidden");
-    const insideApproveBtnReset = document.getElementById("approveBtnInsideResult");
-    if (insideApproveBtnReset) {
-        insideApproveBtnReset.classList.add("hidden");
-        insideApproveBtnReset.disabled = true;
-    }
-    if (document.getElementById("approveBtnBottom")) {
-        document.getElementById("approveBtnBottom").classList.add("hidden");
-        document.getElementById("approveBtnBottom").disabled = true;
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
     }
 
-    try {
-        const response = await fetch("/api/scan-document", {
-            method: "POST"
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-            setStatus("Scan failed: " + (data.message || "Unknown error"));
-            document.getElementById("startScanBtn").disabled = false;
-            updateButtons();
-            return;
-        }
-
-        const newDoc = {
-            filename: data.filename,
-            file_url: data.file_url,
-            size: data.size || 0,
-            modified: Date.now()
-        };
-
-        scannedDocuments.unshift(newDoc);
-        selectedDoc = newDoc;
-        selectedBlob = null;
-
-        renderScanList();
-        showSelectedDocument();
-
-        setStatus("Scan completed. Check image, then click Extract Selected.");
-
-    } catch (error) {
-        setStatus("Scan failed: " + error.message);
-    }
-
-    document.getElementById("startScanBtn").disabled = false;
-    updateButtons();
+    return new Blob([bytes], { type: mimeType || "image/png" });
 }
 
+async function uploadScannedPayload(filePayload, index, total) {
+    const blob = base64ToBlob(filePayload.file_base64, filePayload.mime_type || "image/png");
 
+    let filename = filePayload.filename || `ai_accounts_scan_${Date.now()}_${index + 1}.png`;
+    filename = filename.replace(/\.(pdf|jpg|jpeg|tif|tiff)$/i, ".png");
+
+    if (!filename.toLowerCase().endsWith(".png")) {
+        filename += ".png";
+    }
+
+    const scannedFile = new File([blob], filename, { type: "image/png" });
+
+    const formData = new FormData();
+    formData.append(UPLOAD_FIELD_NAME, scannedFile);
+
+    showLoading(total > 1 ? `Uploading and extracting ${index + 1} of ${total}...` : "Uploading scan and running OCR...");
+
+    const response = await fetch("/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.error || data.success === false) {
+        throw new Error(data.message || data.error || "OCR extraction failed");
+    }
+
+    return data;
+}
+
+async function startExtraction() {
+    const btn = document.getElementById("startScanBtn");
+    const batch = document.getElementById("batchAdfToggle").checked;
+
+    try {
+        btn.disabled = true;
+        document.getElementById("extractBtn").disabled = true;
+        document.getElementById("approveBtn").disabled = true;
+        latestExtractedFields = null;
+        document.getElementById("structuredFields").innerHTML = "";
+        showStatus("");
+
+        showLoading(batch ? "Batch scanning all ADF pages..." : "Scanning voucher from feeder...");
+
+        const health = await fetch(LOCAL_AGENT + "/health", { cache: "no-store" }).then(r => r.json());
+
+        if (!health.success) {
+            throw new Error(health.message || "Scanner agent not ready");
+        }
+
+        const scanResult = await fetch(LOCAL_AGENT + "/scan", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                format: "png",
+                batch: batch,
+                multiple: batch
+            })
+        }).then(r => r.json());
+
+        if (!scanResult.success) {
+            throw new Error(scanResult.message || "Scan failed");
+        }
+
+        const files = Array.isArray(scanResult.files) && scanResult.files.length ? scanResult.files : [scanResult];
+
+        let lastResult = null;
+
+        for (let i = 0; i < files.length; i++) {
+            lastResult = await uploadScannedPayload(files[i], i, files.length);
+        }
+
+        renderStructuredFields(lastResult);
+        await loadScannedDocuments(true);
+
+    } catch (error) {
+        showStatus(error.message || "Start extraction failed", "error");
+
+    } finally {
+        hideLoading();
+        btn.disabled = false;
+        if (selectedDoc) document.getElementById("extractBtn").disabled = false;
+    }
+}
 
 async function getSelectedBlob() {
     if (!selectedDoc) return null;
-
     if (selectedBlob) return selectedBlob;
 
-    const response = await fetch(selectedDoc.file_url + "?t=" + Date.now());
+    const response = await fetch((selectedDoc.file_url || selectedDoc.url || selectedDoc.path) + "?t=" + Date.now());
     selectedBlob = await response.blob();
     return selectedBlob;
 }
 
-function renderStructuredFields(data) {
-    const container = document.getElementById("structuredFields");
+function getStructuredInfo(data) {
     const structured = data.structured_output || {};
     const fields = structured.fields || {};
 
-    const cards = [
-        ["Document Type", structured.classification?.document_type || ""],
-        ["Voucher No", fields.voucher_no || ""],
-        ["Date", fields.date || ""],
-        ["Account Head", (fields.account_head || "").toUpperCase()],
-        ["Person Name", fields.person_name || ""],
-        ["Purpose", fields.purpose || ""],
-        ["Amount Words", fields.amount_words || ""],
-        ["Amount", fields.amount ?? ""],
-        ["Status", structured.validation?.status || data.status || ""]
-    ];
+    return {
+        structured: structured,
+        fields: fields,
+        cards: [
+            ["Document Type", structured.classification?.document_type || ""],
+            ["Voucher No", fields.voucher_no || ""],
+            ["Date", fields.date || ""],
+            ["Account Head", (fields.account_head || "").toUpperCase()],
+            ["Person Name", fields.person_name || ""],
+            ["Purpose", fields.purpose || ""],
+            ["Amount Words", fields.amount_words || ""],
+            ["Amount", fields.amount ?? ""],
+            ["Status", structured.validation?.status || data.status || ""]
+        ]
+    };
+}
 
-    container.innerHTML = cards.map(([label, value]) => `
-        <div class="field-card">
-            <div class="field-label">${label}</div>
-            <div class="field-value">${value || "-"}</div>
-        </div>
-    `).join("");
+function renderStructuredFields(data) {
+    const container = document.getElementById("structuredFields");
+    const info = getStructuredInfo(data);
 
-    container.classList.remove("hidden");
+    latestExtractedFields = info.fields;
+
+    container.innerHTML = info.cards.map(([label, value]) => {
+        const clean = value === undefined || value === null || String(value).trim() === "" ? "-" : String(value).trim();
+
+        return `
+            <div class="field-card">
+                <div class="field-label">${label}</div>
+                <div class="field-value ${clean === "-" ? "empty" : ""}">${clean}</div>
+            </div>
+        `;
+    }).join("");
+
+    document.getElementById("approveBtn").disabled = false;
+    showStatus("");
 }
 
 async function extractSelected() {
     if (!selectedDoc) {
-        setStatus("Select a scanned document first.");
+        showStatus("Select a scanned PNG first.", "error");
         return;
     }
 
-    setStatus("Extracting OCR data from selected image...");
-    document.getElementById("extractBtn").disabled = true;
-    if (document.getElementById("approveBtn")) document.getElementById("approveBtn").disabled = true;
-        const insideApproveBtnDone = document.getElementById("approveBtnInsideResult");
-        if (insideApproveBtnDone) {
-            insideApproveBtnDone.disabled = true;
-            insideApproveBtnDone.innerText = "Inserted";
-        }
-        if (document.getElementById("approveBtnBottom")) document.getElementById("approveBtnBottom").disabled = true;
-    document.getElementById("structuredFields").classList.add("hidden");
-    const insideApproveBtnReset = document.getElementById("approveBtnInsideResult");
-    if (insideApproveBtnReset) {
-        insideApproveBtnReset.classList.add("hidden");
-        insideApproveBtnReset.disabled = true;
-    }
-    if (document.getElementById("approveBtnBottom")) {
-        document.getElementById("approveBtnBottom").classList.add("hidden");
-        document.getElementById("approveBtnBottom").disabled = true;
-    }
-   
-
     try {
+        document.getElementById("extractBtn").disabled = true;
+        document.getElementById("approveBtn").disabled = true;
+        showLoading("Running OCR for selected PNG...");
+
         const blob = await getSelectedBlob();
+        const file = new File([blob], selectedDoc.filename, { type: "image/png" });
 
         const formData = new FormData();
-        formData.append(UPLOAD_FIELD_NAME, blob, selectedDoc.filename);
+        formData.append(UPLOAD_FIELD_NAME, file);
 
         const response = await fetch("/upload", {
             method: "POST",
-            body: formData
+            body: formData,
+            credentials: "same-origin"
         });
 
         const data = await response.json();
 
+        if (!response.ok || data.error || data.success === false) {
+            throw new Error(data.message || data.error || "Extraction failed");
+        }
+
         renderStructuredFields(data);
-
-        const structured = data.structured_output || {};
-        const fields = structured.fields || {};
-        latestExtractedFields = fields;
-        if (document.getElementById("approveBtn")) {
-            document.getElementById("approveBtn").disabled = false;
-        }
-
-        
-
-        if (data.status === "succeeded" || data.success !== false) {
-            setStatus("Extraction completed for " + selectedDoc.filename);
-        } else {
-            setStatus("Extraction failed: " + (data.message || data.error || "Unknown error"));
-        }
+        await loadScannedDocuments(false);
 
     } catch (error) {
-        setStatus("Extraction error: " + error.message);
+        showStatus("Extraction error: " + error.message, "error");
+
+    } finally {
+        hideLoading();
+        if (selectedDoc) document.getElementById("extractBtn").disabled = false;
     }
-
-    updateButtons();
 }
-
 
 async function approveOcrVoucher() {
     if (!latestExtractedFields) {
-        setStatus("Extract first before approving.");
+        showStatus("Extract first before approving.", "error");
         return;
     }
 
@@ -1010,288 +949,46 @@ async function approveOcrVoucher() {
         account_name: (latestExtractedFields.account_head || "").toUpperCase(),
         person_name: latestExtractedFields.person_name || "",
         purpose: latestExtractedFields.purpose || "",
-            invoice_no: latestExtractedFields.invoice_no || "",
-            invoice_date: latestExtractedFields.invoice_date || "",
-            party_code: latestExtractedFields.party_code || "",
-            party_name: latestExtractedFields.party_name || "",
+        invoice_no: latestExtractedFields.invoice_no || "",
+        invoice_date: latestExtractedFields.invoice_date || "",
+        party_code: latestExtractedFields.party_code || "",
+        party_name: latestExtractedFields.party_name || "",
         amount: latestExtractedFields.amount || ""
     };
 
     if (!payload.voucherdate || !payload.account_name || !payload.person_name || !payload.purpose || !payload.amount) {
-        setStatus("Approve failed: required fields missing. Please review OCR fields.");
+        showStatus("Approve failed: required fields missing. Please review OCR fields.", "error");
         return;
     }
 
     try {
-        setStatus("Approving and inserting OCR voucher...");
+        showLoading("Approving and inserting voucher...");
 
         const response = await fetch("/api/ocr-extraction/approve", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(payload)
         });
 
         const data = await response.json();
 
         if (!data.success) {
-            setStatus("Approve failed: " + (data.message || "Unknown error"));
-            return;
+            throw new Error(data.message || "Unknown error");
         }
 
-        setStatus("Approved and inserted successfully. Voucher ID: " + (data.voucher_id || ""));
         document.getElementById("approveBtn").disabled = true;
+        showStatus("Approved and inserted successfully. Voucher ID: " + (data.voucher_id || ""));
 
     } catch (error) {
-        setStatus("Approve error: " + error.message);
+        showStatus("Approve error: " + error.message, "error");
+
+    } finally {
+        hideLoading();
     }
 }
 
-loadScannedDocuments();
+document.addEventListener("DOMContentLoaded", function () {
+    loadScannedDocuments(true);
+});
 </script>
-
-<script>
-/* START EXTRACTION WINDOWS SCAN FINAL */
-(function () {
-    const LOCAL_AGENT = "http://127.0.0.1:6060";
-
-    function findButtonByText(text) {
-        const target = text.trim().toLowerCase();
-
-        return Array.from(document.querySelectorAll("button, a")).find(function (btn) {
-            return (btn.innerText || "").trim().toLowerCase() === target;
-        });
-    }
-
-    function getResultPanel() {
-        return (
-            document.getElementById("extractionResult") ||
-            document.getElementById("resultContent") ||
-            document.getElementById("resultPanel") ||
-            document.querySelector(".extraction-result") ||
-            document.querySelector(".result-panel") ||
-            Array.from(document.querySelectorAll("h1,h2,h3,div"))
-                .find(function (el) {
-                    return (el.innerText || "").trim().toLowerCase() === "extraction result";
-                })?.parentElement
-        );
-    }
-
-    function setResultMessage(message, isError = false) {
-        const panel = getResultPanel();
-
-        if (!panel) {
-            alert(message);
-            return;
-        }
-
-        let box = document.getElementById("startExtractionStatusBox");
-
-        if (!box) {
-            box = document.createElement("div");
-            box.id = "startExtractionStatusBox";
-            box.style.margin = "12px 0";
-            box.style.padding = "12px 14px";
-            box.style.borderRadius = "12px";
-            box.style.fontWeight = "800";
-            box.style.fontSize = "13px";
-            box.style.whiteSpace = "pre-line";
-            panel.appendChild(box);
-        }
-
-        box.style.background = isError ? "#fee2e2" : "#eaf2ff";
-        box.style.color = isError ? "#991b1b" : "#0f3f8f";
-        box.style.border = isError ? "1px solid #fecaca" : "1px solid #bfdbfe";
-        box.innerText = message || "";
-    }
-
-    function base64ToBlob(base64, mimeType) {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-
-        return new Blob([bytes], { type: mimeType || "application/pdf" });
-    }
-
-    function renderLatestExtractionResult(result) {
-        const panel = getResultPanel();
-        if (!panel) return;
-
-        const old = document.getElementById("latestExtractionResultBox");
-        if (old) old.remove();
-
-        const data =
-            result.structured ||
-            result.extracted ||
-            result.extraction ||
-            result.data ||
-            result.result ||
-            result;
-
-        const rows = [];
-
-        function add(label, value) {
-            if (value !== undefined && value !== null && String(value).trim() !== "") {
-                rows.push(`
-                    <div style="display:grid;grid-template-columns:130px 1fr;border-bottom:1px solid #e5e7eb;">
-                        <div style="padding:8px 10px;font-weight:900;background:#f8fafc;color:#0f172a;">${label}</div>
-                        <div style="padding:8px 10px;color:#111827;white-space:pre-wrap;">${String(value)}</div>
-                    </div>
-                `);
-            }
-        }
-
-        add("Voucher No", data.voucher_no || data.voucherNo);
-        add("Date", data.date || data.voucherdate || data.voucher_date);
-        add("Account Head", data.account_head || data.account_name || data.accountHead);
-        add("Person", data.person_name || data.name_of_person || data.person);
-        add("Purpose", data.purpose || data.narration);
-        add("Amount", data.amount || data.amount_rs);
-        add("Amount Words", data.amount_words || data.amountInWords);
-
-        const box = document.createElement("div");
-        box.id = "latestExtractionResultBox";
-        box.style.marginTop = "12px";
-        box.style.border = "1px solid #dbe3ef";
-        box.style.borderRadius = "14px";
-        box.style.overflow = "hidden";
-        box.style.background = "#ffffff";
-
-        box.innerHTML = `
-            <div style="padding:11px 13px;font-weight:900;background:#f1f5f9;color:#0f172a;">
-                Latest Extracted Result
-            </div>
-            ${rows.length ? rows.join("") : `
-                <pre style="margin:0;padding:12px;white-space:pre-wrap;font-size:12px;">${JSON.stringify(data, null, 2)}</pre>
-            `}
-        `;
-
-        panel.appendChild(box);
-    }
-
-    async function startExtractionFromWindowsPc() {
-        const startBtn = findButtonByText("Start Extraction");
-
-        try {
-            if (startBtn) {
-                startBtn.disabled = true;
-                startBtn.innerText = "Scanning...";
-            }
-
-            setResultMessage("Checking scanner agent on this Windows PC...");
-
-            const healthResponse = await fetch(LOCAL_AGENT + "/health", {
-                cache: "no-store"
-            });
-
-            const health = await healthResponse.json();
-
-            if (!health.success) {
-                throw new Error(health.message || "Scanner agent not ready");
-            }
-
-            setResultMessage("Scanner ready. Scanning voucher from feeder...");
-
-            const scanResponse = await fetch(LOCAL_AGENT + "/scan", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({format: "pdf"})
-            });
-
-            const scanResult = await scanResponse.json();
-
-            if (!scanResult.success) {
-                throw new Error(scanResult.message || "Scan failed");
-            }
-
-            setResultMessage("Scan completed. Uploading latest voucher for OCR extraction...");
-
-            const blob = base64ToBlob(scanResult.file_base64, scanResult.mime_type);
-            const filename = scanResult.filename || "ai_accounts_scan.pdf";
-
-            const formData = new FormData();
-            const scannedFile = new File([blob], filename, {
-                type: scanResult.mime_type || "application/pdf"
-            });
-
-            formData.append("document", scannedFile);
-
-            const uploadResponse = await fetch("/upload", {
-                method: "POST",
-                body: formData,
-                credentials: "same-origin"
-            });
-
-            const contentType = uploadResponse.headers.get("content-type") || "";
-
-            if (!contentType.includes("application/json")) {
-                throw new Error("Server returned non-JSON. Login again and retry.");
-            }
-
-            const uploadResult = await uploadResponse.json();
-
-            if (uploadResult.success === false) {
-                throw new Error(uploadResult.message || uploadResult.error || "OCR extraction failed");
-            }
-
-            setResultMessage("Latest voucher scanned and OCR extraction completed.");
-            renderLatestExtractionResult(uploadResult);
-
-            if (typeof loadScannedDocuments === "function") {
-                try {
-                    await loadScannedDocuments();
-                } catch (e) {}
-            }
-
-        } catch (error) {
-            console.error("Start extraction error:", error);
-            setResultMessage(error.message || "Start extraction failed", true);
-
-        } finally {
-            if (startBtn) {
-                startBtn.disabled = false;
-                startBtn.innerText = "Start Extraction";
-            }
-        }
-    }
-
-    function installStartButtonOverride() {
-        // Remove visible third-party/local scanner panel if old cached HTML created it
-        const oldPanel =
-            document.getElementById("windowsScannerPanel") ||
-            document.getElementById("windowsScanPanel");
-
-        if (oldPanel) {
-            oldPanel.remove();
-        }
-
-        const startBtn = findButtonByText("Start Extraction");
-
-        if (!startBtn) {
-            setTimeout(installStartButtonOverride, 500);
-            return;
-        }
-
-        const cleanBtn = startBtn.cloneNode(true);
-        startBtn.parentNode.replaceChild(cleanBtn, startBtn);
-
-        cleanBtn.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            startExtractionFromWindowsPc();
-        }, true);
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        installStartButtonOverride();
-        setTimeout(installStartButtonOverride, 500);
-        setTimeout(installStartButtonOverride, 1500);
-    });
-})();
-</script>
-
 {% endblock %}

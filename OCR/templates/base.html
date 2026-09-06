@@ -292,6 +292,34 @@
             }
         }
     </style>
+
+{# HIDE BRAND EXCEPT LOGIN DASHBOARD FINAL #}
+{% if request.endpoint not in ['login', 'dashboard'] %}
+<style>
+    .app-brand,
+    .app-brand-title,
+    .app-brand-subtitle,
+    .brand,
+    .brand-title,
+    .brand-subtitle,
+    .top-brand,
+    .top-brand-title,
+    .site-brand,
+    .site-title {
+        display: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+    }
+
+    .app-shell {
+        padding-top: 18px !important;
+    }
+</style>
+{% endif %}
+{# END HIDE BRAND EXCEPT LOGIN DASHBOARD FINAL #}
+
 </head>
 
 <body>

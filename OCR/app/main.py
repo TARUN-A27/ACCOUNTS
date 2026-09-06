@@ -676,6 +676,7 @@ def get_history():
             timestamp = get_file_time(review_path)
 
             source_file = review_data.get("source_file") or filename
+            safe_source_file = secure_filename(source_file) or source_file
             status = review_data.get("status", "pending")
             document_type = review_data.get("document_type", "unknown")
             corrected_fields = review_data.get("corrected_fields", {})
@@ -742,6 +743,7 @@ def get_history():
                 structured_data = json.load(f)
 
             source_file = structured_data.get("source_file") or filename
+            safe_source_file = secure_filename(source_file) or source_file
 
             if source_file in reviewed_source_files:
                 continue
@@ -1521,6 +1523,7 @@ def get_dashboard():
             day = date_key(timestamp)
 
             source_file = review_data.get("source_file") or filename
+            safe_source_file = secure_filename(source_file) or source_file
             status = review_data.get("status", "pending")
             document_type = review_data.get("document_type", "unknown")
             corrected_fields = review_data.get("corrected_fields", {})
@@ -1577,6 +1580,7 @@ def get_dashboard():
                 structured_data = json.load(f)
 
             source_file = structured_data.get("source_file") or filename
+            safe_source_file = secure_filename(source_file) or source_file
 
             total_documents += 1
 

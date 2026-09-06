@@ -663,4 +663,222 @@ document.addEventListener("keydown", function(event) {
 loadValidationDocuments();
 </script>
 
+<style>
+/* VALIDATION COMPACT ALIGN FINAL */
+body {
+    overflow-x: hidden !important;
+}
+
+.app-shell {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
+
+.page-header {
+    width: min(1100px, calc(100vw - 36px)) !important;
+    max-width: min(1100px, calc(100vw - 36px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 14px !important;
+}
+
+.card {
+    width: min(1100px, calc(100vw - 36px)) !important;
+    max-width: min(1100px, calc(100vw - 36px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06) !important;
+}
+
+.table-responsive {
+    width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+table,
+.table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+}
+
+table th,
+table td,
+.table th,
+.table td {
+    vertical-align: middle !important;
+    padding: 11px 12px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+table th,
+.table th {
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    color: #334155 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* Validation columns: Document | Type | Status | Action */
+table th:nth-child(1),
+table td:nth-child(1),
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: 52% !important;
+    max-width: 52% !important;
+    font-weight: 800 !important;
+}
+
+table th:nth-child(2),
+table td:nth-child(2),
+.table th:nth-child(2),
+.table td:nth-child(2) {
+    width: 13% !important;
+    max-width: 13% !important;
+    text-align: left !important;
+}
+
+table th:nth-child(3),
+table td:nth-child(3),
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 17% !important;
+    max-width: 17% !important;
+    text-align: left !important;
+}
+
+table th:nth-child(4),
+table td:nth-child(4),
+.table th:nth-child(4),
+.table td:nth-child(4) {
+    width: 18% !important;
+    max-width: 18% !important;
+    text-align: left !important;
+}
+
+.btn {
+    border-radius: 10px !important;
+    padding: 8px 13px !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+}
+
+.badge,
+[class*="status-"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    padding: 5px 8px !important;
+    border-radius: 999px !important;
+}
+
+.validation-file-name-short {
+    display: inline-block;
+    max-width: 100%;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+@media (max-width: 1050px) {
+    .page-header,
+    .card {
+        width: calc(100vw - 24px) !important;
+        max-width: calc(100vw - 24px) !important;
+    }
+
+    table th,
+    table td,
+    .table th,
+    .table td {
+        padding: 9px 8px !important;
+        font-size: 11px !important;
+    }
+
+    table th:nth-child(1),
+    table td:nth-child(1),
+    .table th:nth-child(1),
+    .table td:nth-child(1) {
+        width: 48% !important;
+    }
+
+    table th:nth-child(2),
+    table td:nth-child(2),
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
+        width: 14% !important;
+    }
+
+    table th:nth-child(3),
+    table td:nth-child(3),
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
+        width: 19% !important;
+    }
+
+    table th:nth-child(4),
+    table td:nth-child(4),
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+        width: 19% !important;
+    }
+}
+</style>
+
+<script>
+/* VALIDATION COMPACT ALIGN FINAL */
+(function () {
+    function middleTrim(text, maxLength) {
+        text = String(text || "").trim();
+
+        if (text.length <= maxLength) return text;
+
+        const start = Math.ceil((maxLength - 3) * 0.55);
+        const end = Math.floor((maxLength - 3) * 0.45);
+
+        return text.slice(0, start) + "..." + text.slice(text.length - end);
+    }
+
+    function compactValidationRows() {
+        document.querySelectorAll("tbody tr").forEach(function (row) {
+            const cells = row.querySelectorAll("td");
+
+            if (cells.length < 4) return;
+
+            const docCell = cells[0];
+
+            if (!docCell.dataset.fullText) {
+                const full = docCell.innerText.trim();
+                docCell.dataset.fullText = full;
+                docCell.title = full;
+                docCell.innerHTML = `<span class="validation-file-name-short">${middleTrim(full, 58)}</span>`;
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        compactValidationRows();
+
+        const observer = new MutationObserver(compactValidationRows);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        setTimeout(compactValidationRows, 500);
+        setTimeout(compactValidationRows, 1500);
+    });
+})();
+</script>
+
 {% endblock %}
