@@ -466,7 +466,13 @@ def cash_voucher_entry_list_api():
 
         limit = max(1, min(limit, 5000))
 
-        result = list_cash_voucher_entries(limit=limit)
+        usercode = session.get("usercode")
+
+        # The IA authenticates everyone's vouchers; every other user sees only their own.
+        result = list_cash_voucher_entries(
+            limit=limit,
+            usercode=None if is_ia_auth_user(usercode) else int(usercode or 0)
+        )
 
         entries = result.get("entries") or result.get("rows") or []
         result["entries"] = entries

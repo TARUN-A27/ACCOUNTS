@@ -2204,12 +2204,13 @@ document.addEventListener("click", function (event) {
 
 </script>
 
+<script src="{{ url_for('static', filename='voucher_pages.js') }}"></script>
 <script>
 /* FINAL IFRAME VOUCHER PRINT FIX */
 (function () {
     window.printVoucherPreviewOnly = function () {
         const source =
-            document.querySelector("#previewModal .cash-voucher-pages") ||
+            document.querySelector(".cash-voucher-pages") ||
             document.querySelector("#previewModal .preview-box") ||
             document.querySelector("#printPreview .print-box") ||
             document.querySelector(".preview-box") ||
@@ -2465,6 +2466,7 @@ document.addEventListener("click", function (event) {
         doc.body.appendChild(clone);
 
         setTimeout(function () {
+            window.packVoucherPages?.(doc.body);
             frame.contentWindow.focus();
             frame.contentWindow.print();
 

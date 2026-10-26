@@ -2688,7 +2688,7 @@ def update_cash_voucher_entry(voucher_id, data, usercode=None, allow_any_user=Fa
             conn.close()
 
 
-# FINAL OVERRIDE: show all voucher drafts regardless of usercode
+# FINAL OVERRIDE: usercode=None lists every voucher (IA), otherwise only that user's own
 def list_cash_voucher_entries(limit=100, usercode=None, username=None):
     conn = None
     cursor = None
@@ -2720,6 +2720,7 @@ def list_cash_voucher_entries(limit=100, usercode=None, username=None):
                 FROM CASHBANKENTRY e
                 LEFT JOIN CASHBANKENTRYDETAILS d
                   ON d.CASHBANKENTRY_ID = e.ID
+                WHERE (:usercode IS NULL OR e.USERCODE = :usercode)
                 GROUP BY e.ID,
                          e.VOUCHERDATE,
                          e.ACCOUNT_HEAD_CODE,
@@ -2740,6 +2741,7 @@ def list_cash_voucher_entries(limit=100, usercode=None, username=None):
             )
             WHERE ROWNUM <= :limit
         """, {
+            "usercode": None if usercode is None else int(usercode),
             "limit": int(limit or 100)
         })
 

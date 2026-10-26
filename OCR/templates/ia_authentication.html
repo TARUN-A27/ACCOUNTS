@@ -2552,6 +2552,7 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
 
 </style>
 
+<script src="{{ url_for('static', filename='voucher_pages.js') }}"></script>
 <script>
 /* IA CLEAN PRINT ONLY FIX */
 (function () {
@@ -2597,6 +2598,8 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
         printOnly.appendChild(source.cloneNode(true));
 
         document.body.appendChild(printOnly);
+        // same box as the print-only .preview-box rule below: 180mm wide, 7mm padding
+        window.packVoucherPages?.(printOnly, "190mm", "width:180mm !important;max-width:180mm !important;padding:7mm 7mm 3mm !important;box-sizing:border-box !important");
         document.body.classList.add("ia-print-active");
 
         setTimeout(function () {
@@ -4138,6 +4141,11 @@ function applyFinalCashVoucherPreviewFormat(row = null) {
              * No wrappers.
              * No delayed setTimeout renderer.
              */
+
+            // Undo the previous voucher's page split, or its extra pages stay in the preview and the print.
+            const oldPages = document.querySelector("#previewModal .ia-voucher-pages");
+            if (oldPages) oldPages.replaceWith(oldPages.firstElementChild);
+
             renderIASinglePreview(row);
             paginateIAVoucherPages(document.querySelector("#previewModal .preview-box"));
 

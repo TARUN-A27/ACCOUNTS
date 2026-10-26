@@ -2317,6 +2317,7 @@ function printDraftVoucherOnly() {
     frame.contentDocument.close();
 
     setTimeout(() => {
+        window.packVoucherPages?.(frame.contentDocument.body, "calc(190mm - 24px)");
         frame.contentWindow.focus();
         frame.contentWindow.print();
         setTimeout(() => frame.remove(), 500);
@@ -2332,6 +2333,7 @@ document.addEventListener("DOMContentLoaded", function () {
     loadDrafts();
 });
 </script>
+<script src="{{ url_for('static', filename='voucher_pages.js') }}"></script>
 
 
 
