@@ -564,6 +564,24 @@ def history():
 
 @app.route("/api/history", methods=["GET"])
 def get_history():
+    usercode = session.get("usercode")
+
+    if not session.get("logged_in") or not usercode:
+        return jsonify({
+            "success": False,
+            "error": "Login required",
+            "message": "Login required"
+        }), 401
+
+    # The IA sees everyone's activity; every other user only their own.
+    # Entries logged before they carried a usercode have no owner, so only the IA sees those.
+    # ponytail: a document someone else reviewed shows only in the reviewer's history;
+    # look up the uploader if uploaders must keep seeing their documents.
+    owner = None if is_ia_auth_user(usercode) else str(usercode)
+
+    def is_mine(log_entry):
+        return owner is None or str(log_entry.get("usercode")) == owner
+
     structured_dir = os.path.join(BASE_DIR, "logs", "structured")
     review_dir = os.path.join(BASE_DIR, "logs", "review")
 
@@ -634,12 +652,14 @@ def get_history():
                     FROM TARUNCASHBANK
                     WHERE divisioncode = :divisioncode
                       AND yearcode = :yearcode
+                      AND (:usercode IS NULL OR usercode = :usercode)
                     ORDER BY id DESC
                 )
                 WHERE ROWNUM <= 1000
             """, {
                 "divisioncode": int(divisioncode),
-                "yearcode": int(yearcode)
+                "yearcode": int(yearcode),
+                "usercode": int(owner) if owner else None
             })
 
             for row in cursor.fetchall():
@@ -688,6 +708,9 @@ def get_history():
             corrected_fields = review_data.get("corrected_fields", {})
 
             reviewed_source_files.add(source_file)
+
+            if not is_mine(review_data):
+                continue
 
             cashbank_result = review_data.get("cashbank_result") or {}
 
@@ -751,7 +774,7 @@ def get_history():
             source_file = structured_data.get("source_file") or filename
             safe_source_file = secure_filename(source_file) or source_file
 
-            if source_file in reviewed_source_files:
+            if source_file in reviewed_source_files or not is_mine(structured_data):
                 continue
 
             timestamp = get_file_time(structured_path)
@@ -1032,6 +1055,7 @@ def upload_document():
         structured_output["source_file"] = saved_filename
         structured_output["file_url"] = f"/static/uploads/{saved_filename}"
         structured_output["processed_at"] = datetime.now().isoformat()
+        structured_output["usercode"] = session.get("usercode")
 
         clean_result["structured_output"] = structured_output
         structured_dir = os.path.join(LOG_DIR, "structured")
@@ -1206,6 +1230,9 @@ def review_document():
             return jsonify({
                 "error": "Invalid review status"
             }), 400
+
+        # Always the logged-in user, never a usercode sent by the client.
+        review_data["usercode"] = session.get("usercode")
 
         saved_review = save_review_log(BASE_DIR, review_data)
 

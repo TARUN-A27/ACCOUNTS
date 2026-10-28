@@ -21,6 +21,7 @@ def save_review_log(base_dir, review_data):
         "status": review_data.get("status"),
         "corrected_fields": review_data.get("corrected_fields", {}),
         "reviewed_by": review_data.get("reviewed_by", "admin"),
+        "usercode": review_data.get("usercode"),
         "reviewed_at": datetime.now().isoformat()
     }
 
